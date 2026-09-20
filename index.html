@@ -184,46 +184,68 @@
             }
         }
 
-        // --- 2. VERSIÓN BLINDADA DEL DASHBOARD (INMUNE A ZONAS HORARIAS) ---
+        // --- 2. VERSIÓN BLINDADA DEL DASHBOARD (PROCESAMIENTO LOCAL) ---
         async function cargarEstadisticas() {
-            const fechaActual = new Date();
-            // Fuerza la búsqueda con texto puro (Ej. "2026-09-01") evadiendo el desfase UTC-5 de Colombia
-            const primerDiaMes = `${fechaActual.getFullYear()}-${String(fechaActual.getMonth() + 1).padStart(2, '0')}-01`;
-            
-            const { data, error } = await db.from('reporte_mensual')
-                .select('*')
-                .gte('mes', primerDiaMes)
-                .eq('tipo', 'gasto');
+            // Calculamos el inicio del mes exacto sin importar la zona horaria
+            const fecha = new Date();
+            const año = fecha.getFullYear();
+            const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+            const inicioDeMes = `${año}-${mes}-01`;
 
-            if (error) return console.error("Error trayendo estadísticas:", error);
+            // 1. Descargar diccionario de categorías
+            const { data: categorias, error: errCat } = await db.from('categorias').select('*').eq('tipo', 'gasto');
+            if (errCat) return console.error("Error categorías:", errCat);
 
+            // 2. Descargar las transacciones crudas del mes directamente
+            const { data: transacciones, error: errTrans } = await db.from('transacciones').select('*').gte('fecha', inicioDeMes);
+            if (errTrans) return console.error("Error transacciones:", errTrans);
+
+            // 3. Motor de cálculo interno (Reemplaza las fórmulas de Excel)
             let totalGastadoMes = 0;
+            const reporte = {};
+
+            // Inicializar contadores por categoría
+            categorias.forEach(c => {
+                reporte[c.id] = { nombre: c.nombre, presupuesto: parseFloat(c.presupuesto_mensual) || 0, gastado: 0 };
+            });
+
+            // Sumar los gastos del mes
+            transacciones.forEach(t => {
+                if (reporte[t.categoria_id]) {
+                    const valor = parseFloat(t.monto);
+                    reporte[t.categoria_id].gastado += valor;
+                    totalGastadoMes += valor;
+                }
+            });
+
+            // 4. Inyectar datos a la interfaz (Pantalla y Gráficas)
             const labelsGrafico = [];
             const dataGrafico = [];
             const contenedorLista = document.getElementById('lista-presupuestos');
-            contenedorLista.innerHTML = ''; // Limpia lista anterior
+            contenedorLista.innerHTML = '';
 
-            // Si no hay datos, mostramos 0
-            if (!data || data.length === 0) {
+            // Si no hay gastos, dibujar pantalla en cero
+            if (totalGastadoMes === 0) {
                 document.getElementById('dash-total-gastado').textContent = '$ 0';
-                renderizarGraficoDonut(['Sin datos'], [1]); // Gráfico vacío representativo
+                renderizarGraficoDonut(['Sin datos'], [1]);
                 return;
             }
 
-            data.forEach(item => {
-                totalGastadoMes += parseFloat(item.total_gastado);
-                labelsGrafico.push(item.categoria);
-                dataGrafico.push(item.total_gastado);
+            // Dibujar barras y alimentar gráfico
+            Object.values(reporte).forEach(item => {
+                if (item.gastado > 0) {
+                    labelsGrafico.push(item.nombre);
+                    dataGrafico.push(item.gastado);
+                }
 
-                // Calcular progreso
-                const porcentaje = Math.min((item.total_gastado / item.presupuesto_mensual) * 100, 100).toFixed(0);
+                const porcentaje = item.presupuesto > 0 ? Math.min((item.gastado / item.presupuesto) * 100, 100).toFixed(0) : 0;
                 const colorBarra = porcentaje > 90 ? 'bg-red-500' : (porcentaje > 70 ? 'bg-yellow-400' : 'bg-emerald-400');
 
                 contenedorLista.innerHTML += `
                     <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 mb-4">
                         <div class="flex justify-between items-end mb-2">
-                            <span class="font-bold text-white">${item.categoria}</span>
-                            <span class="text-xs text-slate-400">${formateador.format(item.total_gastado)} de ${formateador.format(item.presupuesto_mensual)}</span>
+                            <span class="font-bold text-white uppercase text-xs tracking-wider">${item.nombre}</span>
+                            <span class="text-xs text-slate-400">${formateador.format(item.gastado)} de ${formateador.format(item.presupuesto)}</span>
                         </div>
                         <div class="w-full bg-slate-900 rounded-full h-2.5">
                             <div class="${colorBarra} h-2.5 rounded-full transition-all duration-1000" style="width: ${porcentaje}%"></div>
@@ -232,6 +254,7 @@
                 `;
             });
 
+            // Actualizar total general y gráfico
             document.getElementById('dash-total-gastado').textContent = formateador.format(totalGastadoMes);
             renderizarGraficoDonut(labelsGrafico, dataGrafico);
         }
