@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gasto Tracker</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Evita el zoom accidental al tocar rápido en iOS */
+        button { touch-action: manipulation; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 h-screen flex flex-col font-sans select-none">
+    
+    <!-- Header -->
+    <header class="p-6 flex justify-between items-center border-b border-slate-800">
+        <span id="fecha-actual" class="text-slate-400 font-medium"></span>
+        <span class="bg-slate-800 text-emerald-400 px-3 py-1 rounded-full text-sm font-semibold tracking-wide">Nequi</span>
+    </header>
+
+    <!-- Pantalla de Monto -->
+    <div class="flex-1 flex flex-col justify-center items-center p-6">
+        <span class="text-slate-500 text-lg mb-2">Ingresar gasto</span>
+        <div id="monto-display" class="text-6xl font-bold tracking-tighter text-white">
+            $ 0
+        </div>
+    </div>
+
+    <!-- Categorías Rápida (Ejecutan el guardado) -->
+    <div class="grid grid-cols-4 gap-2 px-4 pb-4" id="categorias-container">
+        <!-- Se inyectan dinámicamente desde Supabase -->
+    </div>
+
+    <!-- Numpad -->
+    <div class="grid grid-cols-3 gap-2 p-4 bg-slate-950 rounded-t-3xl">
+        <button onclick="digitar('1')" class="py-5 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">1</button>
+        <button onclick="digitar('2')" class="py-5 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">2</button>
+        <button onclick="digitar('3')" class="py-5 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">3</button>
+        <button onclick="digitar('4')" class="py-5 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">4</button>
+        <button onclick="digitar('5')" class="py-5 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">5</button>
+        <button onclick="digitar('6')" class="py-5 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">6</button>
+        <button onclick="digitar('7')" class="py-5 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">7</button>
+        <button onclick="digitar('8')" class="py-5 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">8</button>
+        <button onclick="digitar('9')" class="py-5 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">9</button>
+        <button onclick="limpiar()" class="py-5 text-lg font-medium text-red-400 bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">C</button>
+        <button onclick="digitar('0')" class="py-5 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">0</button>
+        <button onclick="borrar()" class="py-5 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">⌫</button>
+    </div>
+
+    <script>
+        // 1. Configuración de Supabase
+        const supabaseUrl = 'TU_URL_DE_SUPABASE';
+        const supabaseKey = 'TU_ANON_KEY';
+        const db = supabase.createClient(supabaseUrl, supabaseKey);
+
+        // 2. Estado de la App
+        let monto = '0';
+        const formateador = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+        const pantalla = document.getElementById('monto-display');
+
+        // Fecha en el header
+        document.getElementById('fecha-actual').textContent = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }).format(new Date());
+
+        // 3. Lógica del Numpad
+        function actualizarPantalla() {
+            pantalla.textContent = formateador.format(parseInt(monto || '0'));
+        }
+        function digitar(num) {
+            if (monto === '0' || monto === 0) monto = num;
+            else if (monto.length < 10) monto += num;
+            actualizarPantalla();
+        }
+        function borrar() {
+            monto = monto.slice(0, -1);
+            if (monto === '') monto = '0';
+            actualizarPantalla();
+        }
+        function limpiar() {
+            monto = '0';
+            actualizarPantalla();
+        }
+
+        // 4. Carga de Categorías desde Supabase
+        async function cargarCategorias() {
+            const { data, error } = await db.from('categorias').select('*').eq('tipo', 'gasto');
+            if (error) return console.error(error);
+            
+            const contenedor = document.getElementById('categorias-container');
+            data.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.className = "flex flex-col items-center justify-center py-3 bg-slate-800 rounded-xl active:bg-blue-600 active:scale-95 transition-all border border-slate-700";
+                btn.innerHTML = `<span class="text-2xl mb-1">${cat.icono}</span><span class="text-xs text-slate-300">${cat.nombre}</span>`;
+                btn.onclick = () => guardarTransaccion(cat.id);
+                contenedor.appendChild(btn);
+            });
+        }
+
+        // 5. Motor de Guardado y Sincronización Offline
+        async function guardarTransaccion(categoriaId) {
+            const valorGasto = parseInt(monto);
+            if (valorGasto === 0) return;
+
+            const payload = {
+                monto: valorGasto,
+                categoria_id: categoriaId,
+                cuenta: 'Nequi',
+                fecha: new Date().toISOString()
+            };
+
+            if (navigator.onLine) {
+                // Hay internet: Envío directo
+                const { error } = await db.from('transacciones').insert([payload]);
+                if (error) console.error("Error guardando:", error);
+                else vibrarExito();
+            } else {
+                // Modo offline: Encolar en LocalStorage
+                let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+                queue.push(payload);
+                localStorage.setItem('offline_queue', JSON.stringify(queue));
+                vibrarExito();
+            }
+
+            limpiar();
+        }
+
+        function vibrarExito() {
+            if (navigator.vibrate) navigator.vibrate(50);
+            pantalla.style.color = '#34d399'; // Verde momentáneo
+            setTimeout(() => pantalla.style.color = 'white', 300);
+        }
+
+        // Sincronizar cola cuando vuelva el internet
+        window.addEventListener('online', async () => {
+            let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+            if (queue.length > 0) {
+                const { error } = await db.from('transacciones').insert(queue);
+                if (!error) localStorage.removeItem('offline_queue');
+            }
+        });
+
+        // 6. Init PWA y Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Falló:', err));
+        }
+        
+        cargarCategorias();
+    </script>
+</body>
+</html>
