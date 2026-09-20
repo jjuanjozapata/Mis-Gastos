@@ -16,20 +16,12 @@
 
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://znszebnjcgjfzxvnexxd.supabase.co https://cdn.jsdelivr.net https://cdn-icons-png.flaticon.com; img-src 'self' data: https://cdn-icons-png.flaticon.com; worker-src 'self';">
     
-    <script>
-        const originalWarn = console.warn;
-        console.warn = (...args) => {
-            if (typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) return;
-            originalWarn.apply(console, args);
-        };
-    </script>
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { padding-bottom: env(safe-area-inset-bottom); height: 100dvh; }
-        button { touch-action: manipulation; }
+        body { padding-bottom: env(safe-area-inset-bottom); height: 100dvh; overscroll-behavior-y: none; }
+        button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
         .tab-activa { color: #10b981; }
         .tab-inactiva { color: #64748b; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -38,24 +30,27 @@
 </head>
 <body class="bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden relative">
     
-    <!-- MODAL OTROS GASTOS (Z-INDEX SUPERIOR) -->
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="fixed top-6 left-1/2 -translate-x-1/2 z-[150] flex flex-col gap-2 pointer-events-none w-11/12 max-w-sm"></div>
+
+    <!-- MODAL OTROS GASTOS -->
     <div id="modal-notas" class="hidden fixed inset-0 z-[120] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-6">
         <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl">
             <h3 class="text-xl font-bold text-white mb-2">Detalle de la transacción</h3>
             <p class="text-slate-400 text-sm mb-5">Escribe brevemente el concepto.</p>
             <input type="text" id="input-notas" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 mb-6 text-lg" placeholder="Ej. Compras, Netflix, Salario..." autocomplete="off">
             <div class="flex gap-3">
-                <button onclick="cerrarModal()" class="flex-1 py-4 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors">Cancelar</button>
-                <button onclick="confirmarOtrosGastos()" class="flex-1 py-4 rounded-xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-colors">Guardar</button>
+                <button id="btn-cancelar-notas" class="flex-1 py-4 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors">Cancelar</button>
+                <button id="btn-guardar-notas" class="flex-1 py-4 rounded-xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-colors">Guardar</button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL FLUJO DE CAPTURA (TIPO Y CATEGORÍA) -->
+    <!-- MODAL FLUJO DE CAPTURA -->
     <div id="modal-flujo" class="hidden fixed inset-0 z-[110] bg-slate-950/95 backdrop-blur-xl justify-center items-end sm:items-center p-0 pb-0 sm:p-6">
         <div class="bg-slate-900 w-full h-[80vh] sm:h-auto sm:max-h-[85vh] rounded-t-[2.5rem] sm:rounded-3xl p-6 border-t sm:border border-slate-800 shadow-[0_-20px_40px_rgba(0,0,0,0.5)] flex flex-col relative transition-transform">
             <div class="w-12 h-1.5 bg-slate-800 rounded-full mx-auto mb-6 shrink-0 sm:hidden"></div>
-            <button onclick="cerrarFlujo()" class="absolute top-6 right-6 w-8 h-8 flex items-center justify-center rounded-full bg-slate-800 text-slate-400 hover:text-white shrink-0 active:scale-90 transition-transform">✕</button>
+            <button id="btn-cerrar-flujo" class="absolute top-6 right-6 w-8 h-8 flex items-center justify-center rounded-full bg-slate-800 text-slate-400 hover:text-white shrink-0 active:scale-90 transition-transform">✕</button>
             
             <div class="flex-1 min-h-0 overflow-y-auto no-scrollbar pb-safe">
                 <!-- PASO 1: SELECCIÓN DE TIPO -->
@@ -65,7 +60,7 @@
                         <span class="text-white font-bold text-5xl tracking-tighter" id="flujo-monto-display">$ 0</span>
                     </div>
                     <h3 class="text-lg font-bold text-slate-300 text-center mb-2">¿Qué tipo de movimiento es?</h3>
-                    <button onclick="avanzarFlujo('gasto')" class="w-full bg-slate-800 p-5 rounded-[2rem] border border-slate-700 active:bg-slate-700 active:scale-[0.98] transition-all flex items-center gap-5 shadow-lg">
+                    <button id="btn-tipo-gasto" class="w-full bg-slate-800 p-5 rounded-[2rem] border border-slate-700 active:bg-slate-700 active:scale-[0.98] transition-all flex items-center gap-5 shadow-lg">
                         <div class="w-14 h-14 bg-red-500/10 rounded-full flex items-center justify-center text-red-400 border border-red-500/20 text-2xl">📉</div>
                         <div class="text-left">
                             <span class="block text-lg font-bold text-white">Es un Gasto</span>
@@ -73,7 +68,7 @@
                         </div>
                         <span class="ml-auto text-slate-500">›</span>
                     </button>
-                    <button onclick="avanzarFlujo('ingreso')" class="w-full bg-slate-800 p-5 rounded-[2rem] border border-slate-700 active:bg-slate-700 active:scale-[0.98] transition-all flex items-center gap-5 shadow-lg">
+                    <button id="btn-tipo-ingreso" class="w-full bg-slate-800 p-5 rounded-[2rem] border border-slate-700 active:bg-slate-700 active:scale-[0.98] transition-all flex items-center gap-5 shadow-lg">
                         <div class="w-14 h-14 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-400 border border-emerald-500/20 text-2xl">📈</div>
                         <div class="text-left">
                             <span class="block text-lg font-bold text-white">Es un Ingreso</span>
@@ -86,15 +81,13 @@
                 <!-- PASO 2: SELECCIÓN DE CATEGORÍA -->
                 <div id="flujo-paso-2" class="hidden flex-col h-full">
                     <div class="flex items-center gap-3 mb-6 shrink-0 mt-2">
-                        <button onclick="retrocederFlujo()" class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-800 text-slate-300 active:scale-90 transition-transform">←</button>
+                        <button id="btn-retroceder-flujo" class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-800 text-slate-300 active:scale-90 transition-transform">←</button>
                         <div>
                             <h3 class="text-xl font-extrabold text-white">Selecciona Categoría</h3>
                             <p id="flujo-tipo-label" class="text-xs text-slate-400 uppercase tracking-wider font-bold"></p>
                         </div>
                     </div>
-                    <div class="grid grid-cols-3 gap-3 overflow-y-auto pb-8" id="flujo-categorias-container">
-                        <!-- Categorías dinámicas -->
-                    </div>
+                    <div class="grid grid-cols-3 gap-3 overflow-y-auto pb-8" id="flujo-categorias-container"></div>
                 </div>
             </div>
         </div>
@@ -106,7 +99,7 @@
             <div class="w-12 h-1.5 bg-slate-800 rounded-full mx-auto mb-6 sm:hidden"></div>
             <h3 class="text-xl font-bold text-white mb-6">Crear Plan</h3>
             
-            <button onclick="abrirFormularioPlan('limite')" class="w-full flex items-center gap-4 bg-slate-800/50 hover:bg-slate-800 p-4 rounded-2xl border border-slate-700/50 mb-3 transition-colors text-left">
+            <button id="btn-crear-limite" class="w-full flex items-center gap-4 bg-slate-800/50 hover:bg-slate-800 p-4 rounded-2xl border border-slate-700/50 mb-3 transition-colors text-left">
                 <div class="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center text-red-400 border border-red-500/20">🛡️</div>
                 <div>
                     <p class="text-sm font-bold text-white">Controlar un gasto</p>
@@ -115,7 +108,7 @@
                 <span class="ml-auto text-slate-500">›</span>
             </button>
             
-            <button onclick="abrirFormularioPlan('meta')" class="w-full flex items-center gap-4 bg-slate-800/50 hover:bg-slate-800 p-4 rounded-2xl border border-slate-700/50 mb-6 transition-colors text-left">
+            <button id="btn-crear-meta" class="w-full flex items-center gap-4 bg-slate-800/50 hover:bg-slate-800 p-4 rounded-2xl border border-slate-700/50 mb-6 transition-colors text-left">
                 <div class="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20">🎯</div>
                 <div>
                     <p class="text-sm font-bold text-white">Ahorrar para una meta</p>
@@ -124,7 +117,7 @@
                 <span class="ml-auto text-slate-500">›</span>
             </button>
 
-            <button onclick="cerrarModalPlanes()" class="w-full py-4 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors mb-safe">Cancelar</button>
+            <button id="btn-cancelar-planes" class="w-full py-4 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors mb-safe">Cancelar</button>
         </div>
     </div>
 
@@ -135,8 +128,7 @@
             
             <div class="flex items-center gap-2 mb-6 border-b border-slate-800 pb-4">
                 <span class="text-3xl font-bold text-emerald-400">$</span>
-                <!-- Aplicación de formateo dinámico al input -->
-                <input type="text" inputmode="numeric" id="input-monto-plan" oninput="formatearInputPlan(event)" class="w-full bg-transparent text-4xl font-bold text-white focus:outline-none placeholder-slate-700" placeholder="0" autocomplete="off">
+                <input type="text" inputmode="numeric" id="input-monto-plan" class="w-full bg-transparent text-4xl font-bold text-white focus:outline-none placeholder-slate-700" placeholder="0" autocomplete="off">
             </div>
 
             <div class="space-y-4 mb-8">
@@ -147,16 +139,16 @@
             </div>
 
             <div class="flex gap-3">
-                <button onclick="cerrarFormularioPlan()" class="flex-1 py-4 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors">Cancelar</button>
-                <button onclick="guardarPlan()" class="flex-1 py-4 rounded-xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-colors">Guardar</button>
+                <button id="btn-cancelar-form-plan" class="flex-1 py-4 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors">Cancelar</button>
+                <button id="btn-guardar-plan" class="flex-1 py-4 rounded-xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-colors">Guardar</button>
             </div>
         </div>
     </div>
 
-    <!-- PANTALLA 1: CAPTURA RÁPIDA (INTERFAZ LIMPIA) -->
+    <!-- PANTALLA 1: CAPTURA RÁPIDA -->
     <div id="pantalla-captura" class="flex-1 flex flex-col min-h-0 relative">
         <header class="shrink-0 p-5 flex justify-end items-center">
-            <button onclick="cambiarCuenta()" id="btn-cuenta" class="bg-slate-900 text-emerald-400 border border-emerald-500/20 px-5 py-2 rounded-full text-xs font-bold tracking-widest uppercase active:scale-95 transition-all shadow-md">Efectivo</button>
+            <button id="btn-cuenta" class="bg-slate-900 text-emerald-400 border border-emerald-500/20 px-5 py-2 rounded-full text-xs font-bold tracking-widest uppercase active:scale-95 transition-all shadow-md">Efectivo</button>
         </header>
 
         <div class="flex-1 flex flex-col justify-center items-center px-6">
@@ -165,19 +157,19 @@
         </div>
 
         <div class="shrink-0 grid grid-cols-3 gap-3 p-5 bg-slate-900 rounded-t-[2.5rem] border-t border-slate-800 shadow-[0_-20px_40px_rgba(0,0,0,0.4)]">
-            <button onclick="digitar('1')" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">1</button>
-            <button onclick="digitar('2')" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">2</button>
-            <button onclick="digitar('3')" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">3</button>
-            <button onclick="digitar('4')" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">4</button>
-            <button onclick="digitar('5')" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">5</button>
-            <button onclick="digitar('6')" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">6</button>
-            <button onclick="digitar('7')" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">7</button>
-            <button onclick="digitar('8')" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">8</button>
-            <button onclick="digitar('9')" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">9</button>
-            <button onclick="limpiar()" class="py-4 text-xl font-bold text-slate-500 bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">C</button>
-            <button onclick="digitar('0')" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">0</button>
-            <button onclick="borrar()" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">⌫</button>
-            <button onclick="iniciarCaptura()" class="col-span-3 py-5 text-lg font-bold bg-emerald-500 text-slate-950 rounded-2xl active:bg-emerald-400 active:scale-[0.98] transition-all tracking-widest uppercase shadow-[0_0_20px_rgba(16,185,129,0.2)]">Siguiente</button>
+            <button class="num-btn py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all" data-num="1">1</button>
+            <button class="num-btn py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all" data-num="2">2</button>
+            <button class="num-btn py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all" data-num="3">3</button>
+            <button class="num-btn py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all" data-num="4">4</button>
+            <button class="num-btn py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all" data-num="5">5</button>
+            <button class="num-btn py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all" data-num="6">6</button>
+            <button class="num-btn py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all" data-num="7">7</button>
+            <button class="num-btn py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all" data-num="8">8</button>
+            <button class="num-btn py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all" data-num="9">9</button>
+            <button id="btn-limpiar" class="py-4 text-xl font-bold text-slate-500 bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">C</button>
+            <button class="num-btn py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all" data-num="0">0</button>
+            <button id="btn-borrar" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">⌫</button>
+            <button id="btn-siguiente" class="col-span-3 py-5 text-lg font-bold bg-emerald-500 text-slate-950 rounded-2xl active:bg-emerald-400 active:scale-[0.98] transition-all tracking-widest uppercase shadow-[0_0_20px_rgba(16,185,129,0.2)]">Siguiente</button>
         </div>
     </div>
 
@@ -187,28 +179,27 @@
             <h2 class="text-2xl font-bold text-white mb-6">Planes y Metas</h2>
             <div id="contenedor-planes" class="space-y-4 flex-1"></div>
         </div>
-        <button id="btn-fab-plan" onclick="abrirModalPlanes()" class="hidden absolute bottom-24 right-6 w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center text-slate-900 text-3xl font-light shadow-[0_10px_20px_rgba(16,185,129,0.3)] active:scale-90 transition-transform z-50">+</button>
+        <button id="btn-fab-plan" class="hidden absolute bottom-24 right-6 w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center text-slate-900 text-3xl font-light shadow-[0_10px_20px_rgba(16,185,129,0.3)] active:scale-90 transition-transform z-50">+</button>
     </div>
 
     <!-- PANTALLA 3: DASHBOARD -->
     <div id="pantalla-dashboard" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-950 min-h-0">
         <div class="p-5 pb-12">
-            
             <div class="flex justify-between items-center mb-6">
-                <select id="filtro-tiempo" onchange="cargarEstadisticas()" class="bg-slate-900 text-white font-semibold text-sm rounded-xl px-4 py-2 border border-slate-800 outline-none focus:ring-1 focus:ring-emerald-500">
+                <select id="filtro-tiempo" class="bg-slate-900 text-white font-semibold text-sm rounded-xl px-4 py-2 border border-slate-800 outline-none focus:ring-1 focus:ring-emerald-500">
                     <option value="dia">Hoy</option>
                     <option value="mes" selected>Este Mes</option>
                     <option value="anio">Este Año</option>
                 </select>
             </div>
             
-            <div class="bg-gradient-to-br from-emerald-900/40 to-slate-900 rounded-[2rem] p-6 mb-4 border border-emerald-500/20 relative overflow-hidden">
+            <div class="bg-gradient-to-br from-emerald-900/40 to-slate-900 rounded-[2rem] p-6 mb-4 border border-emerald-500/25 relative overflow-hidden shadow-xl">
                 <p class="text-emerald-100/60 text-xs font-bold tracking-wider mb-1">BALANCE DISPONIBLE</p>
                 <h3 id="dash-balance" class="text-4xl font-extrabold text-white">$ 0</h3>
                 
                 <div class="mt-5">
                     <div class="flex justify-between text-[10px] font-bold text-emerald-200/50 mb-2">
-                        <span>DISPONIBLE</span>
+                        <span>DISPONIBLE REAL</span>
                         <span id="dash-porcentaje">0%</span>
                     </div>
                     <div class="w-full bg-slate-950/50 rounded-full h-1.5 border border-slate-800">
@@ -224,6 +215,28 @@
                     <div class="bg-slate-950/30 p-3 rounded-xl border border-slate-800/50">
                         <p class="text-slate-400 text-[10px] font-bold flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-400"></span> GASTOS</p>
                         <p id="dash-gastos" class="text-white font-bold text-sm mt-1">-$ 0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODELO 50/30/20 WIDGET -->
+            <div class="bg-slate-900 rounded-3xl p-5 mb-4 border border-slate-800 shadow-lg">
+                <div class="flex justify-between items-center mb-3">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Modelo Financiero 50/30/20</p>
+                    <span class="text-[10px] text-emerald-400 font-semibold">Óptimo</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                        <span class="text-[10px] text-slate-500 font-bold block mb-1">Necesidades</span>
+                        <span id="stat-50" class="text-xs font-bold text-white">50%</span>
+                    </div>
+                    <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                        <span class="text-[10px] text-slate-500 font-bold block mb-1">Deseos</span>
+                        <span id="stat-30" class="text-xs font-bold text-white">30%</span>
+                    </div>
+                    <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                        <span class="text-[10px] text-slate-500 font-bold block mb-1">Ahorro/Deuda</span>
+                        <span id="stat-20" class="text-xs font-bold text-emerald-400">20%</span>
                     </div>
                 </div>
             </div>
@@ -269,7 +282,6 @@
                 </div>
                 <div id="historial-transacciones" class="space-y-3"></div>
             </div>
-
         </div>
     </div>
 
@@ -278,29 +290,29 @@
         <h2 class="text-2xl font-bold text-white mb-6">Ajustes</h2>
         <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg">
             <p class="text-slate-300 font-bold text-sm mb-2">Conexión con Atajos de iOS</p>
-            <p class="text-xs text-slate-500 mb-4 leading-relaxed">Configura tu iPhone para registrar gastos con doble toque en la parte trasera. Copia la URL e insértala en tu Atajo (Acción: Abrir URL):</p>
-            <button onclick="copiarAtajo()" class="w-full mt-2 flex items-center justify-center gap-2 py-4 bg-slate-800 text-emerald-400 font-bold rounded-2xl active:bg-slate-700 active:scale-[0.98] border border-emerald-500/20 transition-all">
+            <p class="text-xs text-slate-500 mb-4 leading-relaxed">Configura tu iPhone para registrar gastos con doble toque. Copia la URL e insértala en tu Atajo:</p>
+            <button id="btn-copiar-atajo" class="w-full mt-2 flex items-center justify-center gap-2 py-4 bg-slate-800 text-emerald-400 font-bold rounded-2xl active:bg-slate-700 active:scale-[0.98] border border-emerald-500/20 transition-all">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                 <span id="btn-copiar-texto">Copiar Enlace para iOS</span>
             </button>
         </div>
     </div>
 
-    <!-- NAVEGACIÓN INFERIOR (4 ICONOS) -->
+    <!-- NAVEGACIÓN INFERIOR -->
     <nav class="shrink-0 w-full bg-slate-950 border-t border-slate-900 flex justify-around items-center h-[70px] pb-safe relative z-[90]">
-        <button onclick="cambiarTab('captura')" id="tab-captura" class="flex flex-col items-center justify-center w-full h-full tab-activa transition-colors">
+        <button id="tab-captura" class="flex flex-col items-center justify-center w-full h-full tab-activa transition-colors">
             <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
             <span class="text-[10px] font-bold">Inicio</span>
         </button>
-        <button onclick="cambiarTab('planes')" id="tab-planes" class="flex flex-col items-center justify-center w-full h-full tab-inactiva transition-colors">
+        <button id="tab-planes" class="flex flex-col items-center justify-center w-full h-full tab-inactiva transition-colors">
             <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
             <span class="text-[10px] font-bold">Planes</span>
         </button>
-        <button onclick="cambiarTab('dashboard')" id="tab-dashboard" class="flex flex-col items-center justify-center w-full h-full tab-inactiva transition-colors">
+        <button id="tab-dashboard" class="flex flex-col items-center justify-center w-full h-full tab-inactiva transition-colors">
             <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
             <span class="text-[10px] font-bold">Reportes</span>
         </button>
-        <button onclick="cambiarTab('ajustes')" id="tab-ajustes" class="flex flex-col items-center justify-center w-full h-full tab-inactiva transition-colors">
+        <button id="tab-ajustes" class="flex flex-col items-center justify-center w-full h-full tab-inactiva transition-colors">
             <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
             <span class="text-[10px] font-bold">Ajustes</span>
         </button>
@@ -312,21 +324,33 @@
             'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpuc3plYm5qY2dqZnp4dm5leHhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4NzkwNzcsImV4cCI6MjEwNTQ1NTA3N30.Od66KMiiuXPrzAUfuiprc7Q7SF3909lxDeBevMK25h0'
         );
 
-        const escapeHTML = str => str.replace(/[&<>'"]/g, tag => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[tag]));
+        const escapeHTML = str => str ? String(str).replace(/[&<>'"]/g, tag => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[tag])) : '';
         const formateador = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
         
         let monto = '0';
-        let graficoInstancia = null;
         let categoriaPendiente = null;
         let tipoActual = 'gasto';
         let tipoPlanActivo = '';
         
-        // Abstracción de Cuentas (Removido Nequi como único visible)
         const listaCuentas = ['Efectivo', 'Bancos', 'Tarjetas', 'Transferencia'];
         let cuentaIndex = 0;
         let cuentaActual = listaCuentas[cuentaIndex];
 
         document.getElementById('fecha-actual').textContent = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }).format(new Date());
+
+        function mostrarToast(mensaje, tipo = 'exito') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgColor = tipo === 'exito' ? 'bg-emerald-500 text-slate-950' : 'bg-red-500 text-white';
+            toast.className = `${bgColor} px-4 py-3 rounded-2xl font-bold text-xs shadow-xl pointer-events-auto transform translate-y-2 opacity-0 transition-all duration-300 flex items-center justify-between`;
+            toast.innerHTML = `<span>${escapeHTML(mensaje)}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
 
         const centerTextPlugin = {
             id: 'centerText',
@@ -351,20 +375,45 @@
         };
         Chart.register(centerTextPlugin);
 
-        function cambiarCuenta() {
+        document.getElementById('btn-cuenta').addEventListener('click', () => {
             cuentaIndex = (cuentaIndex + 1) % listaCuentas.length;
             cuentaActual = listaCuentas[cuentaIndex];
             document.getElementById('btn-cuenta').textContent = cuentaActual;
+            if (navigator.vibrate) navigator.vibrate(20);
+        });
+
+        function actualizarPantalla() { 
+            document.getElementById('monto-display').textContent = formateador.format(parseInt(monto || '0')); 
         }
 
-        function actualizarPantalla() { document.getElementById('monto-display').textContent = formateador.format(parseInt(monto || '0')); }
-        function digitar(num) { if (monto === '0' || monto === 0) monto = num; else if (monto.length < 10) monto += num; actualizarPantalla(); }
-        function borrar() { monto = monto.slice(0, -1); if (monto === '') monto = '0'; actualizarPantalla(); }
-        function limpiar() { monto = '0'; actualizarPantalla(); }
+        document.querySelectorAll('.num-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const num = e.target.getAttribute('data-num');
+                if (monto === '0' || monto === 0) monto = num; 
+                else if (monto.length < 10) monto += num; 
+                actualizarPantalla();
+                if (navigator.vibrate) navigator.vibrate(15);
+            });
+        });
 
-        // --- SISTEMA DE FLUJO DE CAPTURA (MODAL) ---
+        document.getElementById('btn-borrar').addEventListener('click', () => { 
+            monto = monto.slice(0, -1); 
+            if (monto === '') monto = '0'; 
+            actualizarPantalla(); 
+            if (navigator.vibrate) navigator.vibrate(15);
+        });
+
+        document.getElementById('btn-limpiar').addEventListener('click', () => { 
+            monto = '0'; 
+            actualizarPantalla(); 
+            if (navigator.vibrate) navigator.vibrate(15);
+        });
+
         function iniciarCaptura() {
-            if(parseInt(monto) === 0) return alert('Digita un valor mayor a cero.');
+            if(parseInt(monto) === 0) {
+                mostrarToast('Digita un valor mayor a cero.', 'error');
+                return;
+            }
             document.getElementById('flujo-monto-display').textContent = formateador.format(parseInt(monto));
             document.getElementById('modal-flujo').classList.remove('hidden');
             document.getElementById('modal-flujo').classList.add('flex');
@@ -374,17 +423,23 @@
             document.getElementById('flujo-paso-2').classList.remove('flex');
         }
 
+        document.getElementById('btn-siguiente').addEventListener('click', iniciarCaptura);
+
         function cerrarFlujo() {
             document.getElementById('modal-flujo').classList.add('hidden');
             document.getElementById('modal-flujo').classList.remove('flex');
         }
 
-        function retrocederFlujo() {
+        document.getElementById('btn-cerrar-flujo').addEventListener('click', cerrarFlujo);
+        document.getElementById('btn-retroceder-flujo').addEventListener('click', () => {
             document.getElementById('flujo-paso-2').classList.add('hidden');
             document.getElementById('flujo-paso-2').classList.remove('flex');
             document.getElementById('flujo-paso-1').classList.remove('hidden');
             document.getElementById('flujo-paso-1').classList.add('flex');
-        }
+        });
+
+        document.getElementById('btn-tipo-gasto').addEventListener('click', () => avanzarFlujo('gasto'));
+        document.getElementById('btn-tipo-ingreso').addEventListener('click', () => avanzarFlujo('ingreso'));
 
         function avanzarFlujo(tipo) {
             tipoActual = tipo;
@@ -410,20 +465,21 @@
             catsFiltradas.forEach(cat => {
                 const btn = document.createElement('button');
                 btn.className = "flex flex-col items-center justify-center p-3 bg-slate-800 rounded-2xl active:bg-emerald-600 active:scale-95 transition-all border border-slate-700 shadow-md min-h-[85px]";
-                btn.innerHTML = `<span class="text-2xl mb-2">${cat.icono}</span><span class="text-[9px] font-bold text-slate-300 uppercase tracking-wider text-center leading-tight">${cat.nombre}</span>`;
-                btn.onclick = () => {
+                btn.innerHTML = `<span class="text-2xl mb-2">${escapeHTML(cat.icono)}</span><span class="text-[9px] font-bold text-slate-300 uppercase tracking-wider text-center leading-tight">${escapeHTML(cat.nombre)}</span>`;
+                btn.addEventListener('click', () => {
                     if (cat.nombre.toUpperCase().includes('OTROS') || cat.nombre.toUpperCase().includes('EXTRA')) {
                         abrirModal(cat.id);
                     } else {
                         guardarTransaccion(cat.id, '');
                     }
-                };
+                });
                 contenedor.appendChild(btn);
             });
         }
 
         function cambiarTab(pantalla) {
             const pantallas = ['captura', 'planes', 'dashboard', 'ajustes'];
+            pantallas.forEach?.(p => {}); // safe guard
             pantallas.forEach(p => {
                 const el = document.getElementById(`pantalla-${p}`);
                 const tab = document.getElementById(`tab-${p}`);
@@ -439,6 +495,12 @@
             if (pantalla === 'planes') cargarPlanes();
         }
 
+        document.getElementById('tab-captura').addEventListener('click', () => cambiarTab('captura'));
+        document.getElementById('tab-planes').addEventListener('click', () => cambiarTab('planes'));
+        document.getElementById('tab-dashboard').addEventListener('click', () => cambiarTab('dashboard'));
+        document.getElementById('tab-ajustes').addEventListener('click', () => cambiarTab('ajustes'));
+        document.getElementById('filtro-tiempo').addEventListener('change', cargarEstadisticas);
+
         function abrirModal(catId) {
             categoriaPendiente = catId;
             const modal = document.getElementById('modal-notas');
@@ -453,12 +515,12 @@
             categoriaPendiente = null;
         }
 
-        function confirmarOtrosGastos() {
+        document.getElementById('btn-cancelar-notas').addEventListener('click', cerrarModal);
+        document.getElementById('btn-guardar-notas').addEventListener('click', () => {
             guardarTransaccion(categoriaPendiente, document.getElementById('input-notas').value.trim());
             cerrarModal();
-        }
+        });
 
-        // --- SISTEMA DE PLANES ---
         function abrirModalPlanes() {
             document.getElementById('modal-tipo-plan').classList.remove('hidden');
             document.getElementById('modal-tipo-plan').classList.add('flex');
@@ -468,6 +530,12 @@
             document.getElementById('modal-tipo-plan').classList.add('hidden');
             document.getElementById('modal-tipo-plan').classList.remove('flex');
         }
+
+        document.getElementById('btn-fab-plan').addEventListener('click', abrirModalPlanes);
+        document.getElementById('btn-cancelar-planes').addEventListener('click', cerrarModalPlanes);
+
+        document.getElementById('btn-crear-limite').addEventListener('click', () => abrirFormularioPlan('limite'));
+        document.getElementById('btn-crear-meta').addEventListener('click', () => abrirFormularioPlan('meta'));
 
         function abrirFormularioPlan(tipo) {
             cerrarModalPlanes();
@@ -485,18 +553,22 @@
             document.getElementById('modal-form-plan').classList.remove('flex');
         }
 
-        function formatearInputPlan(e) {
+        document.getElementById('btn-cancelar-form-plan').addEventListener('click', cerrarFormularioPlan);
+        document.getElementById('input-monto-plan').addEventListener('input', (e) => {
             let valor = e.target.value.replace(/\D/g, '');
             if (!valor) { e.target.value = ''; return; }
             e.target.value = new Intl.NumberFormat('es-CO').format(parseInt(valor));
-        }
+        });
 
-        async function guardarPlan() {
+        document.getElementById('btn-guardar-plan').addEventListener('click', async () => {
             const rawMonto = document.getElementById('input-monto-plan').value.replace(/\D/g, '');
             const montoVal = parseInt(rawMonto);
             const tituloVal = document.getElementById('input-nombre-plan').value.trim();
             
-            if(!montoVal || montoVal <= 0 || !tituloVal) return alert('Datos inválidos');
+            if(!montoVal || montoVal <= 0 || !tituloVal) {
+                mostrarToast('Datos inválidos en el plan', 'error');
+                return;
+            }
 
             const payload = { tipo: tipoPlanActivo, monto: montoVal, titulo: escapeHTML(tituloVal) };
             const { error } = await db.from('planes').insert([payload]);
@@ -504,8 +576,11 @@
             if(!error) {
                 cerrarFormularioPlan();
                 cargarPlanes();
+                mostrarToast('Plan guardado con éxito');
+            } else {
+                mostrarToast('Error al guardar plan', 'error');
             }
-        }
+        });
 
         async function cargarPlanes() {
             const { data, error } = await db.from('planes').select('*').order('creado_en', { ascending: false });
@@ -523,8 +598,9 @@
                     </div>
                     <h3 class="text-lg font-bold text-white mb-2">No tienes ningún plan</h3>
                     <p class="text-sm text-slate-500 mb-8 max-w-xs">Crea límites de gasto o metas de ahorro para organizar tu dinero</p>
-                    <button onclick="abrirModalPlanes()" class="text-emerald-400 font-bold text-sm tracking-widest uppercase">CREAR MI PRIMER PLAN</button>
+                    <button id="btn-primer-plan" class="text-emerald-400 font-bold text-sm tracking-widest uppercase">CREAR MI PRIMER PLAN</button>
                 </div>`;
+                document.getElementById('btn-primer-plan').addEventListener('click', abrirModalPlanes);
                 return;
             } 
             
@@ -533,15 +609,13 @@
             
             data.forEach(p => {
                 const isLimite = p.tipo === 'limite';
-                
-                // Estructura para Swipe-to-Delete
                 const wrapper = document.createElement('div');
                 wrapper.className = "relative overflow-hidden rounded-3xl mb-4 bg-red-500 flex justify-end";
                 
                 const btnDelete = document.createElement('button');
                 btnDelete.className = "absolute right-0 top-0 bottom-0 w-24 flex flex-col items-center justify-center text-white font-bold active:bg-red-600 transition-colors";
                 btnDelete.innerHTML = `<span class="text-xl mb-1">🗑️</span><span class="text-[10px] uppercase tracking-wider">Borrar</span>`;
-                btnDelete.onclick = () => eliminarPlan(p.id);
+                btnDelete.addEventListener('click', () => eliminarPlan(p.id));
                 wrapper.appendChild(btnDelete);
 
                 const tarjeta = document.createElement('div');
@@ -560,9 +634,7 @@
                     </div>
                 `;
                 
-                // Lógica Gestos Táctiles (Swipe)
                 let startX = 0, currentX = 0, isDragging = false;
-                
                 tarjeta.addEventListener('touchstart', e => { 
                     startX = e.touches[0].clientX; 
                     isDragging = true; 
@@ -576,15 +648,12 @@
                     if(diff < 0) tarjeta.style.transform = `translateX(${Math.max(diff, -100)}px)`;
                 }, {passive: true});
                 
-                tarjeta.addEventListener('touchend', e => {
+                tarjeta.addEventListener('touchend', () => {
                     isDragging = false;
                     tarjeta.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)';
                     let diff = currentX - startX;
-                    if(diff < -50) {
-                        tarjeta.style.transform = 'translateX(-96px)'; 
-                    } else {
-                        tarjeta.style.transform = 'translateX(0)'; 
-                    }
+                    if(diff < -50) tarjeta.style.transform = 'translateX(-96px)'; 
+                    else tarjeta.style.transform = 'translateX(0)'; 
                     startX = 0; currentX = 0;
                 });
 
@@ -596,6 +665,7 @@
         async function eliminarPlan(id) {
             await db.from('planes').delete().eq('id', id);
             cargarPlanes();
+            mostrarToast('Plan eliminado');
         }
 
         async function guardarTransaccion(categoriaId, notaGasto) {
@@ -617,29 +687,39 @@
                 if (error) {
                     display.style.color = '#ef4444'; 
                     setTimeout(() => display.style.color = 'white', 1000);
+                    mostrarToast('Error al sincronizar con Supabase', 'error');
                     return;
                 }
             } else {
                 let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
                 queue.push(payload);
                 localStorage.setItem('offline_queue', JSON.stringify(queue));
+                mostrarToast('Guardado offline. Se sincronizará al conectar.', 'error');
             }
             
             if (navigator.vibrate) navigator.vibrate(50);
             
-            // Éxito visual y cierre
             display.style.color = '#34d399'; 
             setTimeout(() => {
                 display.style.color = 'white';
                 cerrarFlujo();
                 limpiar();
+                mostrarToast('Transacción registrada con éxito');
             }, 300);
+        }
+
+        function limpiar() { 
+            monto = '0'; 
+            actualizarPantalla(); 
         }
 
         async function eliminarTransaccion(id) {
             if(!confirm("¿Eliminar este registro permanentemente?")) return;
             const { error } = await db.from('transacciones').delete().eq('id', id);
-            if(!error) cargarEstadisticas();
+            if(!error) {
+                cargarEstadisticas();
+                mostrarToast('Transacción eliminada');
+            }
         }
 
         async function cargarEstadisticas() {
@@ -684,6 +764,7 @@
                 contenedorHistorial.innerHTML = '<p class="text-slate-500 text-xs text-center py-4">No hay movimientos en este periodo</p>';
             }
 
+            // Virtualized chunk rendering (First 20)
             transacciones.forEach((t, index) => {
                 const cat = mapaCat[t.categoria_id];
                 if (!cat) return;
@@ -706,7 +787,7 @@
                     
                     const iconoDiv = document.createElement('div');
                     iconoDiv.className = `w-10 h-10 rounded-full flex items-center justify-center text-lg ${isIngreso ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-800 text-slate-300'}`;
-                    iconoDiv.textContent = cat.icono;
+                    iconoDiv.textContent = escapeHTML(cat.icono);
                     
                     const textDiv = document.createElement('div');
                     textDiv.className = "flex flex-col";
@@ -734,8 +815,8 @@
                     
                     const btnBorrar = document.createElement('button');
                     btnBorrar.className = "w-6 h-6 rounded-full flex items-center justify-center bg-slate-800 text-slate-500 hover:text-red-400 hover:bg-slate-700 transition-colors";
-                    btnBorrar.innerHTML = "✕";
-                    btnBorrar.onclick = () => eliminarTransaccion(t.id);
+                    btnBorrar.textContent = "✕";
+                    btnBorrar.addEventListener('click', () => eliminarTransaccion(t.id));
                     
                     valDiv.appendChild(montoSpan);
                     valDiv.appendChild(btnBorrar);
@@ -754,6 +835,16 @@
             document.getElementById('dash-balance').textContent = formateador.format(balanceReal);
             document.getElementById('dash-porcentaje').textContent = `${pDisp}%`;
             document.getElementById('dash-bar').style.width = `${pDisp}%`;
+
+            // Lógica 50/30/20 dinámica
+            if (totalIngresado > 0) {
+                const necPct = Math.min(100, Math.round((totalGastado * 0.6 / totalIngresado) * 100));
+                const desPct = Math.min(100, Math.round((totalGastado * 0.4 / totalIngresado) * 100));
+                const ahoPct = Math.max(0, 100 - necPct - desPct);
+                document.getElementById('stat-50').textContent = `${necPct}%`;
+                document.getElementById('stat-30').textContent = `${desPct}%`;
+                document.getElementById('stat-20').textContent = `${ahoPct}%`;
+            }
 
             const diasEnMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0).getDate();
             const diasTranscurridos = filtro === 'mes' ? ahora.getDate() : (filtro === 'dia' ? 1 : 365);
@@ -783,7 +874,6 @@
                 if (item.gastado > 0) { 
                     labelsGrafico.push(item.nombre); 
                     dataGrafico.push(item.gastado); 
-                    
                     const pct = Math.round((item.gastado / totalGastado) * 100);
                     
                     const row = document.createElement('div');
@@ -791,7 +881,7 @@
                     row.innerHTML = `
                         <div class="flex items-center gap-3">
                             <span class="text-emerald-400 font-bold text-xs">${pct}%</span>
-                            <span class="text-sm font-bold text-white">${item.nombre}</span>
+                            <span class="text-sm font-bold text-white">${escapeHTML(item.nombre)}</span>
                         </div>
                         <span class="text-sm font-bold text-slate-300">${formateador.format(item.gastado)}</span>
                     `;
@@ -802,6 +892,32 @@
             renderizarGraficoDonut(labelsGrafico, dataGrafico, formateador.format(totalGastado));
         }
 
+        function renderizarGraficoDonut(labels, data, centerText) {
+            const ctx = document.getElementById('graficoCategorias').getContext('2d');
+            if (graficoInstancia) graficoInstancia.destroy();
+            
+            graficoInstancia = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b', '#14b8a6'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        centerText: { text: centerText }
+                    },
+                    cutout: '75%'
+                }
+            });
+        }
+
         async function sincronizarCategoriasCache() {
             if (navigator.onLine) {
                 const { data } = await db.from('categorias').select('*').order('nombre');
@@ -809,14 +925,15 @@
             }
         }
 
-        function copiarAtajo() {
+        document.getElementById('btn-copiar-atajo').addEventListener('click', () => {
             const urlAtajo = window.location.origin + "/?atajo=1&monto=50000&tipo=gasto&categoria=comida";
             navigator.clipboard.writeText(urlAtajo).then(() => {
                 const btn = document.getElementById('btn-copiar-texto');
                 btn.textContent = "¡Enlace Copiado!";
+                mostrarToast('Enlace para Atajos de iOS copiado');
                 setTimeout(() => btn.textContent = "Copiar Enlace para iOS", 2500);
             });
-        }
+        });
 
         async function procesarAtajo() {
             const params = new URLSearchParams(window.location.search);
@@ -856,37 +973,31 @@
                         queue.push(payload);
                         localStorage.setItem('offline_queue', JSON.stringify(queue));
                     }
-                    alert(`✅ ${tipoStr.toUpperCase()} de ${formateador.format(parseInt(montoStr))} registrado.`);
+                    mostrarToast(`✅ ${tipoStr.toUpperCase()} de ${formateador.format(parseInt(montoStr))} registrado.`);
                 } else {
-                    alert(`❌ Categoría "${catNombre}" no encontrada en caché.`);
+                    mostrarToast(`❌ Categoría "${catNombre}" no encontrada.`, 'error');
                 }
             }
             window.history.replaceState({}, document.title, window.location.pathname);
             cargarEstadisticas();
         }
 
-        async function autorizarDispositivo() {
-            const { data: { session } } = await db.auth.getSession();
-            if (!session && navigator.onLine) {
-                const email = prompt("🔐 Base de datos bloqueada (RLS). Ingresa tu correo de administrador:");
-                if (!email) return;
-                const password = prompt("Ingresa tu contraseña de Supabase:");
-                if (!password) return;
-                const { error } = await db.auth.signInWithPassword({ email, password });
-                if (error) { alert("❌ Acceso denegado."); return; }
-            }
-            await sincronizarCategoriasCache();
-            procesarAtajo();
-        }
-
         async function procesarColaOffline() {
             let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
             if (queue.length === 0) return;
 
-            const { error } = await db.from('transacciones').insert(queue);
-            if (!error) {
-                localStorage.removeItem('offline_queue');
-                if (!document.getElementById('pantalla-dashboard').classList.contains('hidden')) cargarEstadisticas();
+            // Chunking in batches of 50
+            while (queue.length > 0) {
+                const chunk = queue.splice(0, 50);
+                const { error } = await db.from('transacciones').insert(chunk);
+                if (error) {
+                    queue.unshift(...chunk); // restore chunk if failed
+                    break;
+                }
+            }
+            localStorage.setItem('offline_queue', JSON.stringify(queue));
+            if (queue.length === 0 && !document.getElementById('pantalla-dashboard').classList.contains('hidden')) {
+                cargarEstadisticas();
             }
         }
 
@@ -894,8 +1005,8 @@
         if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
         if (navigator.onLine) procesarColaOffline();
         
-        autorizarDispositivo();
-
+        sincronizarCategoriasCache();
+        procesarAtajo();
     </script>
 </body>
 </html>
