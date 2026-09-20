@@ -151,40 +151,31 @@ if (navigator.onLine) procesarColaOffline();
         function borrar() { monto = monto.slice(0, -1); if (monto === '') monto = '0'; actualizarPantalla(); }
         function limpiar() { monto = '0'; actualizarPantalla(); }
 
-        async function cargarCategorias() {
-    const { data, error } = await db.from('categorias').select('*').eq('tipo', 'gasto').order('nombre');
-    if (error) return console.error(error);
+
+
+        async function autorizarDispositivo() {
+    const { data: { session } } = await db.auth.getSession();
     
-    const contenedor = document.getElementById('categorias-container');
-    contenedor.innerHTML = ''; // Aquí es seguro limpiar
-    
-    data.forEach(cat => {
-        const btn = document.createElement('button');
-        btn.className = "flex flex-col items-center justify-center py-2 bg-slate-800 rounded-xl active:bg-emerald-600 active:scale-95 transition-all border border-slate-700 min-h-[70px]";
+    // Si no hay sesión, lanzamos el prompt nativo de autenticación
+    if (!session) {
+        const email = prompt("🔐 Base de datos bloqueada (RLS). Ingresa tu correo de administrador:");
+        if (!email) return;
         
-        const spanIcono = document.createElement('span');
-        spanIcono.className = "text-xl mb-1";
-        spanIcono.textContent = cat.icono; // Seguro contra XSS
+        const password = prompt("Ingresa tu contraseña de Supabase:");
+        if (!password) return;
+
+        const { error } = await db.auth.signInWithPassword({ email, password });
         
-        const spanNombre = document.createElement('span');
-        spanNombre.className = "text-[8px] font-bold text-slate-300 uppercase tracking-wider text-center px-1 leading-tight";
-        spanNombre.textContent = cat.nombre; // Seguro contra XSS
-        
-        btn.appendChild(spanIcono);
-        btn.appendChild(spanNombre);
-        
-        btn.onclick = () => {
-            if (parseInt(monto) > 0) {
-                if (cat.nombre.toUpperCase().includes('OTROS')) {
-                    abrirModal(cat.id);
-                } else {
-                    guardarTransaccion(cat.id, '');
-                }
-            }
-        };
-        contenedor.appendChild(btn);
-    });
+        if (error) {
+            alert("❌ Acceso denegado: " + error.message);
+        } else {
+            alert("✅ Dispositivo autorizado. El RLS ahora permitirá tus transacciones.");
+        }
+    }
 }
+
+// Ejecutamos la validación al abrir la app
+autorizarDispositivo();
 
         function abrirModal(catId) {
             categoriaPendiente = catId;

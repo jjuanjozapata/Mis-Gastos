@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gastos-v3'; // <--- Esto obliga al iPhone a actualizarse
+const CACHE_NAME = 'gastos-v4'; // <--- Al cambiar esto, el iPhone se actualiza a la fuerza
 const ASSETS = [
     '/',
     '/index.html',
