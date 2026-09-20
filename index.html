@@ -2,54 +2,64 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>WZ Finanzas</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        /* Ajustes críticos para iPhone (Evitar solapamientos) */
+        :root { --safe-bottom: env(safe-area-inset-bottom, 20px); }
+        body { padding-bottom: var(--safe-bottom); }
         button { touch-action: manipulation; }
         .tab-activa { color: #34d399; }
         .tab-inactiva { color: #64748b; }
+        /* Ocultar barra de scroll en categorías para un look más limpio */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 h-screen flex flex-col font-sans select-none pb-16">
+<body class="bg-slate-900 text-slate-100 h-[100dvh] flex flex-col font-sans select-none overflow-hidden">
     
     <!-- PANTALLA 1: CAPTURA RÁPIDA -->
-    <div id="pantalla-captura" class="flex-1 flex flex-col h-full">
-        <header class="p-6 flex justify-between items-center border-b border-slate-800">
+    <div id="pantalla-captura" class="flex-1 flex flex-col h-full overflow-hidden">
+        <!-- Header (Fijo arriba) -->
+        <header class="shrink-0 p-5 flex justify-between items-center border-b border-slate-800">
             <span id="fecha-actual" class="text-slate-400 font-medium"></span>
             <span class="bg-slate-800 text-emerald-400 px-3 py-1 rounded-full text-sm font-semibold tracking-wide">Nequi</span>
         </header>
 
-        <div class="flex-1 flex flex-col justify-center items-center p-6">
-            <span class="text-slate-500 text-lg mb-2">Ingresar gasto</span>
+        <!-- Monto (Se adapta al espacio) -->
+        <div class="flex-1 flex flex-col justify-center items-center py-2 min-h-[80px]">
+            <span class="text-slate-500 text-sm mb-1">Ingresar gasto</span>
             <div id="monto-display" class="text-6xl font-bold tracking-tighter text-white transition-colors">$ 0</div>
         </div>
 
-        <!-- Botones dinámicos -->
-        <div class="grid grid-cols-4 gap-2 px-4 pb-4" id="categorias-container"></div>
+        <!-- Categorías (Deslizables verticalmente si son muchas) -->
+        <div class="grid grid-cols-4 gap-2 px-4 pb-3 overflow-y-auto no-scrollbar shrink h-[25vh]" id="categorias-container">
+            <!-- Se inyectan dinámicamente -->
+        </div>
 
-        <!-- Teclado Numérico -->
-        <div class="grid grid-cols-3 gap-2 p-4 bg-slate-950 rounded-t-3xl shadow-2xl shadow-black">
-            <button onclick="digitar('1')" class="py-5 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">1</button>
-            <button onclick="digitar('2')" class="py-5 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">2</button>
-            <button onclick="digitar('3')" class="py-5 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">3</button>
-            <button onclick="digitar('4')" class="py-5 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">4</button>
-            <button onclick="digitar('5')" class="py-5 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">5</button>
-            <button onclick="digitar('6')" class="py-5 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">6</button>
-            <button onclick="digitar('7')" class="py-5 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">7</button>
-            <button onclick="digitar('8')" class="py-5 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">8</button>
-            <button onclick="digitar('9')" class="py-5 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">9</button>
-            <button onclick="limpiar()" class="py-5 text-lg font-medium text-red-400 bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">C</button>
-            <button onclick="digitar('0')" class="py-5 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">0</button>
-            <button onclick="borrar()" class="py-5 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">⌫</button>
+        <!-- Teclado Numérico (Anclado rígidamente abajo) -->
+        <div class="grid grid-cols-3 gap-2 p-4 bg-slate-950 rounded-t-3xl shadow-[0_-10px_30px_rgba(0,0,0,0.5)] shrink-0">
+            <button onclick="digitar('1')" class="py-4 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">1</button>
+            <button onclick="digitar('2')" class="py-4 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">2</button>
+            <button onclick="digitar('3')" class="py-4 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">3</button>
+            <button onclick="digitar('4')" class="py-4 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">4</button>
+            <button onclick="digitar('5')" class="py-4 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">5</button>
+            <button onclick="digitar('6')" class="py-4 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">6</button>
+            <button onclick="digitar('7')" class="py-4 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">7</button>
+            <button onclick="digitar('8')" class="py-4 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">8</button>
+            <button onclick="digitar('9')" class="py-4 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">9</button>
+            <button onclick="limpiar()" class="py-4 text-lg font-bold text-red-400 bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">C</button>
+            <button onclick="digitar('0')" class="py-4 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">0</button>
+            <button onclick="borrar()" class="py-4 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">⌫</button>
         </div>
     </div>
 
     <!-- PANTALLA 2: DASHBOARD -->
-    <div id="pantalla-dashboard" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-900 pb-8">
+    <div id="pantalla-dashboard" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-900">
         <div class="p-6">
             <h2 class="text-2xl font-bold text-white mb-6">Resumen Mensual</h2>
             
@@ -63,12 +73,12 @@
                 <canvas id="graficoCategorias" height="250"></canvas>
             </div>
             
-            <div id="lista-presupuestos" class="space-y-4"></div>
+            <div id="lista-presupuestos" class="space-y-4 pb-4"></div>
         </div>
     </div>
 
-    <!-- NAVEGACIÓN INFERIOR -->
-    <nav class="fixed bottom-0 w-full bg-slate-950 border-t border-slate-800 flex justify-around items-center h-16 pb-safe">
+    <!-- NAVEGACIÓN INFERIOR (Ahora empuja el contenido sin solaparse) -->
+    <nav class="w-full bg-slate-950 border-t border-slate-800 flex justify-around items-center h-[70px] shrink-0">
         <button onclick="cambiarTab('captura')" id="tab-captura" class="flex flex-col items-center justify-center w-full h-full tab-activa transition-colors">
             <span class="text-2xl mb-1">⌨️</span>
             <span class="text-[10px] font-bold">Ingresar</span>
@@ -122,8 +132,8 @@
             contenedor.innerHTML = '';
             data.forEach(cat => {
                 const btn = document.createElement('button');
-                btn.className = "flex flex-col items-center justify-center py-3 bg-slate-800 rounded-xl active:bg-emerald-600 active:scale-95 transition-all border border-slate-700";
-                btn.innerHTML = `<span class="text-2xl mb-1">${cat.icono}</span><span class="text-[9px] font-bold text-slate-300 uppercase tracking-wider text-center px-1 leading-tight">${cat.nombre}</span>`;
+                btn.className = "flex flex-col items-center justify-center py-2 bg-slate-800 rounded-xl active:bg-emerald-600 active:scale-95 transition-all border border-slate-700 min-h-[70px]";
+                btn.innerHTML = `<span class="text-xl mb-1">${cat.icono}</span><span class="text-[8px] font-bold text-slate-300 uppercase tracking-wider text-center px-1 leading-tight">${cat.nombre}</span>`;
                 btn.onclick = () => guardarTransaccion(cat.id);
                 contenedor.appendChild(btn);
             });
@@ -139,7 +149,7 @@
             if (navigator.onLine) {
                 const { error } = await db.from('transacciones').insert([payload]);
                 if (error) {
-                    display.style.color = '#ef4444'; // Rojo si falla BD
+                    display.style.color = '#ef4444'; 
                     setTimeout(() => display.style.color = 'white', 1000);
                     return;
                 }
@@ -150,13 +160,12 @@
             }
             
             if (navigator.vibrate) navigator.vibrate(50);
-            display.style.color = '#34d399'; // Verde si fue un éxito
+            display.style.color = '#34d399'; 
             setTimeout(() => display.style.color = 'white', 300);
             limpiar();
         }
 
         async function cargarEstadisticas() {
-            // Lógica interna para evadir el bug de horario de Colombia
             const fecha = new Date();
             const inicioDeMes = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-01`;
 
@@ -230,7 +239,6 @@
             });
         }
         
-        // PWA INIT
         if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
         cargarCategorias();
     </script>
