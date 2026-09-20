@@ -36,8 +36,11 @@
     <!-- PANTALLA 1: CAPTURA RÁPIDA -->
     <div id="pantalla-captura" class="flex-1 flex flex-col min-h-0 relative">
         <header class="shrink-0 p-5 flex justify-between items-center border-b border-slate-800">
-            <span id="fecha-actual" class="text-slate-400 font-medium"></span>
-            <span class="bg-slate-800 text-emerald-400 px-3 py-1 rounded-full text-sm font-semibold tracking-wide">Nequi</span>
+            <div class="flex gap-1 bg-slate-800 p-1 rounded-xl">
+                <button id="btn-tipo-gasto" onclick="cambiarTipoTransaccion('gasto')" class="bg-slate-600 text-white px-4 py-1 rounded-lg text-xs font-bold transition-all shadow-md">GASTO</button>
+                <button id="btn-tipo-ingreso" onclick="cambiarTipoTransaccion('ingreso')" class="text-slate-400 px-4 py-1 rounded-lg text-xs font-bold transition-all">INGRESO</button>
+            </div>
+            <button onclick="cambiarCuenta()" id="btn-cuenta" class="bg-slate-800 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full text-sm font-semibold tracking-wide active:scale-95 transition-all">Nequi</button>
         </header>
 
         <div class="shrink-0 flex flex-col justify-center items-center py-4">
@@ -68,13 +71,27 @@
     <!-- PANTALLA 2: DASHBOARD -->
     <div id="pantalla-dashboard" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-900 min-h-0">
         <div class="p-6 pb-12">
-            <h2 class="text-2xl font-bold text-white mb-6">Resumen Mensual</h2>
-            <div class="bg-slate-800 rounded-2xl p-5 mb-6 border border-slate-700">
-                <p class="text-slate-400 text-sm font-medium">Total Gastado este Mes</p>
-                <h3 id="dash-total-gastado" class="text-4xl font-bold text-red-400 mt-1">$ 0</h3>
+            <h2 class="text-2xl font-bold text-white mb-6">Flujo de Caja</h2>
+            
+            <div class="bg-slate-800 rounded-3xl p-5 mb-6 border border-slate-700 shadow-xl relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl"></div>
+                <p class="text-slate-400 text-sm font-medium relative z-10">Balance Disponible</p>
+                <h3 id="dash-balance" class="text-4xl font-bold text-white mt-1 relative z-10">$ 0</h3>
+                
+                <div class="grid grid-cols-2 gap-4 mt-6 relative z-10 border-t border-slate-700 pt-4">
+                    <div>
+                        <p class="text-slate-500 text-xs font-medium mb-1">Ingresos</p>
+                        <p id="dash-ingresos" class="text-lg font-bold text-emerald-400">$ 0</p>
+                    </div>
+                    <div>
+                        <p class="text-slate-500 text-xs font-medium mb-1">Gastos</p>
+                        <p id="dash-gastos" class="text-lg font-bold text-red-400">$ 0</p>
+                    </div>
+                </div>
             </div>
-            <div class="bg-slate-800 rounded-2xl p-5 mb-6 border border-slate-700">
-                <p class="text-slate-200 text-sm font-semibold mb-4">Distribución</p>
+
+            <div class="bg-slate-800 rounded-3xl p-5 mb-6 border border-slate-700">
+                <p class="text-slate-200 text-sm font-semibold mb-4">Distribución de Gastos</p>
                 <canvas id="graficoCategorias" height="250"></canvas>
             </div>
             <div id="lista-presupuestos" class="space-y-4"></div>
@@ -103,6 +120,36 @@
         let monto = '0';
         let graficoInstancia = null;
         let categoriaPendiente = null;
+        let tipoActual = 'gasto';
+let cuentaActual = 'Nequi';
+const listaCuentas = ['Nequi', 'Efectivo', 'Bancolombia'];
+let cuentaIndex = 0;
+
+function cambiarCuenta() {
+    cuentaIndex = (cuentaIndex + 1) % listaCuentas.length;
+    cuentaActual = listaCuentas[cuentaIndex];
+    document.getElementById('btn-cuenta').textContent = cuentaActual;
+}
+
+function cambiarTipoTransaccion(tipo) {
+    tipoActual = tipo;
+    const btnGasto = document.getElementById('btn-tipo-gasto');
+    const btnIngreso = document.getElementById('btn-tipo-ingreso');
+    const display = document.getElementById('monto-display');
+    
+    if (tipo === 'gasto') {
+        btnGasto.className = 'bg-slate-600 text-white px-4 py-1 rounded-lg text-xs font-bold transition-all shadow-md';
+        btnIngreso.className = 'text-slate-400 px-4 py-1 rounded-lg text-xs font-bold transition-all';
+        display.classList.remove('text-emerald-400');
+        display.classList.add('text-white');
+    } else {
+        btnIngreso.className = 'bg-emerald-600 text-white px-4 py-1 rounded-lg text-xs font-bold transition-all shadow-md';
+        btnGasto.className = 'text-slate-400 px-4 py-1 rounded-lg text-xs font-bold transition-all';
+        display.classList.remove('text-white');
+        display.classList.add('text-emerald-400');
+    }
+    cargarCategorias(); 
+}
 
         document.getElementById('fecha-actual').textContent = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }).format(new Date());
 
@@ -173,13 +220,14 @@
             const valorGasto = parseInt(monto);
             if (valorGasto === 0) return;
 
-            const payload = { 
-                monto: valorGasto, 
-                categoria_id: categoriaId, 
-                cuenta: 'Nequi', 
-                fecha: new Date().toISOString(),
-                notas: notaGasto || null 
-            };
+            // Cambia el valor estático 'Nequi' por la variable dinámica:
+const payload = { 
+    monto: valorGasto, 
+    categoria_id: categoriaId, 
+    cuenta: cuentaActual, // <-- Conexión dinámica
+    fecha: new Date().toISOString(),
+    notas: notaGasto || null 
+};
             
             const display = document.getElementById('monto-display');
 
@@ -203,81 +251,96 @@
         }
 
         async function cargarEstadisticas() {
-            const fecha = new Date();
-            const inicioDeMes = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-01`;
+    const fecha = new Date();
+    const inicioDeMes = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-01`;
 
-            const { data: categorias, error: errCat } = await db.from('categorias').select('*').eq('tipo', 'gasto');
-            const { data: transacciones, error: errTrans } = await db.from('transacciones').select('*').gte('fecha', inicioDeMes);
-            
-            if (errCat || errTrans) return console.error("Error BD:", errCat, errTrans);
+    const { data: categorias, error: errCat } = await db.from('categorias').select('*');
+    const { data: transacciones, error: errTrans } = await db.from('transacciones').select('*').gte('fecha', inicioDeMes);
+    
+    if (errCat || errTrans) return console.error("Error BD:", errCat, errTrans);
 
-            let totalGastadoMes = 0;
-            const reporte = {};
-            
-            categorias.forEach(c => { reporte[c.id] = { nombre: c.nombre, presupuesto: parseFloat(c.presupuesto_mensual) || 0, gastado: 0 }; });
-            transacciones.forEach(t => {
-                if (reporte[t.categoria_id]) {
-                    const valor = parseFloat(t.monto);
-                    reporte[t.categoria_id].gastado += valor;
-                    totalGastadoMes += valor;
-                }
-            });
+    let totalGastadoMes = 0;
+    let totalIngresadoMes = 0;
+    const reporteGastos = {};
+    const mapaCat = {};
+    
+    categorias.forEach(c => { 
+        mapaCat[c.id] = c;
+        if(c.tipo === 'gasto') reporteGastos[c.id] = { nombre: c.nombre, presupuesto: parseFloat(c.presupuesto_mensual) || 0, gastado: 0 }; 
+    });
 
-            const labelsGrafico = [];
-            const dataGrafico = [];
-            const contenedorLista = document.getElementById('lista-presupuestos');
-            contenedorLista.innerHTML = '';
+    transacciones.forEach(t => {
+        const cat = mapaCat[t.categoria_id];
+        const valor = parseFloat(t.monto);
+        if (!cat) return;
 
-            if (totalGastadoMes === 0) {
-                document.getElementById('dash-total-gastado').textContent = '$ 0';
-                renderizarGraficoDonut(['Sin datos'], [1]);
-                return;
-            }
-
-            Object.values(reporte).sort((a,b) => b.gastado - a.gastado).forEach(item => {
-                if (item.gastado > 0) { labelsGrafico.push(item.nombre); dataGrafico.push(item.gastado); }
-                const porcentaje = item.presupuesto > 0 ? Math.min((item.gastado / item.presupuesto) * 100, 100).toFixed(0) : 0;
-                const colorBarra = porcentaje > 90 ? 'bg-red-500' : (porcentaje > 70 ? 'bg-yellow-400' : 'bg-emerald-400');
-
-                if (item.gastado > 0 || item.presupuesto > 0) {
-                    const tarjeta = document.createElement('div');
-                    tarjeta.className = "bg-slate-800 p-4 rounded-xl border border-slate-700 mb-4";
-
-                    const cabecera = document.createElement('div');
-                    cabecera.className = "flex justify-between items-end mb-2";
-
-                    const nombreSpan = document.createElement('span');
-                    nombreSpan.className = "font-bold text-white uppercase text-xs tracking-wider";
-                    nombreSpan.textContent = item.nombre;
-
-                    const valoresSpan = document.createElement('span');
-                    valoresSpan.className = "text-xs text-slate-400";
-                    valoresSpan.textContent = `${formateador.format(item.gastado)} de ${formateador.format(item.presupuesto)}`;
-
-                    cabecera.appendChild(nombreSpan);
-                    cabecera.appendChild(valoresSpan);
-
-                    const contenedorBarra = document.createElement('div');
-                    contenedorBarra.className = "w-full bg-slate-900 rounded-full h-2.5";
-
-                    const barra = document.createElement('div');
-                    barra.className = `${colorBarra} h-2.5 rounded-full transition-all duration-1000`;
-                    barra.style.width = `${porcentaje}%`;
-
-                    contenedorBarra.appendChild(barra);
-                    tarjeta.appendChild(cabecera);
-                    tarjeta.appendChild(contenedorBarra);
-
-                    contenedorLista.appendChild(tarjeta);
-                }
-            });
-
-            document.getElementById('dash-total-gastado').textContent = formateador.format(totalGastadoMes);
-            renderizarGraficoDonut(labelsGrafico, dataGrafico);
+        if (cat.tipo === 'ingreso') {
+            totalIngresadoMes += valor;
+        } else if (cat.tipo === 'gasto') {
+            totalGastadoMes += valor;
+            if(reporteGastos[t.categoria_id]) reporteGastos[t.categoria_id].gastado += valor;
         }
+    });
+
+    const balanceReal = totalIngresadoMes - totalGastadoMes;
+
+    document.getElementById('dash-ingresos').textContent = formateador.format(totalIngresadoMes);
+    document.getElementById('dash-gastos').textContent = formateador.format(totalGastadoMes);
+    document.getElementById('dash-balance').textContent = formateador.format(balanceReal);
+
+    const labelsGrafico = [];
+    const dataGrafico = [];
+    const contenedorLista = document.getElementById('lista-presupuestos');
+    contenedorLista.innerHTML = '';
+
+    if (totalGastadoMes === 0) {
+        renderizarGraficoDonut(['Sin datos'], [1]);
+        return;
+    }
+
+    Object.values(reporteGastos).sort((a,b) => b.gastado - a.gastado).forEach(item => {
+        if (item.gastado > 0) { labelsGrafico.push(item.nombre); dataGrafico.push(item.gastado); }
+        const porcentaje = item.presupuesto > 0 ? Math.min((item.gastado / item.presupuesto) * 100, 100).toFixed(0) : 0;
+        const colorBarra = porcentaje > 90 ? 'bg-red-500' : (porcentaje > 70 ? 'bg-yellow-400' : 'bg-emerald-400');
+
+        if (item.gastado > 0 || item.presupuesto > 0) {
+            const tarjeta = document.createElement('div');
+            tarjeta.className = "bg-slate-800 p-4 rounded-xl border border-slate-700 mb-4";
+
+            const cabecera = document.createElement('div');
+            cabecera.className = "flex justify-between items-end mb-2";
+
+            const nombreSpan = document.createElement('span');
+            nombreSpan.className = "font-bold text-white uppercase text-xs tracking-wider";
+            nombreSpan.textContent = item.nombre;
+
+            const valoresSpan = document.createElement('span');
+            valoresSpan.className = "text-xs text-slate-400";
+            valoresSpan.textContent = `${formateador.format(item.gastado)} de ${formateador.format(item.presupuesto)}`;
+
+            cabecera.appendChild(nombreSpan);
+            cabecera.appendChild(valoresSpan);
+
+            const contenedorBarra = document.createElement('div');
+            contenedorBarra.className = "w-full bg-slate-900 rounded-full h-2.5";
+
+            const barra = document.createElement('div');
+            barra.className = `${colorBarra} h-2.5 rounded-full transition-all duration-1000`;
+            barra.style.width = `${porcentaje}%`;
+
+            contenedorBarra.appendChild(barra);
+            tarjeta.appendChild(cabecera);
+            tarjeta.appendChild(contenedorBarra);
+
+            contenedorLista.appendChild(tarjeta);
+        }
+    });
+
+    renderizarGraficoDonut(labelsGrafico, dataGrafico);
+}
 
         async function cargarCategorias() {
-            const { data, error } = await db.from('categorias').select('*').eq('tipo', 'gasto').order('nombre');
+            const { data, error } = await db.from('categorias').select('*').eq('tipo', tipoActual).order('nombre');
             if (error) return console.error("Error BD:", error);
             
             const contenedor = document.getElementById('categorias-container');
