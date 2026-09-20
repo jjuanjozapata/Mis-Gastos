@@ -18,7 +18,7 @@ self.addEventListener('activate', event => {
                     if (key !== CACHE_NAME) return caches.delete(key);
                 })
             );
-        })
+        }).then(() => self.clients.claim()) // Toma el control inmediatamente
     );
 });
 

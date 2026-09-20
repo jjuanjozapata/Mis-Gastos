@@ -98,6 +98,27 @@
             'https://znszebnjcgjfzxvnexxd.supabase.co', 
             'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpuc3plYm5qY2dqZnp4dm5leHhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4NzkwNzcsImV4cCI6MjEwNTQ1NTA3N30.Od66KMiiuXPrzAUfuiprc7Q7SF3909lxDeBevMK25h0'
         );
+        // Disparador automático cuando el iPhone recupera la red
+window.addEventListener('online', procesarColaOffline);
+
+async function procesarColaOffline() {
+    let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+    if (queue.length === 0) return;
+
+    // Inserción masiva optimizada
+    const { error } = await db.from('transacciones').insert(queue);
+    
+    if (!error) {
+        localStorage.removeItem('offline_queue');
+        console.log(`Sincronizadas ${queue.length} transacciones pendientes.`);
+        if (!document.getElementById('pantalla-dashboard').classList.contains('hidden')) {
+            cargarEstadisticas();
+        }
+    }
+}
+
+// Ejecutar revisión inicial al abrir la app
+if (navigator.onLine) procesarColaOffline();
 
         const formateador = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
         let monto = '0';
@@ -131,29 +152,39 @@
         function limpiar() { monto = '0'; actualizarPantalla(); }
 
         async function cargarCategorias() {
-            const { data, error } = await db.from('categorias').select('*').eq('tipo', 'gasto').order('nombre');
-            if (error) return console.error(error);
-            
-            const contenedor = document.getElementById('categorias-container');
-            contenedor.innerHTML = '';
-            data.forEach(cat => {
-                const btn = document.createElement('button');
-                btn.className = "flex flex-col items-center justify-center py-2 bg-slate-800 rounded-xl active:bg-emerald-600 active:scale-95 transition-all border border-slate-700 min-h-[70px]";
-                btn.innerHTML = `<span class="text-xl mb-1">${cat.icono}</span><span class="text-[8px] font-bold text-slate-300 uppercase tracking-wider text-center px-1 leading-tight">${cat.nombre}</span>`;
-                
-                btn.onclick = () => {
-                    if (parseInt(monto) > 0) {
-                        // Validación a prueba de balas buscando la palabra "OTROS"
-                        if (cat.nombre.toUpperCase().includes('OTROS')) {
-                            abrirModal(cat.id);
-                        } else {
-                            guardarTransaccion(cat.id, '');
-                        }
-                    }
-                };
-                contenedor.appendChild(btn);
-            });
-        }
+    const { data, error } = await db.from('categorias').select('*').eq('tipo', 'gasto').order('nombre');
+    if (error) return console.error(error);
+    
+    const contenedor = document.getElementById('categorias-container');
+    contenedor.innerHTML = ''; // Aquí es seguro limpiar
+    
+    data.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.className = "flex flex-col items-center justify-center py-2 bg-slate-800 rounded-xl active:bg-emerald-600 active:scale-95 transition-all border border-slate-700 min-h-[70px]";
+        
+        const spanIcono = document.createElement('span');
+        spanIcono.className = "text-xl mb-1";
+        spanIcono.textContent = cat.icono; // Seguro contra XSS
+        
+        const spanNombre = document.createElement('span');
+        spanNombre.className = "text-[8px] font-bold text-slate-300 uppercase tracking-wider text-center px-1 leading-tight";
+        spanNombre.textContent = cat.nombre; // Seguro contra XSS
+        
+        btn.appendChild(spanIcono);
+        btn.appendChild(spanNombre);
+        
+        btn.onclick = () => {
+            if (parseInt(monto) > 0) {
+                if (cat.nombre.toUpperCase().includes('OTROS')) {
+                    abrirModal(cat.id);
+                } else {
+                    guardarTransaccion(cat.id, '');
+                }
+            }
+        };
+        contenedor.appendChild(btn);
+    });
+}
 
         function abrirModal(catId) {
             categoriaPendiente = catId;
