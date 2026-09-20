@@ -23,9 +23,9 @@
     <!-- MODAL OTROS GASTOS -->
     <div id="modal-notas" class="hidden fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-6">
         <div class="bg-slate-800 w-full max-w-sm rounded-3xl p-6 border border-slate-700 shadow-2xl">
-            <h3 class="text-xl font-bold text-white mb-2">Detalle del gasto</h3>
-            <p class="text-slate-400 text-sm mb-5">Escribe brevemente en qué gastaste este dinero.</p>
-            <input type="text" id="input-notas" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 mb-6 text-lg" placeholder="Ej. Helado, Cine, Pasajes..." autocomplete="off">
+            <h3 class="text-xl font-bold text-white mb-2">Detalle de la transacción</h3>
+            <p class="text-slate-400 text-sm mb-5">Escribe brevemente el concepto.</p>
+            <input type="text" id="input-notas" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 mb-6 text-lg" placeholder="Ej. Helado, Cine, Venta..." autocomplete="off">
             <div class="flex gap-3">
                 <button onclick="cerrarModal()" class="flex-1 py-4 rounded-xl bg-slate-700 text-white font-bold active:bg-slate-600 transition-colors">Cancelar</button>
                 <button onclick="confirmarOtrosGastos()" class="flex-1 py-4 rounded-xl bg-emerald-500 text-slate-900 font-bold active:bg-emerald-400 transition-colors">Guardar</button>
@@ -40,11 +40,11 @@
                 <button id="btn-tipo-gasto" onclick="cambiarTipoTransaccion('gasto')" class="bg-slate-600 text-white px-4 py-1 rounded-lg text-xs font-bold transition-all shadow-md">GASTO</button>
                 <button id="btn-tipo-ingreso" onclick="cambiarTipoTransaccion('ingreso')" class="text-slate-400 px-4 py-1 rounded-lg text-xs font-bold transition-all">INGRESO</button>
             </div>
-            <button onclick="cambiarCuenta()" id="btn-cuenta" class="bg-slate-800 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full text-sm font-semibold tracking-wide active:scale-95 transition-all">Nequi</button>
+            <button onclick="cambiarCuenta()" id="btn-cuenta" class="bg-slate-800 text-emerald-400 border border-emerald-500/30 px-4 py-1.5 rounded-full text-sm font-semibold tracking-wide active:scale-95 transition-all">Nequi</button>
         </header>
 
         <div class="shrink-0 flex flex-col justify-center items-center py-4">
-            <span class="text-slate-500 text-sm mb-1">Ingresar gasto</span>
+            <span id="fecha-actual" class="text-slate-500 text-sm mb-1 font-medium"></span>
             <div id="monto-display" class="text-6xl font-bold tracking-tighter text-white transition-colors">$ 0</div>
         </div>
 
@@ -120,38 +120,39 @@
         let monto = '0';
         let graficoInstancia = null;
         let categoriaPendiente = null;
+        
         let tipoActual = 'gasto';
-let cuentaActual = 'Nequi';
-const listaCuentas = ['Nequi', 'Efectivo', 'Bancolombia'];
-let cuentaIndex = 0;
-
-function cambiarCuenta() {
-    cuentaIndex = (cuentaIndex + 1) % listaCuentas.length;
-    cuentaActual = listaCuentas[cuentaIndex];
-    document.getElementById('btn-cuenta').textContent = cuentaActual;
-}
-
-function cambiarTipoTransaccion(tipo) {
-    tipoActual = tipo;
-    const btnGasto = document.getElementById('btn-tipo-gasto');
-    const btnIngreso = document.getElementById('btn-tipo-ingreso');
-    const display = document.getElementById('monto-display');
-    
-    if (tipo === 'gasto') {
-        btnGasto.className = 'bg-slate-600 text-white px-4 py-1 rounded-lg text-xs font-bold transition-all shadow-md';
-        btnIngreso.className = 'text-slate-400 px-4 py-1 rounded-lg text-xs font-bold transition-all';
-        display.classList.remove('text-emerald-400');
-        display.classList.add('text-white');
-    } else {
-        btnIngreso.className = 'bg-emerald-600 text-white px-4 py-1 rounded-lg text-xs font-bold transition-all shadow-md';
-        btnGasto.className = 'text-slate-400 px-4 py-1 rounded-lg text-xs font-bold transition-all';
-        display.classList.remove('text-white');
-        display.classList.add('text-emerald-400');
-    }
-    cargarCategorias(); 
-}
+        let cuentaActual = 'Nequi';
+        const listaCuentas = ['Nequi', 'Efectivo', 'Bancolombia'];
+        let cuentaIndex = 0;
 
         document.getElementById('fecha-actual').textContent = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }).format(new Date());
+
+        function cambiarCuenta() {
+            cuentaIndex = (cuentaIndex + 1) % listaCuentas.length;
+            cuentaActual = listaCuentas[cuentaIndex];
+            document.getElementById('btn-cuenta').textContent = cuentaActual;
+        }
+
+        function cambiarTipoTransaccion(tipo) {
+            tipoActual = tipo;
+            const btnGasto = document.getElementById('btn-tipo-gasto');
+            const btnIngreso = document.getElementById('btn-tipo-ingreso');
+            const display = document.getElementById('monto-display');
+            
+            if (tipo === 'gasto') {
+                btnGasto.className = 'bg-slate-600 text-white px-4 py-1 rounded-lg text-xs font-bold transition-all shadow-md';
+                btnIngreso.className = 'text-slate-400 px-4 py-1 rounded-lg text-xs font-bold transition-all';
+                display.classList.remove('text-emerald-400');
+                display.classList.add('text-white');
+            } else {
+                btnIngreso.className = 'bg-emerald-600 text-white px-4 py-1 rounded-lg text-xs font-bold transition-all shadow-md';
+                btnGasto.className = 'text-slate-400 px-4 py-1 rounded-lg text-xs font-bold transition-all';
+                display.classList.remove('text-white');
+                display.classList.add('text-emerald-400');
+            }
+            cargarCategorias(); 
+        }
 
         function actualizarPantalla() { document.getElementById('monto-display').textContent = formateador.format(parseInt(monto || '0')); }
         function digitar(num) { if (monto === '0' || monto === 0) monto = num; else if (monto.length < 10) monto += num; actualizarPantalla(); }
@@ -220,14 +221,13 @@ function cambiarTipoTransaccion(tipo) {
             const valorGasto = parseInt(monto);
             if (valorGasto === 0) return;
 
-            // Cambia el valor estático 'Nequi' por la variable dinámica:
-const payload = { 
-    monto: valorGasto, 
-    categoria_id: categoriaId, 
-    cuenta: cuentaActual, // <-- Conexión dinámica
-    fecha: new Date().toISOString(),
-    notas: notaGasto || null 
-};
+            const payload = { 
+                monto: valorGasto, 
+                categoria_id: categoriaId, 
+                cuenta: cuentaActual, 
+                fecha: new Date().toISOString(),
+                notas: notaGasto || null 
+            };
             
             const display = document.getElementById('monto-display');
 
@@ -235,7 +235,7 @@ const payload = {
                 const { error } = await db.from('transacciones').insert([payload]);
                 if (error) {
                     display.style.color = '#ef4444'; 
-                    setTimeout(() => display.style.color = 'white', 1000);
+                    setTimeout(() => display.style.color = tipoActual === 'gasto' ? 'white' : '#34d399', 1000);
                     return;
                 }
             } else {
@@ -246,102 +246,108 @@ const payload = {
             
             if (navigator.vibrate) navigator.vibrate(50);
             display.style.color = '#34d399'; 
-            setTimeout(() => display.style.color = 'white', 300);
+            setTimeout(() => display.style.color = tipoActual === 'gasto' ? 'white' : '#34d399', 300);
             limpiar();
         }
 
         async function cargarEstadisticas() {
-    const fecha = new Date();
-    const inicioDeMes = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-01`;
+            const fecha = new Date();
+            const inicioDeMes = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-01`;
 
-    const { data: categorias, error: errCat } = await db.from('categorias').select('*');
-    const { data: transacciones, error: errTrans } = await db.from('transacciones').select('*').gte('fecha', inicioDeMes);
-    
-    if (errCat || errTrans) return console.error("Error BD:", errCat, errTrans);
+            const { data: categorias, error: errCat } = await db.from('categorias').select('*');
+            const { data: transacciones, error: errTrans } = await db.from('transacciones').select('*').gte('fecha', inicioDeMes);
+            
+            if (errCat || errTrans) {
+                console.error("Error BD:", errCat, errTrans);
+                return;
+            }
 
-    let totalGastadoMes = 0;
-    let totalIngresadoMes = 0;
-    const reporteGastos = {};
-    const mapaCat = {};
-    
-    categorias.forEach(c => { 
-        mapaCat[c.id] = c;
-        if(c.tipo === 'gasto') reporteGastos[c.id] = { nombre: c.nombre, presupuesto: parseFloat(c.presupuesto_mensual) || 0, gastado: 0 }; 
-    });
+            let totalGastadoMes = 0;
+            let totalIngresadoMes = 0;
+            const reporteGastos = {};
+            const mapaCat = {};
+            
+            categorias.forEach(c => { 
+                mapaCat[c.id] = c;
+                if(c.tipo === 'gasto') reporteGastos[c.id] = { nombre: c.nombre, presupuesto: parseFloat(c.presupuesto_mensual) || 0, gastado: 0 }; 
+            });
 
-    transacciones.forEach(t => {
-        const cat = mapaCat[t.categoria_id];
-        const valor = parseFloat(t.monto);
-        if (!cat) return;
+            transacciones.forEach(t => {
+                const cat = mapaCat[t.categoria_id];
+                if (!cat) return;
+                const valor = parseFloat(t.monto);
 
-        if (cat.tipo === 'ingreso') {
-            totalIngresadoMes += valor;
-        } else if (cat.tipo === 'gasto') {
-            totalGastadoMes += valor;
-            if(reporteGastos[t.categoria_id]) reporteGastos[t.categoria_id].gastado += valor;
+                if (cat.tipo === 'ingreso') {
+                    totalIngresadoMes += valor;
+                } else if (cat.tipo === 'gasto') {
+                    totalGastadoMes += valor;
+                    if(reporteGastos[t.categoria_id]) reporteGastos[t.categoria_id].gastado += valor;
+                }
+            });
+
+            const balanceReal = totalIngresadoMes - totalGastadoMes;
+
+            document.getElementById('dash-ingresos').textContent = formateador.format(totalIngresadoMes);
+            document.getElementById('dash-gastos').textContent = formateador.format(totalGastadoMes);
+            document.getElementById('dash-balance').textContent = formateador.format(balanceReal);
+
+            const labelsGrafico = [];
+            const dataGrafico = [];
+            const contenedorLista = document.getElementById('lista-presupuestos');
+            contenedorLista.innerHTML = '';
+
+            if (totalGastadoMes === 0) {
+                renderizarGraficoDonut(['Sin datos'], [1]);
+                return;
+            }
+
+            Object.values(reporteGastos).sort((a,b) => b.gastado - a.gastado).forEach(item => {
+                if (item.gastado > 0) { labelsGrafico.push(item.nombre); dataGrafico.push(item.gastado); }
+                const porcentaje = item.presupuesto > 0 ? Math.min((item.gastado / item.presupuesto) * 100, 100).toFixed(0) : 0;
+                const colorBarra = porcentaje > 90 ? 'bg-red-500' : (porcentaje > 70 ? 'bg-yellow-400' : 'bg-emerald-400');
+
+                if (item.gastado > 0 || item.presupuesto > 0) {
+                    const tarjeta = document.createElement('div');
+                    tarjeta.className = "bg-slate-800 p-4 rounded-xl border border-slate-700 mb-4";
+
+                    const cabecera = document.createElement('div');
+                    cabecera.className = "flex justify-between items-end mb-2";
+
+                    const nombreSpan = document.createElement('span');
+                    nombreSpan.className = "font-bold text-white uppercase text-xs tracking-wider";
+                    nombreSpan.textContent = item.nombre;
+
+                    const valoresSpan = document.createElement('span');
+                    valoresSpan.className = "text-xs text-slate-400";
+                    valoresSpan.textContent = `${formateador.format(item.gastado)} de ${formateador.format(item.presupuesto)}`;
+
+                    cabecera.appendChild(nombreSpan);
+                    cabecera.appendChild(valoresSpan);
+
+                    const contenedorBarra = document.createElement('div');
+                    contenedorBarra.className = "w-full bg-slate-900 rounded-full h-2.5";
+
+                    const barra = document.createElement('div');
+                    barra.className = `${colorBarra} h-2.5 rounded-full transition-all duration-1000`;
+                    barra.style.width = `${porcentaje}%`;
+
+                    contenedorBarra.appendChild(barra);
+                    tarjeta.appendChild(cabecera);
+                    tarjeta.appendChild(contenedorBarra);
+
+                    contenedorLista.appendChild(tarjeta);
+                }
+            });
+
+            renderizarGraficoDonut(labelsGrafico, dataGrafico);
         }
-    });
-
-    const balanceReal = totalIngresadoMes - totalGastadoMes;
-
-    document.getElementById('dash-ingresos').textContent = formateador.format(totalIngresadoMes);
-    document.getElementById('dash-gastos').textContent = formateador.format(totalGastadoMes);
-    document.getElementById('dash-balance').textContent = formateador.format(balanceReal);
-
-    const labelsGrafico = [];
-    const dataGrafico = [];
-    const contenedorLista = document.getElementById('lista-presupuestos');
-    contenedorLista.innerHTML = '';
-
-    if (totalGastadoMes === 0) {
-        renderizarGraficoDonut(['Sin datos'], [1]);
-        return;
-    }
-
-    Object.values(reporteGastos).sort((a,b) => b.gastado - a.gastado).forEach(item => {
-        if (item.gastado > 0) { labelsGrafico.push(item.nombre); dataGrafico.push(item.gastado); }
-        const porcentaje = item.presupuesto > 0 ? Math.min((item.gastado / item.presupuesto) * 100, 100).toFixed(0) : 0;
-        const colorBarra = porcentaje > 90 ? 'bg-red-500' : (porcentaje > 70 ? 'bg-yellow-400' : 'bg-emerald-400');
-
-        if (item.gastado > 0 || item.presupuesto > 0) {
-            const tarjeta = document.createElement('div');
-            tarjeta.className = "bg-slate-800 p-4 rounded-xl border border-slate-700 mb-4";
-
-            const cabecera = document.createElement('div');
-            cabecera.className = "flex justify-between items-end mb-2";
-
-            const nombreSpan = document.createElement('span');
-            nombreSpan.className = "font-bold text-white uppercase text-xs tracking-wider";
-            nombreSpan.textContent = item.nombre;
-
-            const valoresSpan = document.createElement('span');
-            valoresSpan.className = "text-xs text-slate-400";
-            valoresSpan.textContent = `${formateador.format(item.gastado)} de ${formateador.format(item.presupuesto)}`;
-
-            cabecera.appendChild(nombreSpan);
-            cabecera.appendChild(valoresSpan);
-
-            const contenedorBarra = document.createElement('div');
-            contenedorBarra.className = "w-full bg-slate-900 rounded-full h-2.5";
-
-            const barra = document.createElement('div');
-            barra.className = `${colorBarra} h-2.5 rounded-full transition-all duration-1000`;
-            barra.style.width = `${porcentaje}%`;
-
-            contenedorBarra.appendChild(barra);
-            tarjeta.appendChild(cabecera);
-            tarjeta.appendChild(contenedorBarra);
-
-            contenedorLista.appendChild(tarjeta);
-        }
-    });
-
-    renderizarGraficoDonut(labelsGrafico, dataGrafico);
-}
 
         async function cargarCategorias() {
             const { data, error } = await db.from('categorias').select('*').eq('tipo', tipoActual).order('nombre');
-            if (error) return console.error("Error BD:", error);
+            if (error) {
+                console.error("Error BD:", error);
+                return;
+            }
             
             const contenedor = document.getElementById('categorias-container');
             contenedor.innerHTML = '';
@@ -363,7 +369,7 @@ const payload = {
                 
                 btn.onclick = () => {
                     if (parseInt(monto) > 0) {
-                        if (cat.nombre.toUpperCase().includes('OTROS')) {
+                        if (cat.nombre.toUpperCase().includes('OTROS') || cat.nombre.toUpperCase().includes('EXTRA')) {
                             abrirModal(cat.id);
                         } else {
                             guardarTransaccion(cat.id, '');
@@ -372,21 +378,6 @@ const payload = {
                 };
                 contenedor.appendChild(btn);
             });
-        }
-
-        async function procesarColaOffline() {
-            let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
-            if (queue.length === 0) return;
-
-            const { error } = await db.from('transacciones').insert(queue);
-            
-            if (!error) {
-                localStorage.removeItem('offline_queue');
-                console.log(`Sincronizadas ${queue.length} transacciones pendientes.`);
-                if (!document.getElementById('pantalla-dashboard').classList.contains('hidden')) {
-                    cargarEstadisticas();
-                }
-            }
         }
 
         async function autorizarDispositivo() {
@@ -408,14 +399,32 @@ const payload = {
                     alert("✅ Dispositivo autorizado.");
                 }
             }
+            
             cargarCategorias();
         }
 
+        async function procesarColaOffline() {
+            let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+            if (queue.length === 0) return;
+
+            const { error } = await db.from('transacciones').insert(queue);
+            
+            if (!error) {
+                localStorage.removeItem('offline_queue');
+                console.log(`Sincronizadas ${queue.length} transacciones pendientes.`);
+                if (!document.getElementById('pantalla-dashboard').classList.contains('hidden')) {
+                    cargarEstadisticas();
+                }
+            }
+        }
+
+        // --- ARRANQUE ---
         window.addEventListener('online', procesarColaOffline);
         if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
         if (navigator.onLine) procesarColaOffline();
         
         autorizarDispositivo();
+
     </script>
 </body>
 </html>
