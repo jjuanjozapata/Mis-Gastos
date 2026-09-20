@@ -6,6 +6,16 @@
     <title>WZ Finanzas</title>
     <link rel="manifest" href="manifest.json">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://znszebnjcgjfzxvnexxd.supabase.co https://cdn.jsdelivr.net; img-src 'self' data: https://cdn-icons-png.flaticon.com;">
+    
+    <!-- Bloqueo de la advertencia de desarrollo de Tailwind -->
+    <script>
+        const originalWarn = console.warn;
+        console.warn = (...args) => {
+            if (typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) return;
+            originalWarn.apply(console, args);
+        };
+    </script>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -71,7 +81,16 @@
     <!-- PANTALLA 2: DASHBOARD -->
     <div id="pantalla-dashboard" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-900 min-h-0">
         <div class="p-6 pb-12">
-            <h2 class="text-2xl font-bold text-white mb-6">Flujo de Caja</h2>
+            
+            <!-- FILTRO DE TIEMPO -->
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-white">Flujo de Caja</h2>
+                <select id="filtro-tiempo" onchange="cargarEstadisticas()" class="bg-slate-800 text-slate-300 text-sm rounded-lg px-3 py-1.5 border border-slate-700 outline-none">
+                    <option value="dia">Hoy</option>
+                    <option value="mes" selected>Este Mes</option>
+                    <option value="anio">Este Año</option>
+                </select>
+            </div>
             
             <div class="bg-slate-800 rounded-3xl p-5 mb-6 border border-slate-700 shadow-xl relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl"></div>
@@ -88,6 +107,12 @@
                         <p id="dash-gastos" class="text-lg font-bold text-red-400">$ 0</p>
                     </div>
                 </div>
+            </div>
+
+            <!-- HISTORIAL RECIENTE -->
+            <div class="bg-slate-800 rounded-3xl p-5 mb-6 border border-slate-700">
+                <p class="text-slate-200 text-sm font-semibold mb-4">Últimos Movimientos</p>
+                <div id="historial-transacciones" class="space-y-3"></div>
             </div>
 
             <div class="bg-slate-800 rounded-3xl p-5 mb-6 border border-slate-700">
@@ -213,7 +238,23 @@
                         hoverOffset: 4
                     }]
                 },
-                options: { responsive: true, cutout: '75%', plugins: { legend: { position: 'right', labels: { color: '#cbd5e1', font: { size: 9 } } } } }
+                options: { 
+                    responsive: true, 
+                    cutout: '75%', 
+                    plugins: { 
+                        legend: { position: 'right', labels: { color: '#cbd5e1', font: { size: 9 } } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let total = context.chart._metasets[context.datasetIndex].total;
+                                    let valor = context.raw;
+                                    let porcentaje = Math.round((valor / total) * 100);
+                                    return ` ${context.label}: ${formateador.format(valor)} (${porcentaje}%)`;
+                                }
+                            }
+                        }
+                    } 
+                }
             });
         }
 
@@ -250,12 +291,27 @@
             limpiar();
         }
 
+        async function eliminarTransaccion(id) {
+            if(!confirm("¿Borrar esta transacción?")) return;
+            const { error } = await db.from('transacciones').delete().eq('id', id);
+            if(!error) cargarEstadisticas();
+        }
+
         async function cargarEstadisticas() {
+            const filtro = document.getElementById('filtro-tiempo').value;
             const fecha = new Date();
-            const inicioDeMes = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-01`;
+            let fechaFiltro;
+            
+            if (filtro === 'dia') {
+                fechaFiltro = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
+            } else if (filtro === 'anio') {
+                fechaFiltro = `${fecha.getFullYear()}-01-01`;
+            } else {
+                fechaFiltro = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-01`;
+            }
 
             const { data: categorias, error: errCat } = await db.from('categorias').select('*');
-            const { data: transacciones, error: errTrans } = await db.from('transacciones').select('*').gte('fecha', inicioDeMes);
+            const { data: transacciones, error: errTrans } = await db.from('transacciones').select('*').gte('fecha', fechaFiltro).order('fecha', { ascending: false });
             
             if (errCat || errTrans) {
                 console.error("Error BD:", errCat, errTrans);
@@ -272,16 +328,62 @@
                 if(c.tipo === 'gasto') reporteGastos[c.id] = { nombre: c.nombre, presupuesto: parseFloat(c.presupuesto_mensual) || 0, gastado: 0 }; 
             });
 
-            transacciones.forEach(t => {
+            const contenedorHistorial = document.getElementById('historial-transacciones');
+            contenedorHistorial.innerHTML = '';
+
+            if(transacciones.length === 0) {
+                contenedorHistorial.innerHTML = '<p class="text-slate-500 text-xs text-center">No hay registros</p>';
+            }
+
+            transacciones.forEach((t, index) => {
                 const cat = mapaCat[t.categoria_id];
                 if (!cat) return;
                 const valor = parseFloat(t.monto);
+                const isIngreso = cat.tipo === 'ingreso';
 
-                if (cat.tipo === 'ingreso') {
+                if (isIngreso) {
                     totalIngresadoMes += valor;
                 } else if (cat.tipo === 'gasto') {
                     totalGastadoMes += valor;
                     if(reporteGastos[t.categoria_id]) reporteGastos[t.categoria_id].gastado += valor;
+                }
+
+                // Generar UI del Historial (limitado a 15 para no saturar)
+                if (index < 15) {
+                    const fila = document.createElement('div');
+                    fila.className = "flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700/50";
+                    
+                    const infoDiv = document.createElement('div');
+                    infoDiv.className = "flex flex-col";
+                    
+                    const catSpan = document.createElement('span');
+                    catSpan.className = "text-sm font-bold text-white";
+                    catSpan.textContent = cat.nombre;
+                    
+                    const notaSpan = document.createElement('span');
+                    notaSpan.className = "text-xs text-slate-500";
+                    notaSpan.textContent = t.notas ? t.notas : (isIngreso ? 'Ingreso' : 'Gasto');
+                    
+                    infoDiv.appendChild(catSpan);
+                    infoDiv.appendChild(notaSpan);
+                    
+                    const valDiv = document.createElement('div');
+                    valDiv.className = "flex items-center gap-3";
+                    
+                    const montoSpan = document.createElement('span');
+                    montoSpan.className = `text-sm font-bold ${isIngreso ? 'text-emerald-400' : 'text-red-400'}`;
+                    montoSpan.textContent = `${isIngreso ? '+' : '-'}${formateador.format(valor)}`;
+                    
+                    const btnBorrar = document.createElement('button');
+                    btnBorrar.className = "text-slate-500 hover:text-red-400 text-lg transition-colors p-1 active:scale-90";
+                    btnBorrar.innerHTML = "🗑️";
+                    btnBorrar.onclick = () => eliminarTransaccion(t.id);
+                    
+                    valDiv.appendChild(montoSpan);
+                    valDiv.appendChild(btnBorrar);
+                    fila.appendChild(infoDiv);
+                    fila.appendChild(valDiv);
+                    contenedorHistorial.appendChild(fila);
                 }
             });
 
