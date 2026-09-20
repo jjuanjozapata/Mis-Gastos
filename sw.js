@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gastos-v4'; // <--- Al cambiar esto, el iPhone se actualiza a la fuerza
+const CACHE_NAME = 'gastos-v5'; 
 const ASSETS = [
     '/',
     '/index.html',
@@ -18,7 +18,7 @@ self.addEventListener('activate', event => {
                     if (key !== CACHE_NAME) return caches.delete(key);
                 })
             );
-        }).then(() => self.clients.claim()) // Toma el control inmediatamente
+        }).then(() => self.clients.claim()) 
     );
 });
 
