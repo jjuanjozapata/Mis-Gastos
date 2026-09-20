@@ -1,27 +1,33 @@
-const CACHE_NAME = 'gastos-v1';
+const CACHE_NAME = 'gastos-v2'; // <--- Este 'v2' rompe el caché
 const ASSETS = [
     '/',
     '/index.html',
     '/manifest.json'
 ];
 
-// Instalar y cachear interfaz estática
 self.addEventListener('install', event => {
+    self.skipWaiting(); // Fuerza la instalación inmediata
     event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then(cache => cache.addAll(ASSETS))
+        caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
     );
 });
 
-// Interceptar peticiones. Si no hay red, sirve desde caché.
-self.addEventListener('fetch', event => {
-    // Excluir llamadas directas a la API de Supabase del caché estático
-    if (event.request.url.includes('supabase.co')) return;
+self.addEventListener('activate', event => {
+    // Destruye cualquier caché viejo (gastos-v1)
+    event.waitUntil(
+        caches.keys().then(keys => {
+            return Promise.all(
+                keys.map(key => {
+                    if (key !== CACHE_NAME) return caches.delete(key);
+                })
+            );
+        })
+    );
+});
 
+self.addEventListener('fetch', event => {
+    if (event.request.url.includes('supabase.co')) return;
     event.respondWith(
-        caches.match(event.request)
-            .then(response => {
-                return response || fetch(event.request);
-            })
+        caches.match(event.request).then(response => response || fetch(event.request))
     );
 });

@@ -28,10 +28,10 @@
             <div id="monto-display" class="text-6xl font-bold tracking-tighter text-white transition-colors">$ 0</div>
         </div>
 
-        <div class="grid grid-cols-4 gap-2 px-4 pb-4" id="categorias-container">
-            <!-- Botones inyectados desde BD -->
-        </div>
+        <!-- Botones dinámicos -->
+        <div class="grid grid-cols-4 gap-2 px-4 pb-4" id="categorias-container"></div>
 
+        <!-- Teclado Numérico -->
         <div class="grid grid-cols-3 gap-2 p-4 bg-slate-950 rounded-t-3xl shadow-2xl shadow-black">
             <button onclick="digitar('1')" class="py-5 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">1</button>
             <button onclick="digitar('2')" class="py-5 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">2</button>
@@ -48,31 +48,26 @@
         </div>
     </div>
 
-    <!-- PANTALLA 2: DASHBOARD Y ESTADÍSTICAS -->
+    <!-- PANTALLA 2: DASHBOARD -->
     <div id="pantalla-dashboard" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-900 pb-8">
         <div class="p-6">
             <h2 class="text-2xl font-bold text-white mb-6">Resumen Mensual</h2>
             
-            <!-- Resumen Total -->
             <div class="bg-slate-800 rounded-2xl p-5 mb-6 border border-slate-700">
                 <p class="text-slate-400 text-sm font-medium">Total Gastado este Mes</p>
                 <h3 id="dash-total-gastado" class="text-4xl font-bold text-red-400 mt-1">$ 0</h3>
             </div>
 
-            <!-- Gráfico de Donut -->
             <div class="bg-slate-800 rounded-2xl p-5 mb-6 border border-slate-700">
-                <p class="text-slate-200 text-sm font-semibold mb-4">Distribución por Categoría</p>
+                <p class="text-slate-200 text-sm font-semibold mb-4">Distribución</p>
                 <canvas id="graficoCategorias" height="250"></canvas>
             </div>
             
-            <!-- Lista de Presupuestos -->
-            <div id="lista-presupuestos" class="space-y-4">
-                <!-- Se inyecta desde la base de datos -->
-            </div>
+            <div id="lista-presupuestos" class="space-y-4"></div>
         </div>
     </div>
 
-    <!-- NAVEGACIÓN INFERIOR (IOS STYLE) -->
+    <!-- NAVEGACIÓN INFERIOR -->
     <nav class="fixed bottom-0 w-full bg-slate-950 border-t border-slate-800 flex justify-around items-center h-16 pb-safe">
         <button onclick="cambiarTab('captura')" id="tab-captura" class="flex flex-col items-center justify-center w-full h-full tab-activa transition-colors">
             <span class="text-2xl mb-1">⌨️</span>
@@ -85,10 +80,10 @@
     </nav>
 
     <script>
-        // --- 1. CONFIGURACIÓN Y CREDENCIALES ---
-        const supabaseUrl = 'https://znszebnjcgjfzxvnexxd.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpuc3plYm5qY2dqZnp4dm5leHhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4NzkwNzcsImV4cCI6MjEwNTQ1NTA3N30.Od66KMiiuXPrzAUfuiprc7Q7SF3909lxDeBevMK25h0';
-        const db = supabase.createClient(supabaseUrl, supabaseKey);
+        const db = supabase.createClient(
+            'https://znszebnjcgjfzxvnexxd.supabase.co', 
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpuc3plYm5qY2dqZnp4dm5leHhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4NzkwNzcsImV4cCI6MjEwNTQ1NTA3N30.Od66KMiiuXPrzAUfuiprc7Q7SF3909lxDeBevMK25h0'
+        );
 
         const formateador = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
         let monto = '0';
@@ -96,7 +91,6 @@
 
         document.getElementById('fecha-actual').textContent = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }).format(new Date());
 
-        // --- 2. LÓGICA DE NAVEGACIÓN ---
         function cambiarTab(pantalla) {
             const captura = document.getElementById('pantalla-captura');
             const dashboard = document.getElementById('pantalla-dashboard');
@@ -104,112 +98,77 @@
             const tabDash = document.getElementById('tab-dashboard');
 
             if (pantalla === 'captura') {
-                captura.classList.remove('hidden');
-                captura.classList.add('flex');
-                dashboard.classList.add('hidden');
-                dashboard.classList.remove('flex');
-                tabCap.classList.replace('tab-inactiva', 'tab-activa');
-                tabDash.classList.replace('tab-activa', 'tab-inactiva');
+                captura.classList.remove('hidden'); captura.classList.add('flex');
+                dashboard.classList.add('hidden'); dashboard.classList.remove('flex');
+                tabCap.classList.replace('tab-inactiva', 'tab-activa'); tabDash.classList.replace('tab-activa', 'tab-inactiva');
             } else {
-                dashboard.classList.remove('hidden');
-                dashboard.classList.add('flex');
-                captura.classList.add('hidden');
-                captura.classList.remove('flex');
-                tabDash.classList.replace('tab-inactiva', 'tab-activa');
-                tabCap.classList.replace('tab-activa', 'tab-inactiva');
-                cargarEstadisticas(); // Dispara la consulta al cambiar de pestaña
+                dashboard.classList.remove('hidden'); dashboard.classList.add('flex');
+                captura.classList.add('hidden'); captura.classList.remove('flex');
+                tabDash.classList.replace('tab-inactiva', 'tab-activa'); tabCap.classList.replace('tab-activa', 'tab-inactiva');
+                cargarEstadisticas();
             }
         }
 
-        // --- 3. LÓGICA DEL TECLADO (CAPTURAR DATOS) ---
-        function actualizarPantalla() {
-            document.getElementById('monto-display').textContent = formateador.format(parseInt(monto || '0'));
-        }
-        function digitar(num) {
-            if (monto === '0' || monto === 0) monto = num;
-            else if (monto.length < 10) monto += num;
-            actualizarPantalla();
-        }
-        function borrar() {
-            monto = monto.slice(0, -1);
-            if (monto === '') monto = '0';
-            actualizarPantalla();
-        }
-        function limpiar() {
-            monto = '0';
-            actualizarPantalla();
-        }
+        function actualizarPantalla() { document.getElementById('monto-display').textContent = formateador.format(parseInt(monto || '0')); }
+        function digitar(num) { if (monto === '0' || monto === 0) monto = num; else if (monto.length < 10) monto += num; actualizarPantalla(); }
+        function borrar() { monto = monto.slice(0, -1); if (monto === '') monto = '0'; actualizarPantalla(); }
+        function limpiar() { monto = '0'; actualizarPantalla(); }
 
         async function cargarCategorias() {
-            const { data, error } = await db.from('categorias').select('*').eq('tipo', 'gasto');
-            if (error) return console.error("Fallo cargando categorías:", error);
+            const { data, error } = await db.from('categorias').select('*').eq('tipo', 'gasto').order('nombre');
+            if (error) return console.error(error);
             
             const contenedor = document.getElementById('categorias-container');
-            contenedor.innerHTML = ''; // Limpiar
+            contenedor.innerHTML = '';
             data.forEach(cat => {
                 const btn = document.createElement('button');
-                btn.className = "flex flex-col items-center justify-center py-3 bg-slate-800 rounded-xl active:bg-blue-600 active:scale-95 transition-all border border-slate-700";
-                btn.innerHTML = `<span class="text-2xl mb-1">${cat.icono}</span><span class="text-[10px] font-bold text-slate-300 uppercase tracking-wider">${cat.nombre}</span>`;
+                btn.className = "flex flex-col items-center justify-center py-3 bg-slate-800 rounded-xl active:bg-emerald-600 active:scale-95 transition-all border border-slate-700";
+                btn.innerHTML = `<span class="text-2xl mb-1">${cat.icono}</span><span class="text-[9px] font-bold text-slate-300 uppercase tracking-wider text-center px-1 leading-tight">${cat.nombre}</span>`;
                 btn.onclick = () => guardarTransaccion(cat.id);
                 contenedor.appendChild(btn);
             });
         }
 
-        // --- 1. VERSIÓN BLINDADA DEL GUARDADO ---
         async function guardarTransaccion(categoriaId) {
             const valorGasto = parseInt(monto);
             if (valorGasto === 0) return;
 
             const payload = { monto: valorGasto, categoria_id: categoriaId, cuenta: 'Nequi', fecha: new Date().toISOString() };
+            const display = document.getElementById('monto-display');
 
             if (navigator.onLine) {
                 const { error } = await db.from('transacciones').insert([payload]);
                 if (error) {
-                    console.error("Fallo guardando en DB:", error);
-                    // Si hay error, el texto se pone rojo un segundo y NO limpia la pantalla
-                    const display = document.getElementById('monto-display');
-                    display.style.color = '#ef4444'; 
+                    display.style.color = '#ef4444'; // Rojo si falla BD
                     setTimeout(() => display.style.color = 'white', 1000);
-                    return; 
-                } else {
-                    vibrarExito();
-                    limpiar(); // Solo limpia si fue exitoso
+                    return;
                 }
             } else {
                 let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
                 queue.push(payload);
                 localStorage.setItem('offline_queue', JSON.stringify(queue));
-                vibrarExito();
-                limpiar();
             }
+            
+            if (navigator.vibrate) navigator.vibrate(50);
+            display.style.color = '#34d399'; // Verde si fue un éxito
+            setTimeout(() => display.style.color = 'white', 300);
+            limpiar();
         }
 
-        // --- 2. VERSIÓN BLINDADA DEL DASHBOARD (PROCESAMIENTO LOCAL) ---
         async function cargarEstadisticas() {
-            // Calculamos el inicio del mes exacto sin importar la zona horaria
+            // Lógica interna para evadir el bug de horario de Colombia
             const fecha = new Date();
-            const año = fecha.getFullYear();
-            const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-            const inicioDeMes = `${año}-${mes}-01`;
+            const inicioDeMes = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-01`;
 
-            // 1. Descargar diccionario de categorías
             const { data: categorias, error: errCat } = await db.from('categorias').select('*').eq('tipo', 'gasto');
-            if (errCat) return console.error("Error categorías:", errCat);
-
-            // 2. Descargar las transacciones crudas del mes directamente
             const { data: transacciones, error: errTrans } = await db.from('transacciones').select('*').gte('fecha', inicioDeMes);
-            if (errTrans) return console.error("Error transacciones:", errTrans);
+            
+            if (errCat || errTrans) return console.error("Error BD:", errCat, errTrans);
 
-            // 3. Motor de cálculo interno (Reemplaza las fórmulas de Excel)
             let totalGastadoMes = 0;
             const reporte = {};
-
-            // Inicializar contadores por categoría
-            categorias.forEach(c => {
-                reporte[c.id] = { nombre: c.nombre, presupuesto: parseFloat(c.presupuesto_mensual) || 0, gastado: 0 };
-            });
-
-            // Sumar los gastos del mes
+            
+            categorias.forEach(c => { reporte[c.id] = { nombre: c.nombre, presupuesto: parseFloat(c.presupuesto_mensual) || 0, gastado: 0 }; });
             transacciones.forEach(t => {
                 if (reporte[t.categoria_id]) {
                     const valor = parseFloat(t.monto);
@@ -218,94 +177,35 @@
                 }
             });
 
-            // 4. Inyectar datos a la interfaz (Pantalla y Gráficas)
             const labelsGrafico = [];
             const dataGrafico = [];
             const contenedorLista = document.getElementById('lista-presupuestos');
             contenedorLista.innerHTML = '';
 
-            // Si no hay gastos, dibujar pantalla en cero
             if (totalGastadoMes === 0) {
                 document.getElementById('dash-total-gastado').textContent = '$ 0';
                 renderizarGraficoDonut(['Sin datos'], [1]);
                 return;
             }
 
-            // Dibujar barras y alimentar gráfico
-            Object.values(reporte).forEach(item => {
-                if (item.gastado > 0) {
-                    labelsGrafico.push(item.nombre);
-                    dataGrafico.push(item.gastado);
-                }
-
+            Object.values(reporte).sort((a,b) => b.gastado - a.gastado).forEach(item => {
+                if (item.gastado > 0) { labelsGrafico.push(item.nombre); dataGrafico.push(item.gastado); }
                 const porcentaje = item.presupuesto > 0 ? Math.min((item.gastado / item.presupuesto) * 100, 100).toFixed(0) : 0;
                 const colorBarra = porcentaje > 90 ? 'bg-red-500' : (porcentaje > 70 ? 'bg-yellow-400' : 'bg-emerald-400');
 
-                contenedorLista.innerHTML += `
-                    <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 mb-4">
-                        <div class="flex justify-between items-end mb-2">
-                            <span class="font-bold text-white uppercase text-xs tracking-wider">${item.nombre}</span>
-                            <span class="text-xs text-slate-400">${formateador.format(item.gastado)} de ${formateador.format(item.presupuesto)}</span>
+                if (item.gastado > 0 || item.presupuesto > 0) {
+                    contenedorLista.innerHTML += `
+                        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 mb-4">
+                            <div class="flex justify-between items-end mb-2">
+                                <span class="font-bold text-white uppercase text-xs tracking-wider">${item.nombre}</span>
+                                <span class="text-xs text-slate-400">${formateador.format(item.gastado)} de ${formateador.format(item.presupuesto)}</span>
+                            </div>
+                            <div class="w-full bg-slate-900 rounded-full h-2.5">
+                                <div class="${colorBarra} h-2.5 rounded-full transition-all duration-1000" style="width: ${porcentaje}%"></div>
+                            </div>
                         </div>
-                        <div class="w-full bg-slate-900 rounded-full h-2.5">
-                            <div class="${colorBarra} h-2.5 rounded-full transition-all duration-1000" style="width: ${porcentaje}%"></div>
-                        </div>
-                    </div>
-                `;
-            });
-
-            // Actualizar total general y gráfico
-            document.getElementById('dash-total-gastado').textContent = formateador.format(totalGastadoMes);
-            renderizarGraficoDonut(labelsGrafico, dataGrafico);
-        }
-
-        function vibrarExito() {
-            if (navigator.vibrate) navigator.vibrate(50);
-            const display = document.getElementById('monto-display');
-            display.style.color = '#34d399'; 
-            setTimeout(() => display.style.color = 'white', 300);
-        }
-
-        // --- 4. LÓGICA DEL DASHBOARD (GRÁFICAS) ---
-        async function cargarEstadisticas() {
-            // Obtenemos el mes actual para filtrar
-            const fechaActual = new Date();
-            const primerDiaMes = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), 1).toISOString();
-            
-            // Llama a la vista SQL que creaste en la Fase 3
-            const { data, error } = await db.from('reporte_mensual')
-                .select('*')
-                .gte('mes', primerDiaMes)
-                .eq('tipo', 'gasto');
-
-            if (error) return console.error("Error trayendo estadísticas:", error);
-
-            let totalGastadoMes = 0;
-            const labelsGrafico = [];
-            const dataGrafico = [];
-            const contenedorLista = document.getElementById('lista-presupuestos');
-            contenedorLista.innerHTML = '';
-
-            data.forEach(item => {
-                totalGastadoMes += parseFloat(item.total_gastado);
-                labelsGrafico.push(item.categoria);
-                dataGrafico.push(item.total_gastado);
-
-                // Calcular progreso
-                const porcentaje = Math.min((item.total_gastado / item.presupuesto_mensual) * 100, 100).toFixed(0);
-                const colorBarra = porcentaje > 90 ? 'bg-red-500' : (porcentaje > 70 ? 'bg-yellow-400' : 'bg-emerald-400');
-
-                contenedorLista.innerHTML += `
-                    <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
-                        <div class="flex justify-between items-end mb-2">
-                            <span class="font-bold text-white">${item.categoria}</span>
-                            <span class="text-xs text-slate-400">${formateador.format(item.total_gastado)} de ${formateador.format(item.presupuesto_mensual)}</span>
-                        </div>
-                        <div class="w-full bg-slate-900 rounded-full h-2.5">
-                            <div class="${colorBarra} h-2.5 rounded-full transition-all duration-1000" style="width: ${porcentaje}%"></div>
-                        </div>
-                    </div>
-                `;
+                    `;
+                }
             });
 
             document.getElementById('dash-total-gastado').textContent = formateador.format(totalGastadoMes);
@@ -314,31 +214,24 @@
 
         function renderizarGraficoDonut(labels, data) {
             const ctx = document.getElementById('graficoCategorias').getContext('2d');
-            
-            if (graficoInstancia) graficoInstancia.destroy(); // Destruye el viejo antes de repintar
-
+            if (graficoInstancia) graficoInstancia.destroy();
             graficoInstancia = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: labels,
                     datasets: [{
                         data: data,
-                        backgroundColor: ['#f87171', '#60a5fa', '#34d399', '#fbbf24', '#c084fc', '#a3e635'],
+                        backgroundColor: ['#f87171', '#60a5fa', '#34d399', '#fbbf24', '#c084fc', '#a3e635', '#f472b6', '#38bdf8', '#a78bfa', '#fb923c', '#4ade80', '#94a3b8'],
                         borderWidth: 0,
                         hoverOffset: 4
                     }]
                 },
-                options: {
-                    responsive: true,
-                    cutout: '75%',
-                    plugins: {
-                        legend: { position: 'right', labels: { color: '#cbd5e1', font: { size: 11 } } }
-                    }
-                }
+                options: { responsive: true, cutout: '75%', plugins: { legend: { position: 'right', labels: { color: '#cbd5e1', font: { size: 9 } } } } }
             });
         }
-
-        // --- INIT ---
+        
+        // PWA INIT
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
         cargarCategorias();
     </script>
 </body>
