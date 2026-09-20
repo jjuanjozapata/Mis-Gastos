@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gastos-v2'; // <--- Este 'v2' rompe el caché
+const CACHE_NAME = 'gastos-v3'; // <--- Esto obliga al iPhone a actualizarse
 const ASSETS = [
     '/',
     '/index.html',
@@ -6,14 +6,11 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', event => {
-    self.skipWaiting(); // Fuerza la instalación inmediata
-    event.waitUntil(
-        caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
-    );
+    self.skipWaiting();
+    event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
 });
 
 self.addEventListener('activate', event => {
-    // Destruye cualquier caché viejo (gastos-v1)
     event.waitUntil(
         caches.keys().then(keys => {
             return Promise.all(

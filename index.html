@@ -9,7 +9,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* Ajustes críticos para iPhone y Flexbox estricto */
         body { padding-bottom: env(safe-area-inset-bottom); height: 100dvh; }
         button { touch-action: manipulation; }
         .tab-activa { color: #34d399; }
@@ -18,44 +17,37 @@
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 flex flex-col font-sans select-none overflow-hidden">
+<body class="bg-slate-900 text-slate-100 flex flex-col font-sans select-none overflow-hidden relative">
     
-    <!-- MODAL OTROS GASTOS (Oculto por defecto) -->
-    <div id="modal-notas" class="hidden absolute inset-0 z-50 bg-slate-950/90 backdrop-blur-md justify-center items-center p-6">
+    <!-- MODAL OTROS GASTOS (Fijo y por encima de todo) -->
+    <div id="modal-notas" class="hidden fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-6">
         <div class="bg-slate-800 w-full max-w-sm rounded-3xl p-6 border border-slate-700 shadow-2xl">
-            <h3 class="text-lg font-bold text-white mb-2">Detalle del gasto</h3>
-            <p class="text-slate-400 text-sm mb-4">¿En qué gastaste este dinero?</p>
-            <input type="text" id="input-notas" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-400 mb-6" placeholder="Ej. Pasajes, Helado, Cine..." autocomplete="off">
+            <h3 class="text-xl font-bold text-white mb-2">Detalle del gasto</h3>
+            <p class="text-slate-400 text-sm mb-5">Escribe brevemente en qué gastaste este dinero.</p>
+            <input type="text" id="input-notas" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 mb-6 text-lg" placeholder="Ej. Helado, Cine, Pasajes..." autocomplete="off">
             <div class="flex gap-3">
-                <button onclick="cerrarModal()" class="flex-1 py-3 rounded-xl bg-slate-700 text-white font-bold active:bg-slate-600 transition-colors">Cancelar</button>
-                <button onclick="confirmarOtrosGastos()" class="flex-1 py-3 rounded-xl bg-emerald-500 text-slate-900 font-bold active:bg-emerald-400 transition-colors">Guardar</button>
+                <button onclick="cerrarModal()" class="flex-1 py-4 rounded-xl bg-slate-700 text-white font-bold active:bg-slate-600 transition-colors">Cancelar</button>
+                <button onclick="confirmarOtrosGastos()" class="flex-1 py-4 rounded-xl bg-emerald-500 text-slate-900 font-bold active:bg-emerald-400 transition-colors">Guardar</button>
             </div>
         </div>
     </div>
 
     <!-- PANTALLA 1: CAPTURA RÁPIDA -->
     <div id="pantalla-captura" class="flex-1 flex flex-col min-h-0 relative">
-        
-        <!-- Header (Fijo) -->
         <header class="shrink-0 p-5 flex justify-between items-center border-b border-slate-800">
             <span id="fecha-actual" class="text-slate-400 font-medium"></span>
             <span class="bg-slate-800 text-emerald-400 px-3 py-1 rounded-full text-sm font-semibold tracking-wide">Nequi</span>
         </header>
 
-        <!-- Monto (Fijo) -->
         <div class="shrink-0 flex flex-col justify-center items-center py-4">
             <span class="text-slate-500 text-sm mb-1">Ingresar gasto</span>
             <div id="monto-display" class="text-6xl font-bold tracking-tighter text-white transition-colors">$ 0</div>
         </div>
 
-        <!-- Categorías (Único elemento que toma el espacio restante y hace scroll) -->
         <div class="flex-1 overflow-y-auto no-scrollbar px-4 pb-2" id="categorias-wrapper">
-            <div class="grid grid-cols-4 gap-2" id="categorias-container">
-                <!-- Se inyectan dinámicamente -->
-            </div>
+            <div class="grid grid-cols-4 gap-2" id="categorias-container"></div>
         </div>
 
-        <!-- Teclado Numérico (Anclado rígido abajo, altura reducida) -->
         <div class="shrink-0 grid grid-cols-3 gap-2 p-3 bg-slate-950 rounded-t-3xl shadow-[0_-15px_30px_rgba(0,0,0,0.6)]">
             <button onclick="digitar('1')" class="py-3 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">1</button>
             <button onclick="digitar('2')" class="py-3 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">2</button>
@@ -76,22 +68,19 @@
     <div id="pantalla-dashboard" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-900 min-h-0">
         <div class="p-6 pb-12">
             <h2 class="text-2xl font-bold text-white mb-6">Resumen Mensual</h2>
-            
             <div class="bg-slate-800 rounded-2xl p-5 mb-6 border border-slate-700">
                 <p class="text-slate-400 text-sm font-medium">Total Gastado este Mes</p>
                 <h3 id="dash-total-gastado" class="text-4xl font-bold text-red-400 mt-1">$ 0</h3>
             </div>
-
             <div class="bg-slate-800 rounded-2xl p-5 mb-6 border border-slate-700">
                 <p class="text-slate-200 text-sm font-semibold mb-4">Distribución</p>
                 <canvas id="graficoCategorias" height="250"></canvas>
             </div>
-            
             <div id="lista-presupuestos" class="space-y-4"></div>
         </div>
     </div>
 
-    <!-- NAVEGACIÓN INFERIOR (Fija en la parte inferior absoluta) -->
+    <!-- NAVEGACIÓN INFERIOR -->
     <nav class="shrink-0 w-full bg-slate-950 border-t border-slate-800 flex justify-around items-center h-[65px]">
         <button onclick="cambiarTab('captura')" id="tab-captura" class="flex flex-col items-center justify-center w-full h-full tab-activa transition-colors">
             <span class="text-xl mb-1">⌨️</span>
@@ -104,7 +93,6 @@
     </nav>
 
     <script>
-        // 1. CREDENCIALES
         const db = supabase.createClient(
             'https://znszebnjcgjfzxvnexxd.supabase.co', 
             'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpuc3plYm5qY2dqZnp4dm5leHhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4NzkwNzcsImV4cCI6MjEwNTQ1NTA3N30.Od66KMiiuXPrzAUfuiprc7Q7SF3909lxDeBevMK25h0'
@@ -117,7 +105,6 @@
 
         document.getElementById('fecha-actual').textContent = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }).format(new Date());
 
-        // 2. NAVEGACIÓN
         function cambiarTab(pantalla) {
             const captura = document.getElementById('pantalla-captura');
             const dashboard = document.getElementById('pantalla-dashboard');
@@ -136,13 +123,11 @@
             }
         }
 
-        // 3. TECLADO
         function actualizarPantalla() { document.getElementById('monto-display').textContent = formateador.format(parseInt(monto || '0')); }
         function digitar(num) { if (monto === '0' || monto === 0) monto = num; else if (monto.length < 10) monto += num; actualizarPantalla(); }
         function borrar() { monto = monto.slice(0, -1); if (monto === '') monto = '0'; actualizarPantalla(); }
         function limpiar() { monto = '0'; actualizarPantalla(); }
 
-        // 4. CATEGORÍAS Y LOGICA DE OTROS GASTOS
         async function cargarCategorias() {
             const { data, error } = await db.from('categorias').select('*').eq('tipo', 'gasto').order('nombre');
             if (error) return console.error(error);
@@ -154,11 +139,14 @@
                 btn.className = "flex flex-col items-center justify-center py-2 bg-slate-800 rounded-xl active:bg-emerald-600 active:scale-95 transition-all border border-slate-700 min-h-[70px]";
                 btn.innerHTML = `<span class="text-xl mb-1">${cat.icono}</span><span class="text-[8px] font-bold text-slate-300 uppercase tracking-wider text-center px-1 leading-tight">${cat.nombre}</span>`;
                 
-                // Enrutador de acciones
                 btn.onclick = () => {
                     if (parseInt(monto) > 0) {
-                        if (cat.nombre === 'OTROS GASTOS') abrirModal(cat.id);
-                        else guardarTransaccion(cat.id, '');
+                        // Validación a prueba de balas buscando la palabra "OTROS"
+                        if (cat.nombre.toUpperCase().includes('OTROS')) {
+                            abrirModal(cat.id);
+                        } else {
+                            guardarTransaccion(cat.id, '');
+                        }
                     }
                 };
                 contenedor.appendChild(btn);
@@ -170,12 +158,13 @@
             const modal = document.getElementById('modal-notas');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
-            setTimeout(() => document.getElementById('input-notas').focus(), 100);
+            document.getElementById('input-notas').focus();
         }
 
         function cerrarModal() {
-            document.getElementById('modal-notas').classList.add('hidden');
-            document.getElementById('modal-notas').classList.remove('flex');
+            const modal = document.getElementById('modal-notas');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
             document.getElementById('input-notas').value = '';
             categoriaPendiente = null;
         }
@@ -186,7 +175,6 @@
             cerrarModal();
         }
 
-        // 5. GUARDADO EN BASE DE DATOS
         async function guardarTransaccion(categoriaId, notaGasto) {
             const valorGasto = parseInt(monto);
             if (valorGasto === 0) return;
@@ -220,7 +208,6 @@
             limpiar();
         }
 
-        // 6. DASHBOARD
         async function cargarEstadisticas() {
             const fecha = new Date();
             const inicioDeMes = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-01`;
