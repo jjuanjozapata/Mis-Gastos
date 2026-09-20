@@ -1,15 +1,18 @@
 {
+  "id": "com.wzstore.misgastos",
   "name": "Mis Gastos",
   "short_name": "Gastos",
   "start_url": "index.html",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#020617",
   "theme_color": "#020617",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/2933/2933116.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }

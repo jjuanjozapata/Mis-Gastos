@@ -3,8 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <!-- Soporte PWA Universal (Android/Chrome y iOS) -->
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
     <title>Mis Gastos</title>
     
     <link rel="manifest" href="manifest.json">
@@ -458,12 +462,6 @@
             }
         }
 
-        async function eliminarPlan(id) {
-            if(!confirm('¿Eliminar este plan?')) return;
-            await db.from('planes').delete().eq('id', id);
-            cargarPlanes();
-        }
-
         function renderizarGraficoDonut(labels, data, totalGastadoStr) {
             const ctx = document.getElementById('graficoCategorias').getContext('2d');
             if (graficoInstancia) graficoInstancia.destroy();
@@ -808,7 +806,6 @@
             let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
             if (queue.length === 0) return;
 
-            // Procesamiento en batch resiliente
             const { error } = await db.from('transacciones').insert(queue);
             if (!error) {
                 localStorage.removeItem('offline_queue');
