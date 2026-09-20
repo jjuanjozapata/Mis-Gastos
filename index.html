@@ -155,6 +155,7 @@
             });
         }
 
+        // --- 1. VERSIÓN BLINDADA DEL GUARDADO ---
         async function guardarTransaccion(categoriaId) {
             const valorGasto = parseInt(monto);
             if (valorGasto === 0) return;
@@ -163,14 +164,76 @@
 
             if (navigator.onLine) {
                 const { error } = await db.from('transacciones').insert([payload]);
-                if (!error) vibrarExito();
+                if (error) {
+                    console.error("Fallo guardando en DB:", error);
+                    // Si hay error, el texto se pone rojo un segundo y NO limpia la pantalla
+                    const display = document.getElementById('monto-display');
+                    display.style.color = '#ef4444'; 
+                    setTimeout(() => display.style.color = 'white', 1000);
+                    return; 
+                } else {
+                    vibrarExito();
+                    limpiar(); // Solo limpia si fue exitoso
+                }
             } else {
                 let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
                 queue.push(payload);
                 localStorage.setItem('offline_queue', JSON.stringify(queue));
                 vibrarExito();
+                limpiar();
             }
-            limpiar();
+        }
+
+        // --- 2. VERSIÓN BLINDADA DEL DASHBOARD (INMUNE A ZONAS HORARIAS) ---
+        async function cargarEstadisticas() {
+            const fechaActual = new Date();
+            // Fuerza la búsqueda con texto puro (Ej. "2026-09-01") evadiendo el desfase UTC-5 de Colombia
+            const primerDiaMes = `${fechaActual.getFullYear()}-${String(fechaActual.getMonth() + 1).padStart(2, '0')}-01`;
+            
+            const { data, error } = await db.from('reporte_mensual')
+                .select('*')
+                .gte('mes', primerDiaMes)
+                .eq('tipo', 'gasto');
+
+            if (error) return console.error("Error trayendo estadísticas:", error);
+
+            let totalGastadoMes = 0;
+            const labelsGrafico = [];
+            const dataGrafico = [];
+            const contenedorLista = document.getElementById('lista-presupuestos');
+            contenedorLista.innerHTML = ''; // Limpia lista anterior
+
+            // Si no hay datos, mostramos 0
+            if (!data || data.length === 0) {
+                document.getElementById('dash-total-gastado').textContent = '$ 0';
+                renderizarGraficoDonut(['Sin datos'], [1]); // Gráfico vacío representativo
+                return;
+            }
+
+            data.forEach(item => {
+                totalGastadoMes += parseFloat(item.total_gastado);
+                labelsGrafico.push(item.categoria);
+                dataGrafico.push(item.total_gastado);
+
+                // Calcular progreso
+                const porcentaje = Math.min((item.total_gastado / item.presupuesto_mensual) * 100, 100).toFixed(0);
+                const colorBarra = porcentaje > 90 ? 'bg-red-500' : (porcentaje > 70 ? 'bg-yellow-400' : 'bg-emerald-400');
+
+                contenedorLista.innerHTML += `
+                    <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 mb-4">
+                        <div class="flex justify-between items-end mb-2">
+                            <span class="font-bold text-white">${item.categoria}</span>
+                            <span class="text-xs text-slate-400">${formateador.format(item.total_gastado)} de ${formateador.format(item.presupuesto_mensual)}</span>
+                        </div>
+                        <div class="w-full bg-slate-900 rounded-full h-2.5">
+                            <div class="${colorBarra} h-2.5 rounded-full transition-all duration-1000" style="width: ${porcentaje}%"></div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('dash-total-gastado').textContent = formateador.format(totalGastadoMes);
+            renderizarGraficoDonut(labelsGrafico, dataGrafico);
         }
 
         function vibrarExito() {
