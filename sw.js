@@ -1,8 +1,8 @@
-const CACHE_NAME = 'gastos-v11-sec'; 
+const CACHE_NAME = 'gastos-v12-sec'; 
 const ASSETS = ['/', '/index.html', '/manifest.json'];
 
 self.addEventListener('install', event => {
-    self.skipWaiting();
+    self.skipWaiting(); // Fuerza la instalación inmediata, destruyendo versiones viejas
     event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
 });
 
@@ -12,26 +12,26 @@ self.addEventListener('activate', event => {
             keys.map(key => {
                 if (key !== CACHE_NAME) return caches.delete(key);
             })
-        )).then(() => self.clients.claim())
+        )).then(() => self.clients.claim()) // Toma control de los clientes al instante
     );
 });
 
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
     
-    // Bypass estricto para Supabase (Garantiza ejecución RLS real-time)
-    if (url.origin.includes('supabase.co')) return;
+    // 1. BYPASS ESTRICTO: Supabase y Extensiones (Cero intercepción)
+    if (url.origin.includes('supabase.co') || url.protocol === 'chrome-extension:') return;
 
-    // Bypass para extensiones del navegador (Evita conflictos con bloqueadores de anuncios)
-    if (url.protocol === 'chrome-extension:') return;
-
-    // Estrategia Network-First con retención de Query Params para Atajos iOS
+    // 2. ESTRATEGIA NETWORK-FIRST (Para navegación base y Atajos iOS)
     if (event.request.mode === 'navigate') {
         event.respondWith(
             fetch(event.request)
                 .then(response => {
-                    const resClone = response.clone(); // Clon síncrono seguro
-                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, resClone));
+                    const resToCache = response.clone(); // Clon síncrono blindado
+                    // Delegamos la escritura al background para no bloquear el hilo
+                    event.waitUntil(
+                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, resToCache))
+                    );
                     return response;
                 })
                 .catch(() => caches.match(event.request).then(res => res || caches.match('/index.html')))
@@ -39,21 +39,22 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // Stale-While-Revalidate para Assets (Tailwind, CDN, ChartJS)
+    // 3. ESTRATEGIA STALE-WHILE-REVALIDATE (Para assets estáticos y librerías)
     event.respondWith(
         caches.match(event.request).then(cachedResponse => {
             const fetchPromise = fetch(event.request).then(networkResponse => {
-                // CLONACIÓN SÍNCRONA: Bloquea el error de stream consumido aislando la respuesta
-                // antes de que el motor resuelva la promesa asíncrona del caché.
+                // Filtramos opacos (status 0) y errores de red
                 if (!networkResponse || networkResponse.status !== 200) {
                     return networkResponse;
                 }
                 
-                const responseToCache = networkResponse.clone();
-                caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
+                const resToCache = networkResponse.clone();
+                event.waitUntil(
+                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, resToCache))
+                );
                 
                 return networkResponse;
-            }).catch(() => null);
+            }).catch(() => null); // Evita romper la app si falla la red
             
             return cachedResponse || fetchPromise;
         })
