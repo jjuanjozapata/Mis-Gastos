@@ -3,14 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Mis Gastos</title>
     
-    <!-- CONEXIÓN DEL ÍCONO (Navegador y App nativa iOS) -->
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2933/2933116.png">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2933/2933116.png">
 
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://znszebnjcgjfzxvnexxd.supabase.co https://cdn.jsdelivr.net; img-src 'self' data: https://cdn-icons-png.flaticon.com;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://znszebnjcgjfzxvnexxd.supabase.co https://cdn.jsdelivr.net; img-src 'self' data: https://cdn-icons-png.flaticon.com; worker-src 'self';">
     
     <script>
         const originalWarn = console.warn;
@@ -138,10 +139,7 @@
     <div id="pantalla-planes" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-950 min-h-0">
         <div class="p-5 pb-12 flex flex-col h-full">
             <h2 class="text-2xl font-bold text-white mb-6">Planes y Metas</h2>
-            
-            <div id="contenedor-planes" class="space-y-4 flex-1">
-                <!-- Se inyecta dinámicamente desde JS -->
-            </div>
+            <div id="contenedor-planes" class="space-y-4 flex-1"></div>
         </div>
         <button id="btn-fab-plan" onclick="abrirModalPlanes()" class="hidden absolute bottom-24 right-6 w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center text-slate-900 text-3xl font-light shadow-[0_10px_20px_rgba(16,185,129,0.3)] active:scale-90 transition-transform">+</button>
     </div>
@@ -236,7 +234,7 @@
             <p class="text-slate-300 font-bold text-sm mb-2">Conexión con Atajos de iOS</p>
             <p class="text-xs text-slate-500 mb-4 leading-relaxed">Configura tu iPhone para registrar gastos con doble toque en la parte trasera usando esta estructura de URL en tu Atajo (Acción: Abrir URL):</p>
             <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 overflow-x-auto">
-                <code class="text-emerald-400 text-xs whitespace-nowrap">https://mis-gastos-chi-taupe.vercel.app/</code>
+                <code class="text-emerald-400 text-xs whitespace-nowrap">https://mis-gastos.vercel.app/?atajo=1&monto=50000&tipo=gasto&categoria=comida</code>
             </div>
         </div>
     </div>
@@ -266,6 +264,9 @@
             'https://znszebnjcgjfzxvnexxd.supabase.co', 
             'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpuc3plYm5qY2dqZnp4dm5leHhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4NzkwNzcsImV4cCI6MjEwNTQ1NTA3N30.Od66KMiiuXPrzAUfuiprc7Q7SF3909lxDeBevMK25h0'
         );
+
+        // Seguridad: Sanitizador anti DOM-based XSS
+        const escapeHTML = str => str.replace(/[&<>'"]/g, tag => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[tag]));
 
         const formateador = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
         let monto = '0';
@@ -372,7 +373,6 @@
             cerrarModal();
         }
 
-        // --- SISTEMA DE PLANES ---
         function abrirModalPlanes() {
             document.getElementById('modal-tipo-plan').classList.remove('hidden');
             document.getElementById('modal-tipo-plan').classList.add('flex');
@@ -405,7 +405,7 @@
             
             if(!montoVal || montoVal <= 0 || !tituloVal) return alert('Datos inválidos');
 
-            const payload = { tipo: tipoPlanActivo, monto: montoVal, titulo: tituloVal };
+            const payload = { tipo: tipoPlanActivo, monto: montoVal, titulo: escapeHTML(tituloVal) };
             const { error } = await db.from('planes').insert([payload]);
             
             if(!error) {
@@ -444,7 +444,7 @@
                             <div class="w-10 h-10 rounded-full flex items-center justify-center border ${isLimite ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}">${isLimite ? '🛡️' : '🎯'}</div>
                             <div>
                                 <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">${isLimite ? 'Límite Mensual' : 'Meta de Ahorro'}</p>
-                                <p class="text-sm font-bold text-white">${p.titulo}</p>
+                                <p class="text-sm font-bold text-white">${escapeHTML(p.titulo)}</p>
                             </div>
                             <button onclick="eliminarPlan('${p.id}')" class="ml-auto text-slate-600 hover:text-red-400">✕</button>
                         </div>
@@ -464,7 +464,6 @@
             cargarPlanes();
         }
 
-        // --- DASHBOARD Y GRÁFICOS ---
         function renderizarGraficoDonut(labels, data, totalGastadoStr) {
             const ctx = document.getElementById('graficoCategorias').getContext('2d');
             if (graficoInstancia) graficoInstancia.destroy();
@@ -509,7 +508,7 @@
                 categoria_id: categoriaId, 
                 cuenta: cuentaActual, 
                 fecha: new Date().toISOString(),
-                notas: notaGasto || null 
+                notas: notaGasto ? escapeHTML(notaGasto) : null 
             };
             
             const display = document.getElementById('monto-display');
@@ -571,7 +570,7 @@
             
             categorias.forEach(c => { 
                 mapaCat[c.id] = c;
-                if(c.tipo === 'gasto') reporteGastos[c.id] = { nombre: c.nombre, icono: c.icono, gastado: 0 }; 
+                if(c.tipo === 'gasto') reporteGastos[c.id] = { nombre: escapeHTML(c.nombre), icono: c.icono, gastado: 0 }; 
             });
 
             const contenedorHistorial = document.getElementById('historial-transacciones');
@@ -610,12 +609,12 @@
                     
                     const catSpan = document.createElement('span');
                     catSpan.className = "text-sm font-bold text-white";
-                    catSpan.textContent = t.notas ? t.notas : cat.nombre;
+                    catSpan.textContent = t.notas ? escapeHTML(t.notas) : escapeHTML(cat.nombre);
                     
                     const notaSpan = document.createElement('span');
                     notaSpan.className = "text-[10px] text-slate-500 font-medium";
                     const fStr = new Date(t.fecha).toLocaleDateString('es-CO', { day:'numeric', month:'short' });
-                    notaSpan.textContent = `${cat.nombre} • ${fStr} • ${t.cuenta}`;
+                    notaSpan.textContent = `${escapeHTML(cat.nombre)} • ${fStr} • ${escapeHTML(t.cuenta)}`;
                     
                     textDiv.appendChild(catSpan);
                     textDiv.appendChild(notaSpan);
@@ -700,13 +699,23 @@
         }
 
         async function cargarCategorias() {
-            const { data, error } = await db.from('categorias').select('*').eq('tipo', tipoActual).order('nombre');
-            if (error) return;
+            let categorias = [];
             
+            if (navigator.onLine) {
+                const { data, error } = await db.from('categorias').select('*').order('nombre');
+                if (!error && data) {
+                    categorias = data;
+                    localStorage.setItem('categorias_cache', JSON.stringify(data));
+                }
+            } else {
+                categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+            }
+
+            const catsFiltradas = categorias.filter(c => c.tipo === tipoActual);
             const contenedor = document.getElementById('categorias-container');
             contenedor.innerHTML = '';
             
-            data.forEach(cat => {
+            catsFiltradas.forEach(cat => {
                 const btn = document.createElement('button');
                 btn.className = "flex flex-col items-center justify-center py-2.5 bg-slate-900 rounded-2xl active:bg-emerald-600 active:scale-95 transition-all border border-slate-800 shadow-sm min-h-[75px]";
                 
@@ -743,8 +752,18 @@
             const catNombre = params.get('categoria');
 
             if(montoStr && tipoStr && catNombre) {
-                const { data } = await db.from('categorias').select('*').eq('tipo', tipoStr);
-                const cat = data.find(c => c.nombre.toLowerCase().includes(catNombre.toLowerCase()));
+                let cat = null;
+                const localCats = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+                
+                if (navigator.onLine) {
+                    const { data } = await db.from('categorias').select('*').eq('tipo', tipoStr);
+                    if (data) {
+                        localStorage.setItem('categorias_cache', JSON.stringify(data));
+                        cat = data.find(c => c.nombre.toLowerCase().includes(catNombre.toLowerCase()));
+                    }
+                } else {
+                    cat = localCats.find(c => c.tipo === tipoStr && c.nombre.toLowerCase().includes(catNombre.toLowerCase()));
+                }
                 
                 if(cat) {
                     const payload = { 
@@ -754,10 +773,17 @@
                         fecha: new Date().toISOString(),
                         notas: 'Desde Atajo iOS'
                     };
-                    await db.from('transacciones').insert([payload]);
+
+                    if (navigator.onLine) {
+                        await db.from('transacciones').insert([payload]);
+                    } else {
+                        let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+                        queue.push(payload);
+                        localStorage.setItem('offline_queue', JSON.stringify(queue));
+                    }
                     alert(`✅ ${tipoStr.toUpperCase()} de ${formateador.format(parseInt(montoStr))} registrado.`);
                 } else {
-                    alert(`❌ Categoría "${catNombre}" no encontrada.`);
+                    alert(`❌ Categoría "${catNombre}" no encontrada en la base de datos ni en caché.`);
                 }
             }
             window.history.replaceState({}, document.title, window.location.pathname);
@@ -766,7 +792,7 @@
 
         async function autorizarDispositivo() {
             const { data: { session } } = await db.auth.getSession();
-            if (!session) {
+            if (!session && navigator.onLine) {
                 const email = prompt("🔐 Base de datos bloqueada (RLS). Ingresa tu correo de administrador:");
                 if (!email) return;
                 const password = prompt("Ingresa tu contraseña de Supabase:");
@@ -774,17 +800,21 @@
                 const { error } = await db.auth.signInWithPassword({ email, password });
                 if (error) { alert("❌ Acceso denegado."); return; }
             }
-            cargarCategorias();
+            await cargarCategorias();
             procesarAtajo();
         }
 
         async function procesarColaOffline() {
             let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
             if (queue.length === 0) return;
+
+            // Procesamiento en batch resiliente
             const { error } = await db.from('transacciones').insert(queue);
             if (!error) {
                 localStorage.removeItem('offline_queue');
                 if (!document.getElementById('pantalla-dashboard').classList.contains('hidden')) cargarEstadisticas();
+            } else {
+                console.error("Fallo al subir la cola offline, reintentando luego.", error);
             }
         }
 
