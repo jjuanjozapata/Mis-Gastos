@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {
   "name": "Control Financiero",
   "short_name": "Gastos",
@@ -12,4 +13,20 @@
       "type": "image/png"
     }
   ]
+=======
+{
+  "name": "Control Financiero",
+  "short_name": "Gastos",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/5717/5717366.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+>>>>>>> b7a68939e1607bcb04d066d0f5db9ca699f9cec3
 }
