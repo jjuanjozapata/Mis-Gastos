@@ -15,7 +15,8 @@
     <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2933/2933116.png">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2933/2933116.png">
 
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://znszebnjcgjfzxvnexxd.supabase.co https://cdn.jsdelivr.net; img-src 'self' data: https://cdn-icons-png.flaticon.com; worker-src 'self';">
+    <!-- CSP Corregido: Flaticon autorizado en connect-src para permitir cacheo del Service Worker -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://znszebnjcgjfzxvnexxd.supabase.co https://cdn.jsdelivr.net https://cdn-icons-png.flaticon.com; img-src 'self' data: https://cdn-icons-png.flaticon.com; worker-src 'self';">
     
     <script>
         const originalWarn = console.warn;
