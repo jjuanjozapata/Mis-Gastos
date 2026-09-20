@@ -152,6 +152,156 @@ if (navigator.onLine) procesarColaOffline();
         function limpiar() { monto = '0'; actualizarPantalla(); }
 
 
+        // --- AQUÍ COMIENZAN LAS FUNCIONES REESTRUCTURADAS ---
+
+        async function cargarCategorias() {
+            const { data, error } = await db.from('categorias').select('*').eq('tipo', 'gasto').order('nombre');
+            if (error) {
+                console.error("Error BD:", error);
+                return;
+            }
+            
+            const contenedor = document.getElementById('categorias-container');
+            contenedor.innerHTML = ''; // Limpieza segura
+            
+            data.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.className = "flex flex-col items-center justify-center py-2 bg-slate-800 rounded-xl active:bg-emerald-600 active:scale-95 transition-all border border-slate-700 min-h-[70px]";
+                
+                const spanIcono = document.createElement('span');
+                spanIcono.className = "text-xl mb-1";
+                spanIcono.textContent = cat.icono; 
+                
+                const spanNombre = document.createElement('span');
+                spanNombre.className = "text-[8px] font-bold text-slate-300 uppercase tracking-wider text-center px-1 leading-tight";
+                spanNombre.textContent = cat.nombre; 
+                
+                btn.appendChild(spanIcono);
+                btn.appendChild(spanNombre);
+                
+                btn.onclick = () => {
+                    if (parseInt(monto) > 0) {
+                        if (cat.nombre.toUpperCase().includes('OTROS')) {
+                            abrirModal(cat.id);
+                        } else {
+                            guardarTransaccion(cat.id, '');
+                        }
+                    }
+                };
+                contenedor.appendChild(btn);
+            });
+        }
+
+        async function autorizarDispositivo() {
+            const { data: { session } } = await db.auth.getSession();
+            
+            if (!session) {
+                const email = prompt("🔐 Base de datos bloqueada (RLS). Ingresa tu correo de administrador:");
+                if (!email) return;
+                
+                const password = prompt("Ingresa tu contraseña de Supabase:");
+                if (!password) return;
+
+                const { error } = await db.auth.signInWithPassword({ email, password });
+                
+                if (error) {
+                    alert("❌ Acceso denegado: " + error.message);
+                    return; // Detenemos la ejecución si falla
+                } else {
+                    alert("✅ Dispositivo autorizado.");
+                }
+            }
+            
+            // La sesión es válida, disparamos la interfaz
+            cargarCategorias();
+        }
+
+        // --- FUNCIONES DE MODAL Y GUARDADO (Mantenlas igual) ---
+        function abrirModal(catId) {
+            categoriaPendiente = catId;
+            const modal = document.getElementById('modal-notas');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.getElementById('input-notas').focus();
+        }
+
+        function cerrarModal() {
+            const modal = document.getElementById('modal-notas');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.getElementById('input-notas').value = '';
+            categoriaPendiente = null;
+        }
+
+        function confirmarOtrosGastos() {
+            const nota = document.getElementById('input-notas').value.trim();
+            guardarTransaccion(categoriaPendiente, nota);
+            cerrarModal();
+        }
+
+        async function guardarTransaccion(categoriaId, notaGasto) {
+            const valorGasto = parseInt(monto);
+            if (valorGasto === 0) return;
+
+            const payload = { 
+                monto: valorGasto, 
+                categoria_id: categoriaId, 
+                cuenta: 'Nequi', 
+                fecha: new Date().toISOString(),
+                notas: notaGasto || null 
+            };
+            
+            const display = document.getElementById('monto-display');
+
+            if (navigator.onLine) {
+                const { error } = await db.from('transacciones').insert([payload]);
+                if (error) {
+                    display.style.color = '#ef4444'; 
+                    setTimeout(() => display.style.color = 'white', 1000);
+                    return;
+                }
+            } else {
+                let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+                queue.push(payload);
+                localStorage.setItem('offline_queue', JSON.stringify(queue));
+            }
+            
+            if (navigator.vibrate) navigator.vibrate(50);
+            display.style.color = '#34d399'; 
+            setTimeout(() => display.style.color = 'white', 300);
+            limpiar();
+        }
+
+        // --- CIERRE DE BUCLE OFFLINE Y ARRANQUE ---
+        window.addEventListener('online', procesarColaOffline);
+
+        async function procesarColaOffline() {
+            let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+            if (queue.length === 0) return;
+
+            const { error } = await db.from('transacciones').insert(queue);
+            
+            if (!error) {
+                localStorage.removeItem('offline_queue');
+                console.log(`Sincronizadas ${queue.length} transacciones pendientes.`);
+                if (!document.getElementById('pantalla-dashboard').classList.contains('hidden')) {
+                    cargarEstadisticas(); // Llama a tu función de gráficas
+                }
+            }
+        }
+
+        // Registro del Service Worker
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+        
+        // Disparadores iniciales
+        if (navigator.onLine) procesarColaOffline();
+        autorizarDispositivo(); // Este es el motor de arranque ahora
+
+    </script>
+</body>
+</html>
+
+
 
         async function autorizarDispositivo() {
     const { data: { session } } = await db.auth.getSession();
@@ -270,18 +420,36 @@ autorizarDispositivo();
                 const colorBarra = porcentaje > 90 ? 'bg-red-500' : (porcentaje > 70 ? 'bg-yellow-400' : 'bg-emerald-400');
 
                 if (item.gastado > 0 || item.presupuesto > 0) {
-                    contenedorLista.innerHTML += `
-                        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 mb-4">
-                            <div class="flex justify-between items-end mb-2">
-                                <span class="font-bold text-white uppercase text-xs tracking-wider">${item.nombre}</span>
-                                <span class="text-xs text-slate-400">${formateador.format(item.gastado)} de ${formateador.format(item.presupuesto)}</span>
-                            </div>
-                            <div class="w-full bg-slate-900 rounded-full h-2.5">
-                                <div class="${colorBarra} h-2.5 rounded-full transition-all duration-1000" style="width: ${porcentaje}%"></div>
-                            </div>
-                        </div>
-                    `;
-                }
+    const tarjeta = document.createElement('div');
+    tarjeta.className = "bg-slate-800 p-4 rounded-xl border border-slate-700 mb-4";
+
+    const cabecera = document.createElement('div');
+    cabecera.className = "flex justify-between items-end mb-2";
+
+    const nombreSpan = document.createElement('span');
+    nombreSpan.className = "font-bold text-white uppercase text-xs tracking-wider";
+    nombreSpan.textContent = item.nombre; // Inyección segura
+
+    const valoresSpan = document.createElement('span');
+    valoresSpan.className = "text-xs text-slate-400";
+    valoresSpan.textContent = `${formateador.format(item.gastado)} de ${formateador.format(item.presupuesto)}`;
+
+    cabecera.appendChild(nombreSpan);
+    cabecera.appendChild(valoresSpan);
+
+    const contenedorBarra = document.createElement('div');
+    contenedorBarra.className = "w-full bg-slate-900 rounded-full h-2.5";
+
+    const barra = document.createElement('div');
+    barra.className = `${colorBarra} h-2.5 rounded-full transition-all duration-1000`;
+    barra.style.width = `${porcentaje}%`; // El linter de VS Code aprobará esto sin problemas
+
+    contenedorBarra.appendChild(barra);
+    tarjeta.appendChild(cabecera);
+    tarjeta.appendChild(contenedorBarra);
+
+    contenedorLista.appendChild(tarjeta);
+}
             });
 
             document.getElementById('dash-total-gastado').textContent = formateador.format(totalGastadoMes);
