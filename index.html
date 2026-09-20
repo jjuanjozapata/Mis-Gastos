@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
-    <!-- Soporte PWA Universal (Android/Chrome y iOS) -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -15,7 +14,6 @@
     <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2933/2933116.png">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2933/2933116.png">
 
-    <!-- CSP Corregido: Flaticon autorizado en connect-src para permitir cacheo del Service Worker -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://znszebnjcgjfzxvnexxd.supabase.co https://cdn.jsdelivr.net https://cdn-icons-png.flaticon.com; img-src 'self' data: https://cdn-icons-png.flaticon.com; worker-src 'self';">
     
     <script>
@@ -40,8 +38,8 @@
 </head>
 <body class="bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden relative">
     
-    <!-- MODAL OTROS GASTOS -->
-    <div id="modal-notas" class="hidden fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-6">
+    <!-- MODAL OTROS GASTOS (Z-INDEX SUPERIOR) -->
+    <div id="modal-notas" class="hidden fixed inset-0 z-[120] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-6">
         <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl">
             <h3 class="text-xl font-bold text-white mb-2">Detalle de la transacción</h3>
             <p class="text-slate-400 text-sm mb-5">Escribe brevemente el concepto.</p>
@@ -49,6 +47,55 @@
             <div class="flex gap-3">
                 <button onclick="cerrarModal()" class="flex-1 py-4 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors">Cancelar</button>
                 <button onclick="confirmarOtrosGastos()" class="flex-1 py-4 rounded-xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-colors">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL FLUJO DE CAPTURA (TIPO Y CATEGORÍA) -->
+    <div id="modal-flujo" class="hidden fixed inset-0 z-[110] bg-slate-950/95 backdrop-blur-xl justify-center items-end sm:items-center p-0 pb-0 sm:p-6">
+        <div class="bg-slate-900 w-full h-[80vh] sm:h-auto sm:max-h-[85vh] rounded-t-[2.5rem] sm:rounded-3xl p-6 border-t sm:border border-slate-800 shadow-[0_-20px_40px_rgba(0,0,0,0.5)] flex flex-col relative transition-transform">
+            <div class="w-12 h-1.5 bg-slate-800 rounded-full mx-auto mb-6 shrink-0 sm:hidden"></div>
+            <button onclick="cerrarFlujo()" class="absolute top-6 right-6 w-8 h-8 flex items-center justify-center rounded-full bg-slate-800 text-slate-400 hover:text-white shrink-0 active:scale-90 transition-transform">✕</button>
+            
+            <div class="flex-1 min-h-0 overflow-y-auto no-scrollbar pb-safe">
+                <!-- PASO 1: SELECCIÓN DE TIPO -->
+                <div id="flujo-paso-1" class="flex flex-col h-full justify-center space-y-6">
+                    <div class="text-center mb-4">
+                        <p class="text-slate-500 text-xs tracking-widest uppercase font-bold mb-2">Registrando</p>
+                        <span class="text-white font-bold text-5xl tracking-tighter" id="flujo-monto-display">$ 0</span>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-300 text-center mb-2">¿Qué tipo de movimiento es?</h3>
+                    <button onclick="avanzarFlujo('gasto')" class="w-full bg-slate-800 p-5 rounded-[2rem] border border-slate-700 active:bg-slate-700 active:scale-[0.98] transition-all flex items-center gap-5 shadow-lg">
+                        <div class="w-14 h-14 bg-red-500/10 rounded-full flex items-center justify-center text-red-400 border border-red-500/20 text-2xl">📉</div>
+                        <div class="text-left">
+                            <span class="block text-lg font-bold text-white">Es un Gasto</span>
+                            <span class="block text-xs text-slate-400">Salida de dinero, compras, pagos</span>
+                        </div>
+                        <span class="ml-auto text-slate-500">›</span>
+                    </button>
+                    <button onclick="avanzarFlujo('ingreso')" class="w-full bg-slate-800 p-5 rounded-[2rem] border border-slate-700 active:bg-slate-700 active:scale-[0.98] transition-all flex items-center gap-5 shadow-lg">
+                        <div class="w-14 h-14 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-400 border border-emerald-500/20 text-2xl">📈</div>
+                        <div class="text-left">
+                            <span class="block text-lg font-bold text-white">Es un Ingreso</span>
+                            <span class="block text-xs text-slate-400">Entrada de dinero, salarios, ventas</span>
+                        </div>
+                        <span class="ml-auto text-slate-500">›</span>
+                    </button>
+                </div>
+
+                <!-- PASO 2: SELECCIÓN DE CATEGORÍA -->
+                <div id="flujo-paso-2" class="hidden flex-col h-full">
+                    <div class="flex items-center gap-3 mb-6 shrink-0 mt-2">
+                        <button onclick="retrocederFlujo()" class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-800 text-slate-300 active:scale-90 transition-transform">←</button>
+                        <div>
+                            <h3 class="text-xl font-extrabold text-white">Selecciona Categoría</h3>
+                            <p id="flujo-tipo-label" class="text-xs text-slate-400 uppercase tracking-wider font-bold"></p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3 overflow-y-auto pb-8" id="flujo-categorias-container">
+                        <!-- Categorías dinámicas -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -88,13 +135,14 @@
             
             <div class="flex items-center gap-2 mb-6 border-b border-slate-800 pb-4">
                 <span class="text-3xl font-bold text-emerald-400">$</span>
-                <input type="number" id="input-monto-plan" class="w-full bg-transparent text-4xl font-bold text-white focus:outline-none placeholder-slate-700" placeholder="0">
+                <!-- Aplicación de formateo dinámico al input -->
+                <input type="text" inputmode="numeric" id="input-monto-plan" oninput="formatearInputPlan(event)" class="w-full bg-transparent text-4xl font-bold text-white focus:outline-none placeholder-slate-700" placeholder="0" autocomplete="off">
             </div>
 
             <div class="space-y-4 mb-8">
                 <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800">
                     <label class="text-xs font-bold text-slate-500 block mb-2">Nombre o Categoría</label>
-                    <input type="text" id="input-nombre-plan" class="w-full bg-transparent text-sm text-white focus:outline-none" placeholder="Ej. Viaje, Comida...">
+                    <input type="text" id="input-nombre-plan" class="w-full bg-transparent text-sm text-white focus:outline-none" placeholder="Ej. Viaje, Comida..." autocomplete="off">
                 </div>
             </div>
 
@@ -105,23 +153,15 @@
         </div>
     </div>
 
-    <!-- PANTALLA 1: CAPTURA RÁPIDA -->
+    <!-- PANTALLA 1: CAPTURA RÁPIDA (INTERFAZ LIMPIA) -->
     <div id="pantalla-captura" class="flex-1 flex flex-col min-h-0 relative">
-        <header class="shrink-0 p-5 flex justify-between items-center border-b border-slate-900/50">
-            <div class="flex gap-1 bg-slate-900 p-1.5 rounded-xl border border-slate-800">
-                <button id="btn-tipo-gasto" onclick="cambiarTipoTransaccion('gasto')" class="bg-slate-700 text-white px-5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md">GASTO</button>
-                <button id="btn-tipo-ingreso" onclick="cambiarTipoTransaccion('ingreso')" class="text-slate-500 px-5 py-1.5 rounded-lg text-xs font-bold transition-all">INGRESO</button>
-            </div>
-            <button onclick="cambiarCuenta()" id="btn-cuenta" class="bg-slate-900 text-emerald-400 border border-emerald-500/20 px-4 py-1.5 rounded-full text-xs font-bold tracking-wide active:scale-95 transition-all">Nequi</button>
+        <header class="shrink-0 p-5 flex justify-end items-center">
+            <button onclick="cambiarCuenta()" id="btn-cuenta" class="bg-slate-900 text-emerald-400 border border-emerald-500/20 px-5 py-2 rounded-full text-xs font-bold tracking-widest uppercase active:scale-95 transition-all shadow-md">Efectivo</button>
         </header>
 
-        <div class="shrink-0 flex flex-col justify-center items-center py-6">
-            <span id="fecha-actual" class="text-slate-500 text-xs tracking-widest uppercase font-semibold mb-2"></span>
-            <div id="monto-display" class="text-[64px] font-bold tracking-tighter text-white transition-colors">$ 0</div>
-        </div>
-
-        <div class="flex-1 overflow-y-auto no-scrollbar px-5 pb-4" id="categorias-wrapper">
-            <div class="grid grid-cols-4 gap-3" id="categorias-container"></div>
+        <div class="flex-1 flex flex-col justify-center items-center px-6">
+            <span id="fecha-actual" class="text-slate-500 text-[10px] tracking-widest uppercase font-bold mb-4 border border-slate-800 px-3 py-1 rounded-full bg-slate-900/50"></span>
+            <div id="monto-display" class="text-[72px] sm:text-[90px] font-extrabold tracking-tighter text-white transition-colors drop-shadow-lg">$ 0</div>
         </div>
 
         <div class="shrink-0 grid grid-cols-3 gap-3 p-5 bg-slate-900 rounded-t-[2.5rem] border-t border-slate-800 shadow-[0_-20px_40px_rgba(0,0,0,0.4)]">
@@ -134,19 +174,20 @@
             <button onclick="digitar('7')" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">7</button>
             <button onclick="digitar('8')" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">8</button>
             <button onclick="digitar('9')" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">9</button>
-            <button onclick="limpiar()" class="py-4 text-lg font-bold text-red-400 bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">C</button>
+            <button onclick="limpiar()" class="py-4 text-xl font-bold text-slate-500 bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">C</button>
             <button onclick="digitar('0')" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">0</button>
             <button onclick="borrar()" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">⌫</button>
+            <button onclick="iniciarCaptura()" class="col-span-3 py-5 text-lg font-bold bg-emerald-500 text-slate-950 rounded-2xl active:bg-emerald-400 active:scale-[0.98] transition-all tracking-widest uppercase shadow-[0_0_20px_rgba(16,185,129,0.2)]">Siguiente</button>
         </div>
     </div>
 
     <!-- PANTALLA 2: PLANES -->
     <div id="pantalla-planes" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-950 min-h-0">
-        <div class="p-5 pb-12 flex flex-col h-full">
+        <div class="p-5 pb-12 flex flex-col h-full overflow-x-hidden">
             <h2 class="text-2xl font-bold text-white mb-6">Planes y Metas</h2>
             <div id="contenedor-planes" class="space-y-4 flex-1"></div>
         </div>
-        <button id="btn-fab-plan" onclick="abrirModalPlanes()" class="hidden absolute bottom-24 right-6 w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center text-slate-900 text-3xl font-light shadow-[0_10px_20px_rgba(16,185,129,0.3)] active:scale-90 transition-transform">+</button>
+        <button id="btn-fab-plan" onclick="abrirModalPlanes()" class="hidden absolute bottom-24 right-6 w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center text-slate-900 text-3xl font-light shadow-[0_10px_20px_rgba(16,185,129,0.3)] active:scale-90 transition-transform z-50">+</button>
     </div>
 
     <!-- PANTALLA 3: DASHBOARD -->
@@ -237,10 +278,11 @@
         <h2 class="text-2xl font-bold text-white mb-6">Ajustes</h2>
         <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg">
             <p class="text-slate-300 font-bold text-sm mb-2">Conexión con Atajos de iOS</p>
-            <p class="text-xs text-slate-500 mb-4 leading-relaxed">Configura tu iPhone para registrar gastos con doble toque en la parte trasera usando esta estructura de URL en tu Atajo (Acción: Abrir URL):</p>
-            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 overflow-x-auto">
-                <code class="text-emerald-400 text-xs whitespace-nowrap">https://mis-gastos.vercel.app/?atajo=1&monto=50000&tipo=gasto&categoria=comida</code>
-            </div>
+            <p class="text-xs text-slate-500 mb-4 leading-relaxed">Configura tu iPhone para registrar gastos con doble toque en la parte trasera. Copia la URL e insértala en tu Atajo (Acción: Abrir URL):</p>
+            <button onclick="copiarAtajo()" class="w-full mt-2 flex items-center justify-center gap-2 py-4 bg-slate-800 text-emerald-400 font-bold rounded-2xl active:bg-slate-700 active:scale-[0.98] border border-emerald-500/20 transition-all">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                <span id="btn-copiar-texto">Copiar Enlace para iOS</span>
+            </button>
         </div>
     </div>
 
@@ -270,19 +312,19 @@
             'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpuc3plYm5qY2dqZnp4dm5leHhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4NzkwNzcsImV4cCI6MjEwNTQ1NTA3N30.Od66KMiiuXPrzAUfuiprc7Q7SF3909lxDeBevMK25h0'
         );
 
-        // Seguridad: Sanitizador anti DOM-based XSS
         const escapeHTML = str => str.replace(/[&<>'"]/g, tag => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[tag]));
-
         const formateador = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+        
         let monto = '0';
         let graficoInstancia = null;
         let categoriaPendiente = null;
-        
         let tipoActual = 'gasto';
-        let cuentaActual = 'Nequi';
-        const listaCuentas = ['Nequi', 'Efectivo', 'Bancolombia', 'Ahorros'];
-        let cuentaIndex = 0;
         let tipoPlanActivo = '';
+        
+        // Abstracción de Cuentas (Removido Nequi como único visible)
+        const listaCuentas = ['Efectivo', 'Bancos', 'Tarjetas', 'Transferencia'];
+        let cuentaIndex = 0;
+        let cuentaActual = listaCuentas[cuentaIndex];
 
         document.getElementById('fecha-actual').textContent = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }).format(new Date());
 
@@ -292,7 +334,6 @@
                 if (chart.config.type !== 'doughnut' || !chart.config.options.plugins.centerText) return;
                 let width = chart.width, height = chart.height, ctx = chart.ctx;
                 ctx.restore();
-                
                 let text = chart.config.options.plugins.centerText.text || "$ 0";
                 ctx.font = "bold 1.2rem sans-serif";
                 ctx.textBaseline = "middle";
@@ -300,7 +341,6 @@
                 let textX = Math.round((width - ctx.measureText(text).width) / 2);
                 let textY = height / 2 - 5;
                 ctx.fillText(text, textX, textY);
-                
                 let subText = "gastado";
                 ctx.font = "normal 0.75rem sans-serif";
                 ctx.fillStyle = "#94a3b8";
@@ -317,30 +357,70 @@
             document.getElementById('btn-cuenta').textContent = cuentaActual;
         }
 
-        function cambiarTipoTransaccion(tipo) {
-            tipoActual = tipo;
-            const btnGasto = document.getElementById('btn-tipo-gasto');
-            const btnIngreso = document.getElementById('btn-tipo-ingreso');
-            const display = document.getElementById('monto-display');
-            
-            if (tipo === 'gasto') {
-                btnGasto.className = 'bg-slate-700 text-white px-5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md';
-                btnIngreso.className = 'text-slate-500 px-5 py-1.5 rounded-lg text-xs font-bold transition-all';
-                display.classList.remove('text-emerald-400');
-                display.classList.add('text-white');
-            } else {
-                btnIngreso.className = 'bg-emerald-600 text-white px-5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md';
-                btnGasto.className = 'text-slate-500 px-5 py-1.5 rounded-lg text-xs font-bold transition-all';
-                display.classList.remove('text-white');
-                display.classList.add('text-emerald-400');
-            }
-            cargarCategorias(); 
-        }
-
         function actualizarPantalla() { document.getElementById('monto-display').textContent = formateador.format(parseInt(monto || '0')); }
         function digitar(num) { if (monto === '0' || monto === 0) monto = num; else if (monto.length < 10) monto += num; actualizarPantalla(); }
         function borrar() { monto = monto.slice(0, -1); if (monto === '') monto = '0'; actualizarPantalla(); }
         function limpiar() { monto = '0'; actualizarPantalla(); }
+
+        // --- SISTEMA DE FLUJO DE CAPTURA (MODAL) ---
+        function iniciarCaptura() {
+            if(parseInt(monto) === 0) return alert('Digita un valor mayor a cero.');
+            document.getElementById('flujo-monto-display').textContent = formateador.format(parseInt(monto));
+            document.getElementById('modal-flujo').classList.remove('hidden');
+            document.getElementById('modal-flujo').classList.add('flex');
+            document.getElementById('flujo-paso-1').classList.remove('hidden');
+            document.getElementById('flujo-paso-1').classList.add('flex');
+            document.getElementById('flujo-paso-2').classList.add('hidden');
+            document.getElementById('flujo-paso-2').classList.remove('flex');
+        }
+
+        function cerrarFlujo() {
+            document.getElementById('modal-flujo').classList.add('hidden');
+            document.getElementById('modal-flujo').classList.remove('flex');
+        }
+
+        function retrocederFlujo() {
+            document.getElementById('flujo-paso-2').classList.add('hidden');
+            document.getElementById('flujo-paso-2').classList.remove('flex');
+            document.getElementById('flujo-paso-1').classList.remove('hidden');
+            document.getElementById('flujo-paso-1').classList.add('flex');
+        }
+
+        function avanzarFlujo(tipo) {
+            tipoActual = tipo;
+            document.getElementById('flujo-tipo-label').textContent = tipo === 'gasto' ? '📉 Registrando Gasto' : '📈 Registrando Ingreso';
+            document.getElementById('flujo-paso-1').classList.add('hidden');
+            document.getElementById('flujo-paso-1').classList.remove('flex');
+            document.getElementById('flujo-paso-2').classList.remove('hidden');
+            document.getElementById('flujo-paso-2').classList.add('flex');
+            renderizarCategoriasFlujo();
+        }
+
+        async function renderizarCategoriasFlujo() {
+            let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+            if (navigator.onLine && categorias.length === 0) {
+                const { data } = await db.from('categorias').select('*').order('nombre');
+                if (data) { categorias = data; localStorage.setItem('categorias_cache', JSON.stringify(data)); }
+            }
+            
+            const catsFiltradas = categorias.filter(c => c.tipo === tipoActual);
+            const contenedor = document.getElementById('flujo-categorias-container');
+            contenedor.innerHTML = '';
+            
+            catsFiltradas.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.className = "flex flex-col items-center justify-center p-3 bg-slate-800 rounded-2xl active:bg-emerald-600 active:scale-95 transition-all border border-slate-700 shadow-md min-h-[85px]";
+                btn.innerHTML = `<span class="text-2xl mb-2">${cat.icono}</span><span class="text-[9px] font-bold text-slate-300 uppercase tracking-wider text-center leading-tight">${cat.nombre}</span>`;
+                btn.onclick = () => {
+                    if (cat.nombre.toUpperCase().includes('OTROS') || cat.nombre.toUpperCase().includes('EXTRA')) {
+                        abrirModal(cat.id);
+                    } else {
+                        guardarTransaccion(cat.id, '');
+                    }
+                };
+                contenedor.appendChild(btn);
+            });
+        }
 
         function cambiarTab(pantalla) {
             const pantallas = ['captura', 'planes', 'dashboard', 'ajustes'];
@@ -378,6 +458,7 @@
             cerrarModal();
         }
 
+        // --- SISTEMA DE PLANES ---
         function abrirModalPlanes() {
             document.getElementById('modal-tipo-plan').classList.remove('hidden');
             document.getElementById('modal-tipo-plan').classList.add('flex');
@@ -404,8 +485,15 @@
             document.getElementById('modal-form-plan').classList.remove('flex');
         }
 
+        function formatearInputPlan(e) {
+            let valor = e.target.value.replace(/\D/g, '');
+            if (!valor) { e.target.value = ''; return; }
+            e.target.value = new Intl.NumberFormat('es-CO').format(parseInt(valor));
+        }
+
         async function guardarPlan() {
-            const montoVal = parseInt(document.getElementById('input-monto-plan').value);
+            const rawMonto = document.getElementById('input-monto-plan').value.replace(/\D/g, '');
+            const montoVal = parseInt(rawMonto);
             const tituloVal = document.getElementById('input-nombre-plan').value.trim();
             
             if(!montoVal || montoVal <= 0 || !tituloVal) return alert('Datos inválidos');
@@ -437,65 +525,77 @@
                     <p class="text-sm text-slate-500 mb-8 max-w-xs">Crea límites de gasto o metas de ahorro para organizar tu dinero</p>
                     <button onclick="abrirModalPlanes()" class="text-emerald-400 font-bold text-sm tracking-widest uppercase">CREAR MI PRIMER PLAN</button>
                 </div>`;
-            } else {
-                fab.classList.remove('hidden');
-                contenedor.innerHTML = '';
-                data.forEach(p => {
-                    const isLimite = p.tipo === 'limite';
-                    const tarjeta = document.createElement('div');
-                    tarjeta.className = "bg-slate-900 p-5 rounded-3xl border border-slate-800 shadow-md relative";
-                    tarjeta.innerHTML = `
-                        <div class="flex items-center gap-3 mb-4">
-                            <div class="w-10 h-10 rounded-full flex items-center justify-center border ${isLimite ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}">${isLimite ? '🛡️' : '🎯'}</div>
-                            <div>
-                                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">${isLimite ? 'Límite Mensual' : 'Meta de Ahorro'}</p>
-                                <p class="text-sm font-bold text-white">${escapeHTML(p.titulo)}</p>
-                            </div>
-                            <button onclick="eliminarPlan('${p.id}')" class="ml-auto text-slate-600 hover:text-red-400">✕</button>
+                return;
+            } 
+            
+            fab.classList.remove('hidden');
+            contenedor.innerHTML = '';
+            
+            data.forEach(p => {
+                const isLimite = p.tipo === 'limite';
+                
+                // Estructura para Swipe-to-Delete
+                const wrapper = document.createElement('div');
+                wrapper.className = "relative overflow-hidden rounded-3xl mb-4 bg-red-500 flex justify-end";
+                
+                const btnDelete = document.createElement('button');
+                btnDelete.className = "absolute right-0 top-0 bottom-0 w-24 flex flex-col items-center justify-center text-white font-bold active:bg-red-600 transition-colors";
+                btnDelete.innerHTML = `<span class="text-xl mb-1">🗑️</span><span class="text-[10px] uppercase tracking-wider">Borrar</span>`;
+                btnDelete.onclick = () => eliminarPlan(p.id);
+                wrapper.appendChild(btnDelete);
+
+                const tarjeta = document.createElement('div');
+                tarjeta.className = "bg-slate-900 p-5 rounded-3xl border border-slate-800 shadow-md relative z-10 w-full transition-transform duration-200 touch-pan-y";
+                tarjeta.innerHTML = `
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center border ${isLimite ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}">${isLimite ? '🛡️' : '🎯'}</div>
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">${isLimite ? 'Límite Mensual' : 'Meta de Ahorro'}</p>
+                            <p class="text-sm font-bold text-white">${escapeHTML(p.titulo)}</p>
                         </div>
-                        <div class="flex justify-between items-end">
-                            <h4 class="text-2xl font-bold text-white">${formateador.format(p.monto)}</h4>
-                            <span class="text-xs text-slate-500">Objetivo</span>
-                        </div>
-                    `;
-                    contenedor.appendChild(tarjeta);
+                    </div>
+                    <div class="flex justify-between items-end">
+                        <h4 class="text-2xl font-bold text-white">${formateador.format(p.monto)}</h4>
+                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Objetivo</span>
+                    </div>
+                `;
+                
+                // Lógica Gestos Táctiles (Swipe)
+                let startX = 0, currentX = 0, isDragging = false;
+                
+                tarjeta.addEventListener('touchstart', e => { 
+                    startX = e.touches[0].clientX; 
+                    isDragging = true; 
+                    tarjeta.style.transition = 'none';
+                }, {passive: true});
+                
+                tarjeta.addEventListener('touchmove', e => {
+                    if(!isDragging) return;
+                    currentX = e.touches[0].clientX;
+                    let diff = currentX - startX;
+                    if(diff < 0) tarjeta.style.transform = `translateX(${Math.max(diff, -100)}px)`;
+                }, {passive: true});
+                
+                tarjeta.addEventListener('touchend', e => {
+                    isDragging = false;
+                    tarjeta.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)';
+                    let diff = currentX - startX;
+                    if(diff < -50) {
+                        tarjeta.style.transform = 'translateX(-96px)'; 
+                    } else {
+                        tarjeta.style.transform = 'translateX(0)'; 
+                    }
+                    startX = 0; currentX = 0;
                 });
-            }
+
+                wrapper.appendChild(tarjeta);
+                contenedor.appendChild(wrapper);
+            });
         }
 
-        function renderizarGraficoDonut(labels, data, totalGastadoStr) {
-            const ctx = document.getElementById('graficoCategorias').getContext('2d');
-            if (graficoInstancia) graficoInstancia.destroy();
-            graficoInstancia = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: data,
-                        backgroundColor: ['#10b981', '#f43f5e', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16', '#64748b'],
-                        borderWidth: 0,
-                        hoverOffset: 4
-                    }]
-                },
-                options: { 
-                    responsive: true, 
-                    cutout: '75%', 
-                    plugins: { 
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    let total = context.chart._metasets[context.datasetIndex].total;
-                                    let valor = context.raw;
-                                    let porcentaje = Math.round((valor / total) * 100);
-                                    return ` ${context.label}: ${formateador.format(valor)} (${porcentaje}%)`;
-                                }
-                            }
-                        },
-                        centerText: { text: totalGastadoStr }
-                    } 
-                }
-            });
+        async function eliminarPlan(id) {
+            await db.from('planes').delete().eq('id', id);
+            cargarPlanes();
         }
 
         async function guardarTransaccion(categoriaId, notaGasto) {
@@ -510,13 +610,13 @@
                 notas: notaGasto ? escapeHTML(notaGasto) : null 
             };
             
-            const display = document.getElementById('monto-display');
+            const display = document.getElementById('flujo-monto-display');
 
             if (navigator.onLine) {
                 const { error } = await db.from('transacciones').insert([payload]);
                 if (error) {
                     display.style.color = '#ef4444'; 
-                    setTimeout(() => display.style.color = tipoActual === 'gasto' ? 'white' : '#34d399', 1000);
+                    setTimeout(() => display.style.color = 'white', 1000);
                     return;
                 }
             } else {
@@ -526,9 +626,14 @@
             }
             
             if (navigator.vibrate) navigator.vibrate(50);
+            
+            // Éxito visual y cierre
             display.style.color = '#34d399'; 
-            setTimeout(() => display.style.color = tipoActual === 'gasto' ? 'white' : '#34d399', 300);
-            limpiar();
+            setTimeout(() => {
+                display.style.color = 'white';
+                cerrarFlujo();
+                limpiar();
+            }, 300);
         }
 
         async function eliminarTransaccion(id) {
@@ -697,48 +802,19 @@
             renderizarGraficoDonut(labelsGrafico, dataGrafico, formateador.format(totalGastado));
         }
 
-        async function cargarCategorias() {
-            let categorias = [];
-            
+        async function sincronizarCategoriasCache() {
             if (navigator.onLine) {
-                const { data, error } = await db.from('categorias').select('*').order('nombre');
-                if (!error && data) {
-                    categorias = data;
-                    localStorage.setItem('categorias_cache', JSON.stringify(data));
-                }
-            } else {
-                categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+                const { data } = await db.from('categorias').select('*').order('nombre');
+                if (data) localStorage.setItem('categorias_cache', JSON.stringify(data));
             }
+        }
 
-            const catsFiltradas = categorias.filter(c => c.tipo === tipoActual);
-            const contenedor = document.getElementById('categorias-container');
-            contenedor.innerHTML = '';
-            
-            catsFiltradas.forEach(cat => {
-                const btn = document.createElement('button');
-                btn.className = "flex flex-col items-center justify-center py-2.5 bg-slate-900 rounded-2xl active:bg-emerald-600 active:scale-95 transition-all border border-slate-800 shadow-sm min-h-[75px]";
-                
-                const spanIcono = document.createElement('span');
-                spanIcono.className = "text-xl mb-1.5";
-                spanIcono.textContent = cat.icono;
-                
-                const spanNombre = document.createElement('span');
-                spanNombre.className = "text-[9px] font-bold text-slate-400 uppercase tracking-wider text-center px-1 leading-tight";
-                spanNombre.textContent = cat.nombre;
-                
-                btn.appendChild(spanIcono);
-                btn.appendChild(spanNombre);
-                
-                btn.onclick = () => {
-                    if (parseInt(monto) > 0) {
-                        if (cat.nombre.toUpperCase().includes('OTROS') || cat.nombre.toUpperCase().includes('EXTRA')) {
-                            abrirModal(cat.id);
-                        } else {
-                            guardarTransaccion(cat.id, '');
-                        }
-                    }
-                };
-                contenedor.appendChild(btn);
+        function copiarAtajo() {
+            const urlAtajo = window.location.origin + "/?atajo=1&monto=50000&tipo=gasto&categoria=comida";
+            navigator.clipboard.writeText(urlAtajo).then(() => {
+                const btn = document.getElementById('btn-copiar-texto');
+                btn.textContent = "¡Enlace Copiado!";
+                setTimeout(() => btn.textContent = "Copiar Enlace para iOS", 2500);
             });
         }
 
@@ -768,7 +844,7 @@
                     const payload = { 
                         monto: parseInt(montoStr), 
                         categoria_id: cat.id, 
-                        cuenta: 'Nequi', 
+                        cuenta: 'Efectivo', 
                         fecha: new Date().toISOString(),
                         notas: 'Desde Atajo iOS'
                     };
@@ -782,7 +858,7 @@
                     }
                     alert(`✅ ${tipoStr.toUpperCase()} de ${formateador.format(parseInt(montoStr))} registrado.`);
                 } else {
-                    alert(`❌ Categoría "${catNombre}" no encontrada en la base de datos ni en caché.`);
+                    alert(`❌ Categoría "${catNombre}" no encontrada en caché.`);
                 }
             }
             window.history.replaceState({}, document.title, window.location.pathname);
@@ -799,7 +875,7 @@
                 const { error } = await db.auth.signInWithPassword({ email, password });
                 if (error) { alert("❌ Acceso denegado."); return; }
             }
-            await cargarCategorias();
+            await sincronizarCategoriasCache();
             procesarAtajo();
         }
 
@@ -811,8 +887,6 @@
             if (!error) {
                 localStorage.removeItem('offline_queue');
                 if (!document.getElementById('pantalla-dashboard').classList.contains('hidden')) cargarEstadisticas();
-            } else {
-                console.error("Fallo al subir la cola offline, reintentando luego.", error);
             }
         }
 
