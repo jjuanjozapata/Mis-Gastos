@@ -7,7 +7,6 @@
     <link rel="manifest" href="manifest.json">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://znszebnjcgjfzxvnexxd.supabase.co https://cdn.jsdelivr.net; img-src 'self' data: https://cdn-icons-png.flaticon.com;">
     
-    <!-- Bloqueo de la advertencia de desarrollo de Tailwind -->
     <script>
         const originalWarn = console.warn;
         console.warn = (...args) => {
@@ -22,115 +21,158 @@
     <style>
         body { padding-bottom: env(safe-area-inset-bottom); height: 100dvh; }
         button { touch-action: manipulation; }
-        .tab-activa { color: #34d399; }
+        .tab-activa { color: #10b981; }
         .tab-inactiva { color: #64748b; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 flex flex-col font-sans select-none overflow-hidden relative">
+<body class="bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden relative">
     
     <!-- MODAL OTROS GASTOS -->
     <div id="modal-notas" class="hidden fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-6">
-        <div class="bg-slate-800 w-full max-w-sm rounded-3xl p-6 border border-slate-700 shadow-2xl">
+        <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl">
             <h3 class="text-xl font-bold text-white mb-2">Detalle de la transacción</h3>
             <p class="text-slate-400 text-sm mb-5">Escribe brevemente el concepto.</p>
-            <input type="text" id="input-notas" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 mb-6 text-lg" placeholder="Ej. Helado, Cine, Venta..." autocomplete="off">
+            <input type="text" id="input-notas" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 mb-6 text-lg" placeholder="Ej. Compras, Netflix, Salario..." autocomplete="off">
             <div class="flex gap-3">
-                <button onclick="cerrarModal()" class="flex-1 py-4 rounded-xl bg-slate-700 text-white font-bold active:bg-slate-600 transition-colors">Cancelar</button>
-                <button onclick="confirmarOtrosGastos()" class="flex-1 py-4 rounded-xl bg-emerald-500 text-slate-900 font-bold active:bg-emerald-400 transition-colors">Guardar</button>
+                <button onclick="cerrarModal()" class="flex-1 py-4 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors">Cancelar</button>
+                <button onclick="confirmarOtrosGastos()" class="flex-1 py-4 rounded-xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-colors">Guardar</button>
             </div>
         </div>
     </div>
 
     <!-- PANTALLA 1: CAPTURA RÁPIDA -->
     <div id="pantalla-captura" class="flex-1 flex flex-col min-h-0 relative">
-        <header class="shrink-0 p-5 flex justify-between items-center border-b border-slate-800">
-            <div class="flex gap-1 bg-slate-800 p-1 rounded-xl">
-                <button id="btn-tipo-gasto" onclick="cambiarTipoTransaccion('gasto')" class="bg-slate-600 text-white px-4 py-1 rounded-lg text-xs font-bold transition-all shadow-md">GASTO</button>
-                <button id="btn-tipo-ingreso" onclick="cambiarTipoTransaccion('ingreso')" class="text-slate-400 px-4 py-1 rounded-lg text-xs font-bold transition-all">INGRESO</button>
+        <header class="shrink-0 p-5 flex justify-between items-center border-b border-slate-900/50">
+            <div class="flex gap-1 bg-slate-900 p-1.5 rounded-xl border border-slate-800">
+                <button id="btn-tipo-gasto" onclick="cambiarTipoTransaccion('gasto')" class="bg-slate-700 text-white px-5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md">GASTO</button>
+                <button id="btn-tipo-ingreso" onclick="cambiarTipoTransaccion('ingreso')" class="text-slate-500 px-5 py-1.5 rounded-lg text-xs font-bold transition-all">INGRESO</button>
             </div>
-            <button onclick="cambiarCuenta()" id="btn-cuenta" class="bg-slate-800 text-emerald-400 border border-emerald-500/30 px-4 py-1.5 rounded-full text-sm font-semibold tracking-wide active:scale-95 transition-all">Nequi</button>
+            <button onclick="cambiarCuenta()" id="btn-cuenta" class="bg-slate-900 text-emerald-400 border border-emerald-500/20 px-4 py-1.5 rounded-full text-xs font-bold tracking-wide active:scale-95 transition-all">Nequi</button>
         </header>
 
-        <div class="shrink-0 flex flex-col justify-center items-center py-4">
-            <span id="fecha-actual" class="text-slate-500 text-sm mb-1 font-medium"></span>
-            <div id="monto-display" class="text-6xl font-bold tracking-tighter text-white transition-colors">$ 0</div>
+        <div class="shrink-0 flex flex-col justify-center items-center py-6">
+            <span id="fecha-actual" class="text-slate-500 text-xs tracking-widest uppercase font-semibold mb-2"></span>
+            <div id="monto-display" class="text-[64px] font-bold tracking-tighter text-white transition-colors">$ 0</div>
         </div>
 
-        <div class="flex-1 overflow-y-auto no-scrollbar px-4 pb-2" id="categorias-wrapper">
-            <div class="grid grid-cols-4 gap-2" id="categorias-container"></div>
+        <div class="flex-1 overflow-y-auto no-scrollbar px-5 pb-4" id="categorias-wrapper">
+            <div class="grid grid-cols-4 gap-3" id="categorias-container"></div>
         </div>
 
-        <div class="shrink-0 grid grid-cols-3 gap-2 p-3 bg-slate-950 rounded-t-3xl shadow-[0_-15px_30px_rgba(0,0,0,0.6)]">
-            <button onclick="digitar('1')" class="py-3 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">1</button>
-            <button onclick="digitar('2')" class="py-3 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">2</button>
-            <button onclick="digitar('3')" class="py-3 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">3</button>
-            <button onclick="digitar('4')" class="py-3 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">4</button>
-            <button onclick="digitar('5')" class="py-3 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">5</button>
-            <button onclick="digitar('6')" class="py-3 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">6</button>
-            <button onclick="digitar('7')" class="py-3 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">7</button>
-            <button onclick="digitar('8')" class="py-3 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">8</button>
-            <button onclick="digitar('9')" class="py-3 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">9</button>
-            <button onclick="limpiar()" class="py-3 text-lg font-bold text-red-400 bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">C</button>
-            <button onclick="digitar('0')" class="py-3 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">0</button>
-            <button onclick="borrar()" class="py-3 text-2xl font-medium bg-slate-800 rounded-xl active:bg-slate-700 active:scale-95 transition-all">⌫</button>
+        <div class="shrink-0 grid grid-cols-3 gap-3 p-5 bg-slate-900 rounded-t-[2.5rem] border-t border-slate-800 shadow-[0_-20px_40px_rgba(0,0,0,0.4)]">
+            <button onclick="digitar('1')" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">1</button>
+            <button onclick="digitar('2')" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">2</button>
+            <button onclick="digitar('3')" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">3</button>
+            <button onclick="digitar('4')" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">4</button>
+            <button onclick="digitar('5')" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">5</button>
+            <button onclick="digitar('6')" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">6</button>
+            <button onclick="digitar('7')" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">7</button>
+            <button onclick="digitar('8')" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">8</button>
+            <button onclick="digitar('9')" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">9</button>
+            <button onclick="limpiar()" class="py-4 text-lg font-bold text-red-400 bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">C</button>
+            <button onclick="digitar('0')" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">0</button>
+            <button onclick="borrar()" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">⌫</button>
         </div>
     </div>
 
     <!-- PANTALLA 2: DASHBOARD -->
-    <div id="pantalla-dashboard" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-900 min-h-0">
-        <div class="p-6 pb-12">
+    <div id="pantalla-dashboard" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-950 min-h-0">
+        <div class="p-5 pb-12">
             
-            <!-- FILTRO DE TIEMPO -->
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold text-white">Flujo de Caja</h2>
-                <select id="filtro-tiempo" onchange="cargarEstadisticas()" class="bg-slate-800 text-slate-300 text-sm rounded-lg px-3 py-1.5 border border-slate-700 outline-none">
+                <select id="filtro-tiempo" onchange="cargarEstadisticas()" class="bg-slate-900 text-white font-semibold text-sm rounded-xl px-4 py-2 border border-slate-800 outline-none focus:ring-1 focus:ring-emerald-500">
                     <option value="dia">Hoy</option>
                     <option value="mes" selected>Este Mes</option>
                     <option value="anio">Este Año</option>
                 </select>
             </div>
             
-            <div class="bg-slate-800 rounded-3xl p-5 mb-6 border border-slate-700 shadow-xl relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl"></div>
-                <p class="text-slate-400 text-sm font-medium relative z-10">Balance Disponible</p>
-                <h3 id="dash-balance" class="text-4xl font-bold text-white mt-1 relative z-10">$ 0</h3>
+            <!-- TARJETA BALANCE -->
+            <div class="bg-gradient-to-br from-emerald-900/40 to-slate-900 rounded-[2rem] p-6 mb-4 border border-emerald-500/20 relative overflow-hidden">
+                <p class="text-emerald-100/60 text-xs font-bold tracking-wider mb-1">BALANCE DISPONIBLE</p>
+                <h3 id="dash-balance" class="text-4xl font-extrabold text-white">$ 0</h3>
                 
-                <div class="grid grid-cols-2 gap-4 mt-6 relative z-10 border-t border-slate-700 pt-4">
-                    <div>
-                        <p class="text-slate-500 text-xs font-medium mb-1">Ingresos</p>
-                        <p id="dash-ingresos" class="text-lg font-bold text-emerald-400">$ 0</p>
+                <div class="mt-5">
+                    <div class="flex justify-between text-[10px] font-bold text-emerald-200/50 mb-2">
+                        <span>DISPONIBLE</span>
+                        <span id="dash-porcentaje">0%</span>
                     </div>
-                    <div>
-                        <p class="text-slate-500 text-xs font-medium mb-1">Gastos</p>
-                        <p id="dash-gastos" class="text-lg font-bold text-red-400">$ 0</p>
+                    <div class="w-full bg-slate-950/50 rounded-full h-1.5 border border-slate-800">
+                        <div id="dash-bar" class="bg-gradient-to-r from-emerald-500 to-teal-300 h-1.5 rounded-full transition-all duration-1000" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 mt-6">
+                    <div class="bg-slate-950/30 p-3 rounded-xl border border-slate-800/50">
+                        <p class="text-slate-400 text-[10px] font-bold flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> INGRESOS</p>
+                        <p id="dash-ingresos" class="text-emerald-400 font-bold text-sm mt-1">+$ 0</p>
+                    </div>
+                    <div class="bg-slate-950/30 p-3 rounded-xl border border-slate-800/50">
+                        <p class="text-slate-400 text-[10px] font-bold flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-400"></span> GASTOS</p>
+                        <p id="dash-gastos" class="text-white font-bold text-sm mt-1">-$ 0</p>
                     </div>
                 </div>
             </div>
 
-            <!-- HISTORIAL RECIENTE -->
-            <div class="bg-slate-800 rounded-3xl p-5 mb-6 border border-slate-700">
-                <p class="text-slate-200 text-sm font-semibold mb-4">Últimos Movimientos</p>
+            <!-- TARJETA SEGURO PARA GASTAR -->
+            <div class="bg-slate-900 rounded-3xl p-5 mb-6 border border-slate-800 flex items-center justify-between shadow-lg">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 text-xl border border-emerald-500/20">🛡️</div>
+                    <div>
+                        <p class="text-slate-400 text-xs font-bold">Seguro para Gastar</p>
+                        <h3 id="dash-seguro" class="text-xl font-extrabold text-emerald-400 mt-0.5">$ 0</h3>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p id="dash-dias-restantes" class="text-xs font-semibold text-slate-300">0 días</p>
+                    <p class="text-[10px] text-slate-500">restantes</p>
+                </div>
+            </div>
+
+            <!-- VISTA RÁPIDA -->
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800">
+                    <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 mb-3 text-sm border border-slate-700">💲</div>
+                    <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wide">Promedio Diario</p>
+                    <p id="dash-promedio" class="text-lg font-bold text-white mt-1">$ 0</p>
+                </div>
+                <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800">
+                    <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 mb-3 text-sm border border-slate-700">⭐</div>
+                    <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wide">Categoría Top</p>
+                    <p id="dash-top-cat" class="text-sm font-bold text-white mt-1 truncate">-</p>
+                </div>
+            </div>
+
+            <!-- GRÁFICO DONA -->
+            <div class="bg-slate-900 rounded-3xl p-6 mb-6 border border-slate-800">
+                <p class="text-white text-sm font-bold mb-4">Gastos por Categoría</p>
+                <div class="relative flex justify-center">
+                    <canvas id="graficoCategorias" height="220"></canvas>
+                </div>
+                <div id="lista-presupuestos" class="space-y-2 mt-6"></div>
+            </div>
+
+            <!-- HISTORIAL -->
+            <div class="mt-8">
+                <div class="flex justify-between items-center mb-4">
+                    <p class="text-white text-sm font-bold">Ver historial completo</p>
+                </div>
                 <div id="historial-transacciones" class="space-y-3"></div>
             </div>
 
-            <div class="bg-slate-800 rounded-3xl p-5 mb-6 border border-slate-700">
-                <p class="text-slate-200 text-sm font-semibold mb-4">Distribución de Gastos</p>
-                <canvas id="graficoCategorias" height="250"></canvas>
-            </div>
-            <div id="lista-presupuestos" class="space-y-4"></div>
         </div>
     </div>
 
     <!-- NAVEGACIÓN INFERIOR -->
-    <nav class="shrink-0 w-full bg-slate-950 border-t border-slate-800 flex justify-around items-center h-[65px]">
+    <nav class="shrink-0 w-full bg-slate-950 border-t border-slate-900 flex justify-around items-center h-[70px] pb-safe">
         <button onclick="cambiarTab('captura')" id="tab-captura" class="flex flex-col items-center justify-center w-full h-full tab-activa transition-colors">
-            <span class="text-xl mb-1">⌨️</span>
+            <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
             <span class="text-[10px] font-bold">Ingresar</span>
         </button>
         <button onclick="cambiarTab('dashboard')" id="tab-dashboard" class="flex flex-col items-center justify-center w-full h-full tab-inactiva transition-colors">
-            <span class="text-xl mb-1">📊</span>
+            <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
             <span class="text-[10px] font-bold">Reportes</span>
         </button>
     </nav>
@@ -148,10 +190,35 @@
         
         let tipoActual = 'gasto';
         let cuentaActual = 'Nequi';
-        const listaCuentas = ['Nequi', 'Efectivo', 'Bancolombia'];
+        const listaCuentas = ['Nequi', 'Efectivo', 'Bancolombia', 'Ahorros'];
         let cuentaIndex = 0;
 
         document.getElementById('fecha-actual').textContent = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }).format(new Date());
+
+        const centerTextPlugin = {
+            id: 'centerText',
+            beforeDraw: function(chart) {
+                if (chart.config.type !== 'doughnut' || !chart.config.options.plugins.centerText) return;
+                let width = chart.width, height = chart.height, ctx = chart.ctx;
+                ctx.restore();
+                
+                let text = chart.config.options.plugins.centerText.text || "$ 0";
+                ctx.font = "bold 1.2rem sans-serif";
+                ctx.textBaseline = "middle";
+                ctx.fillStyle = "#ffffff";
+                let textX = Math.round((width - ctx.measureText(text).width) / 2);
+                let textY = height / 2 - 5;
+                ctx.fillText(text, textX, textY);
+                
+                let subText = "gastado";
+                ctx.font = "normal 0.75rem sans-serif";
+                ctx.fillStyle = "#94a3b8";
+                let subTextX = Math.round((width - ctx.measureText(subText).width) / 2);
+                ctx.fillText(subText, subTextX, textY + 20);
+                ctx.save();
+            }
+        };
+        Chart.register(centerTextPlugin);
 
         function cambiarCuenta() {
             cuentaIndex = (cuentaIndex + 1) % listaCuentas.length;
@@ -166,13 +233,13 @@
             const display = document.getElementById('monto-display');
             
             if (tipo === 'gasto') {
-                btnGasto.className = 'bg-slate-600 text-white px-4 py-1 rounded-lg text-xs font-bold transition-all shadow-md';
-                btnIngreso.className = 'text-slate-400 px-4 py-1 rounded-lg text-xs font-bold transition-all';
+                btnGasto.className = 'bg-slate-700 text-white px-5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md';
+                btnIngreso.className = 'text-slate-500 px-5 py-1.5 rounded-lg text-xs font-bold transition-all';
                 display.classList.remove('text-emerald-400');
                 display.classList.add('text-white');
             } else {
-                btnIngreso.className = 'bg-emerald-600 text-white px-4 py-1 rounded-lg text-xs font-bold transition-all shadow-md';
-                btnGasto.className = 'text-slate-400 px-4 py-1 rounded-lg text-xs font-bold transition-all';
+                btnIngreso.className = 'bg-emerald-600 text-white px-5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md';
+                btnGasto.className = 'text-slate-500 px-5 py-1.5 rounded-lg text-xs font-bold transition-all';
                 display.classList.remove('text-white');
                 display.classList.add('text-emerald-400');
             }
@@ -224,7 +291,7 @@
             cerrarModal();
         }
 
-        function renderizarGraficoDonut(labels, data) {
+        function renderizarGraficoDonut(labels, data, totalGastadoStr) {
             const ctx = document.getElementById('graficoCategorias').getContext('2d');
             if (graficoInstancia) graficoInstancia.destroy();
             graficoInstancia = new Chart(ctx, {
@@ -233,7 +300,7 @@
                     labels: labels,
                     datasets: [{
                         data: data,
-                        backgroundColor: ['#f87171', '#60a5fa', '#34d399', '#fbbf24', '#c084fc', '#a3e635', '#f472b6', '#38bdf8', '#a78bfa', '#fb923c', '#4ade80', '#94a3b8'],
+                        backgroundColor: ['#10b981', '#f43f5e', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16', '#64748b'],
                         borderWidth: 0,
                         hoverOffset: 4
                     }]
@@ -242,7 +309,7 @@
                     responsive: true, 
                     cutout: '75%', 
                     plugins: { 
-                        legend: { position: 'right', labels: { color: '#cbd5e1', font: { size: 9 } } },
+                        legend: { display: false },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
@@ -252,7 +319,8 @@
                                     return ` ${context.label}: ${formateador.format(valor)} (${porcentaje}%)`;
                                 }
                             }
-                        }
+                        },
+                        centerText: { text: totalGastadoStr }
                     } 
                 }
             });
@@ -292,47 +360,51 @@
         }
 
         async function eliminarTransaccion(id) {
-            if(!confirm("¿Borrar esta transacción?")) return;
+            if(!confirm("¿Eliminar este registro permanentemente?")) return;
             const { error } = await db.from('transacciones').delete().eq('id', id);
             if(!error) cargarEstadisticas();
         }
 
         async function cargarEstadisticas() {
             const filtro = document.getElementById('filtro-tiempo').value;
-            const fecha = new Date();
-            let fechaFiltro;
+            const ahora = new Date();
+            let inicioISO, finISO;
             
             if (filtro === 'dia') {
-                fechaFiltro = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
+                inicioISO = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()).toISOString();
+                finISO = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() + 1).toISOString();
             } else if (filtro === 'anio') {
-                fechaFiltro = `${fecha.getFullYear()}-01-01`;
+                inicioISO = new Date(ahora.getFullYear(), 0, 1).toISOString();
+                finISO = new Date(ahora.getFullYear() + 1, 0, 1).toISOString();
             } else {
-                fechaFiltro = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-01`;
+                inicioISO = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString();
+                finISO = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 1).toISOString();
             }
 
             const { data: categorias, error: errCat } = await db.from('categorias').select('*');
-            const { data: transacciones, error: errTrans } = await db.from('transacciones').select('*').gte('fecha', fechaFiltro).order('fecha', { ascending: false });
+            const { data: transacciones, error: errTrans } = await db.from('transacciones')
+                                                                .select('*')
+                                                                .gte('fecha', inicioISO)
+                                                                .lt('fecha', finISO)
+                                                                .order('fecha', { ascending: false });
             
-            if (errCat || errTrans) {
-                console.error("Error BD:", errCat, errTrans);
-                return;
-            }
+            if (errCat || errTrans) return console.error("Error BD:", errCat, errTrans);
 
-            let totalGastadoMes = 0;
-            let totalIngresadoMes = 0;
+            let totalGastado = 0;
+            let totalIngresado = 0;
             const reporteGastos = {};
             const mapaCat = {};
             
             categorias.forEach(c => { 
                 mapaCat[c.id] = c;
-                if(c.tipo === 'gasto') reporteGastos[c.id] = { nombre: c.nombre, presupuesto: parseFloat(c.presupuesto_mensual) || 0, gastado: 0 }; 
+                if(c.tipo === 'gasto') reporteGastos[c.id] = { nombre: c.nombre, icono: c.icono, gastado: 0 }; 
             });
 
             const contenedorHistorial = document.getElementById('historial-transacciones');
             contenedorHistorial.innerHTML = '';
 
             if(transacciones.length === 0) {
-                contenedorHistorial.innerHTML = '<p class="text-slate-500 text-xs text-center">No hay registros</p>';
+                contenedorHistorial.innerHTML = '<p class="text-slate-500 text-xs text-center py-4">No hay movimientos en este periodo</p>';
             }
 
             transacciones.forEach((t, index) => {
@@ -342,41 +414,50 @@
                 const isIngreso = cat.tipo === 'ingreso';
 
                 if (isIngreso) {
-                    totalIngresadoMes += valor;
+                    totalIngresado += valor;
                 } else if (cat.tipo === 'gasto') {
-                    totalGastadoMes += valor;
+                    totalGastado += valor;
                     if(reporteGastos[t.categoria_id]) reporteGastos[t.categoria_id].gastado += valor;
                 }
 
-                // Generar UI del Historial (limitado a 15 para no saturar)
-                if (index < 15) {
+                if (index < 20) {
                     const fila = document.createElement('div');
-                    fila.className = "flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700/50";
+                    fila.className = "flex justify-between items-center bg-slate-900/50 p-4 rounded-2xl border border-slate-800/50";
                     
                     const infoDiv = document.createElement('div');
-                    infoDiv.className = "flex flex-col";
+                    infoDiv.className = "flex items-center gap-3";
+                    
+                    const iconoDiv = document.createElement('div');
+                    iconoDiv.className = `w-10 h-10 rounded-full flex items-center justify-center text-lg ${isIngreso ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-800 text-slate-300'}`;
+                    iconoDiv.textContent = cat.icono;
+                    
+                    const textDiv = document.createElement('div');
+                    textDiv.className = "flex flex-col";
                     
                     const catSpan = document.createElement('span');
                     catSpan.className = "text-sm font-bold text-white";
-                    catSpan.textContent = cat.nombre;
+                    catSpan.textContent = t.notas ? t.notas : cat.nombre;
                     
                     const notaSpan = document.createElement('span');
-                    notaSpan.className = "text-xs text-slate-500";
-                    notaSpan.textContent = t.notas ? t.notas : (isIngreso ? 'Ingreso' : 'Gasto');
+                    notaSpan.className = "text-[10px] text-slate-500 font-medium";
+                    const fStr = new Date(t.fecha).toLocaleDateString('es-CO', { day:'numeric', month:'short' });
+                    notaSpan.textContent = `${cat.nombre} • ${fStr} • ${t.cuenta}`;
                     
-                    infoDiv.appendChild(catSpan);
-                    infoDiv.appendChild(notaSpan);
+                    textDiv.appendChild(catSpan);
+                    textDiv.appendChild(notaSpan);
+                    infoDiv.appendChild(iconoDiv);
+                    infoDiv.appendChild(textDiv);
                     
                     const valDiv = document.createElement('div');
-                    valDiv.className = "flex items-center gap-3";
+                    valDiv.className = "flex items-center gap-4";
                     
                     const montoSpan = document.createElement('span');
-                    montoSpan.className = `text-sm font-bold ${isIngreso ? 'text-emerald-400' : 'text-red-400'}`;
+                    montoSpan.className = `text-sm font-bold ${isIngreso ? 'text-emerald-400' : 'text-white'}`;
                     montoSpan.textContent = `${isIngreso ? '+' : '-'}${formateador.format(valor)}`;
                     
                     const btnBorrar = document.createElement('button');
-                    btnBorrar.className = "text-slate-500 hover:text-red-400 text-lg transition-colors p-1 active:scale-90";
-                    btnBorrar.innerHTML = "🗑️";
+                    btnBorrar.className = "w-6 h-6 rounded-full flex items-center justify-center bg-slate-800 text-slate-500 hover:text-red-400 hover:bg-slate-700 transition-colors";
+                    btnBorrar.innerHTML = "✕";
                     btnBorrar.onclick = () => eliminarTransaccion(t.id);
                     
                     valDiv.appendChild(montoSpan);
@@ -387,83 +468,80 @@
                 }
             });
 
-            const balanceReal = totalIngresadoMes - totalGastadoMes;
+            const balanceReal = totalIngresado - totalGastado;
+            let pDisp = totalIngresado > 0 ? ((balanceReal / totalIngresado) * 100).toFixed(0) : 0;
+            if(pDisp < 0) pDisp = 0; if(pDisp > 100) pDisp = 100;
 
-            document.getElementById('dash-ingresos').textContent = formateador.format(totalIngresadoMes);
-            document.getElementById('dash-gastos').textContent = formateador.format(totalGastadoMes);
+            document.getElementById('dash-ingresos').textContent = `+${formateador.format(totalIngresado)}`;
+            document.getElementById('dash-gastos').textContent = `-${formateador.format(totalGastado)}`;
             document.getElementById('dash-balance').textContent = formateador.format(balanceReal);
+            document.getElementById('dash-porcentaje').textContent = `${pDisp}%`;
+            document.getElementById('dash-bar').style.width = `${pDisp}%`;
+
+            const diasEnMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0).getDate();
+            const diasTranscurridos = filtro === 'mes' ? ahora.getDate() : (filtro === 'dia' ? 1 : 365);
+            const diasRestantes = filtro === 'mes' ? (diasEnMes - diasTranscurridos + 1) : 0;
+            
+            const promedio = diasTranscurridos > 0 ? (totalGastado / diasTranscurridos) : 0;
+            const seguro = balanceReal > 0 && diasRestantes > 0 ? (balanceReal / diasRestantes) : 0;
+
+            document.getElementById('dash-promedio').textContent = formateador.format(promedio);
+            document.getElementById('dash-seguro').textContent = formateador.format(seguro);
+            document.getElementById('dash-dias-restantes').textContent = filtro === 'mes' ? `${diasRestantes} días` : '-';
+
+            const arrGastos = Object.values(reporteGastos).sort((a,b) => b.gastado - a.gastado);
+            document.getElementById('dash-top-cat').textContent = arrGastos.length > 0 && arrGastos[0].gastado > 0 ? arrGastos[0].nombre : 'N/A';
 
             const labelsGrafico = [];
             const dataGrafico = [];
             const contenedorLista = document.getElementById('lista-presupuestos');
             contenedorLista.innerHTML = '';
 
-            if (totalGastadoMes === 0) {
-                renderizarGraficoDonut(['Sin datos'], [1]);
+            if (totalGastado === 0) {
+                renderizarGraficoDonut(['Sin datos'], [1], "$ 0");
                 return;
             }
 
-            Object.values(reporteGastos).sort((a,b) => b.gastado - a.gastado).forEach(item => {
-                if (item.gastado > 0) { labelsGrafico.push(item.nombre); dataGrafico.push(item.gastado); }
-                const porcentaje = item.presupuesto > 0 ? Math.min((item.gastado / item.presupuesto) * 100, 100).toFixed(0) : 0;
-                const colorBarra = porcentaje > 90 ? 'bg-red-500' : (porcentaje > 70 ? 'bg-yellow-400' : 'bg-emerald-400');
-
-                if (item.gastado > 0 || item.presupuesto > 0) {
-                    const tarjeta = document.createElement('div');
-                    tarjeta.className = "bg-slate-800 p-4 rounded-xl border border-slate-700 mb-4";
-
-                    const cabecera = document.createElement('div');
-                    cabecera.className = "flex justify-between items-end mb-2";
-
-                    const nombreSpan = document.createElement('span');
-                    nombreSpan.className = "font-bold text-white uppercase text-xs tracking-wider";
-                    nombreSpan.textContent = item.nombre;
-
-                    const valoresSpan = document.createElement('span');
-                    valoresSpan.className = "text-xs text-slate-400";
-                    valoresSpan.textContent = `${formateador.format(item.gastado)} de ${formateador.format(item.presupuesto)}`;
-
-                    cabecera.appendChild(nombreSpan);
-                    cabecera.appendChild(valoresSpan);
-
-                    const contenedorBarra = document.createElement('div');
-                    contenedorBarra.className = "w-full bg-slate-900 rounded-full h-2.5";
-
-                    const barra = document.createElement('div');
-                    barra.className = `${colorBarra} h-2.5 rounded-full transition-all duration-1000`;
-                    barra.style.width = `${porcentaje}%`;
-
-                    contenedorBarra.appendChild(barra);
-                    tarjeta.appendChild(cabecera);
-                    tarjeta.appendChild(contenedorBarra);
-
-                    contenedorLista.appendChild(tarjeta);
+            arrGastos.forEach(item => {
+                if (item.gastado > 0) { 
+                    labelsGrafico.push(item.nombre); 
+                    dataGrafico.push(item.gastado); 
+                    
+                    const pct = Math.round((item.gastado / totalGastado) * 100);
+                    
+                    const row = document.createElement('div');
+                    row.className = "flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800";
+                    row.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <span class="text-emerald-400 font-bold text-xs">${pct}%</span>
+                            <span class="text-sm font-bold text-white">${item.nombre}</span>
+                        </div>
+                        <span class="text-sm font-bold text-slate-300">${formateador.format(item.gastado)}</span>
+                    `;
+                    contenedorLista.appendChild(row);
                 }
             });
 
-            renderizarGraficoDonut(labelsGrafico, dataGrafico);
+            renderizarGraficoDonut(labelsGrafico, dataGrafico, formateador.format(totalGastado));
         }
 
         async function cargarCategorias() {
             const { data, error } = await db.from('categorias').select('*').eq('tipo', tipoActual).order('nombre');
-            if (error) {
-                console.error("Error BD:", error);
-                return;
-            }
+            if (error) return;
             
             const contenedor = document.getElementById('categorias-container');
             contenedor.innerHTML = '';
             
             data.forEach(cat => {
                 const btn = document.createElement('button');
-                btn.className = "flex flex-col items-center justify-center py-2 bg-slate-800 rounded-xl active:bg-emerald-600 active:scale-95 transition-all border border-slate-700 min-h-[70px]";
+                btn.className = "flex flex-col items-center justify-center py-2.5 bg-slate-900 rounded-2xl active:bg-emerald-600 active:scale-95 transition-all border border-slate-800 shadow-sm min-h-[75px]";
                 
                 const spanIcono = document.createElement('span');
-                spanIcono.className = "text-xl mb-1";
+                spanIcono.className = "text-xl mb-1.5";
                 spanIcono.textContent = cat.icono;
                 
                 const spanNombre = document.createElement('span');
-                spanNombre.className = "text-[8px] font-bold text-slate-300 uppercase tracking-wider text-center px-1 leading-tight";
+                spanNombre.className = "text-[9px] font-bold text-slate-400 uppercase tracking-wider text-center px-1 leading-tight";
                 spanNombre.textContent = cat.nombre;
                 
                 btn.appendChild(spanIcono);
@@ -484,43 +562,27 @@
 
         async function autorizarDispositivo() {
             const { data: { session } } = await db.auth.getSession();
-            
             if (!session) {
                 const email = prompt("🔐 Base de datos bloqueada (RLS). Ingresa tu correo de administrador:");
                 if (!email) return;
-                
                 const password = prompt("Ingresa tu contraseña de Supabase:");
                 if (!password) return;
-
                 const { error } = await db.auth.signInWithPassword({ email, password });
-                
-                if (error) {
-                    alert("❌ Acceso denegado: " + error.message);
-                    return; 
-                } else {
-                    alert("✅ Dispositivo autorizado.");
-                }
+                if (error) { alert("❌ Acceso denegado."); return; }
             }
-            
             cargarCategorias();
         }
 
         async function procesarColaOffline() {
             let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
             if (queue.length === 0) return;
-
             const { error } = await db.from('transacciones').insert(queue);
-            
             if (!error) {
                 localStorage.removeItem('offline_queue');
-                console.log(`Sincronizadas ${queue.length} transacciones pendientes.`);
-                if (!document.getElementById('pantalla-dashboard').classList.contains('hidden')) {
-                    cargarEstadisticas();
-                }
+                if (!document.getElementById('pantalla-dashboard').classList.contains('hidden')) cargarEstadisticas();
             }
         }
 
-        // --- ARRANQUE ---
         window.addEventListener('online', procesarColaOffline);
         if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
         if (navigator.onLine) procesarColaOffline();
