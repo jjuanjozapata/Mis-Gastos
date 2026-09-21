@@ -340,6 +340,42 @@
         </div>
     </div>
 
+    <!-- Modal para Editar Categoría -->
+    <div id="modal-editar-cat" class="hidden fixed inset-0 z-[130] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-5">
+        <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl">
+            <h3 class="text-xl font-bold text-white mb-1">Editar Categoría</h3>
+            <p class="text-slate-400 text-xs mb-4">Modifica el nombre, icono o tipo de tu categoría.</p>
+
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label for="input-editar-cat-nombre" class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Nombre</label>
+                    <input type="text" id="input-editar-cat-nombre" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500" placeholder="Nombre..." autocomplete="off">
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[10px] uppercase font-bold text-slate-400">Emoji</span>
+                        <input type="text" id="input-emoji-editar-personalizado" maxlength="2" class="w-12 text-center bg-slate-950 border border-slate-700 rounded-lg py-1 text-base text-white focus:outline-none focus:border-emerald-500" value="🍿">
+                    </div>
+                    <div id="selector-iconos-editar-cat" class="grid grid-cols-6 gap-2 p-2 bg-slate-950 rounded-2xl border border-slate-800 max-h-32 overflow-y-auto"></div>
+                </div>
+
+                <div id="seccion-tipo-editar-cat">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Tipo de Gasto</span>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" id="btn-editar-cat-var" class="py-2.5 rounded-xl text-xs font-bold border border-emerald-500/40 bg-emerald-500/20 text-emerald-300">Variable</button>
+                        <button type="button" id="btn-editar-cat-fijo" class="py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800 text-slate-400">Fijo / Factura</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button type="button" id="btn-cancelar-editar-cat" class="flex-1 py-3.5 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors text-sm">Cancelar</button>
+                <button type="button" id="btn-guardar-editar-cat" class="flex-1 py-3.5 rounded-xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-colors text-sm">Actualizar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal para Editar Presupuesto de Categoría -->
     <div id="modal-editar-presupuesto" class="hidden fixed inset-0 z-[135] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-5">
         <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl">
@@ -1337,11 +1373,25 @@
                 });
                 wrapper.appendChild(btn);
 
-                // Botón de eliminar categoría personalizada
+                // Botones de editar y eliminar categoría personalizada
                 if (cat.user_id && !['MERCADO', 'ARRIENDO', 'SERVICIOS'].includes(cat.nombre.toUpperCase())) {
+                    const btnActions = document.createElement('div');
+                    btnActions.className = "absolute -top-1.5 -right-1.5 flex gap-1 z-10";
+
+                    const btnEditCat = document.createElement('button');
+                    btnEditCat.type = "button";
+                    btnEditCat.className = "w-6 h-6 rounded-full bg-slate-900 text-slate-400 hover:text-emerald-400 border border-slate-700 flex items-center justify-center text-[10px] shadow-md active:scale-90 transition-colors";
+                    btnEditCat.innerHTML = "✏️";
+                    btnEditCat.title = "Editar categoría";
+                    btnEditCat.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        abrirModalEditarCategoria(cat);
+                    });
+                    btnActions.appendChild(btnEditCat);
+
                     const btnDeleteCat = document.createElement('button');
                     btnDeleteCat.type = "button";
-                    btnDeleteCat.className = "absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-slate-900 text-slate-400 hover:text-red-400 border border-slate-700 flex items-center justify-center text-[10px] shadow-md z-10 active:scale-90 transition-colors";
+                    btnDeleteCat.className = "w-6 h-6 rounded-full bg-slate-900 text-slate-400 hover:text-red-400 border border-slate-700 flex items-center justify-center text-[10px] shadow-md active:scale-90 transition-colors";
                     btnDeleteCat.innerHTML = "✕";
                     btnDeleteCat.title = "Eliminar categoría";
                     btnDeleteCat.addEventListener('click', async (e) => {
@@ -1356,10 +1406,12 @@
                             mostrarToast(`Categoría "${cat.nombre}" eliminada`);
                             renderizarCategoriasFlujo();
                         } else {
-                            mostrarToast('Error al eliminar: ' + error.message, 'error');
+                            mostrarToast('No se puede eliminar: tiene transacciones asociadas. Puedes editarla en su lugar.', 'error');
                         }
                     });
-                    wrapper.appendChild(btnDeleteCat);
+                    btnActions.appendChild(btnDeleteCat);
+
+                    wrapper.appendChild(btnActions);
                 }
 
                 contenedor.appendChild(wrapper);
@@ -1558,6 +1610,125 @@
             cargarPlanes();
             cargarEstadisticas();
         }
+
+let categoriaEditandoId = null;
+        let iconoEditarCatSeleccionado = '🍿';
+        let tipoEditarCatEsFijo = false;
+
+        function abrirModalEditarCategoria(cat) {
+            categoriaEditandoId = cat.id;
+            document.getElementById('input-editar-cat-nombre').value = cat.nombre;
+            tipoEditarCatEsFijo = Boolean(cat.es_fijo);
+            actualizarBotonesTipoEditarCat();
+
+            const seccionTipo = document.getElementById('seccion-tipo-editar-cat');
+            if (cat.tipo === 'ingreso') seccionTipo.classList.add('hidden');
+            else seccionTipo.classList.remove('hidden');
+
+            const inputEmojiCustom = document.getElementById('input-emoji-editar-personalizado');
+            inputEmojiCustom.value = cat.icono || '🍿';
+            iconoEditarCatSeleccionado = cat.icono || '🍿';
+
+            inputEmojiCustom.addEventListener('input', (e) => {
+                const val = e.target.value.trim();
+                if (val) {
+                    iconoEditarCatSeleccionado = val;
+                    gridEmojis.querySelectorAll('button').forEach(btn => btn.className = 'p-2 rounded-xl text-xl flex items-center justify-center bg-slate-900 border border-slate-800');
+                }
+            });
+
+            const gridEmojis = document.getElementById('selector-iconos-editar-cat');
+            gridEmojis.innerHTML = '';
+            listaEmojisPopulares.forEach((emoji) => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = `p-2 rounded-xl text-xl flex items-center justify-center transition-all ${emoji === iconoEditarCatSeleccionado ? 'bg-emerald-500/20 border border-emerald-500' : 'bg-slate-900 border border-slate-800'}`;
+                b.textContent = emoji;
+                b.addEventListener('click', () => {
+                    gridEmojis.querySelectorAll('button').forEach(btn => btn.className = 'p-2 rounded-xl text-xl flex items-center justify-center bg-slate-900 border border-slate-800');
+                    b.className = 'p-2 rounded-xl text-xl flex items-center justify-center bg-emerald-500/20 border border-emerald-500';
+                    iconoEditarCatSeleccionado = emoji;
+                    inputEmojiCustom.value = emoji;
+                });
+                gridEmojis.appendChild(b);
+            });
+
+            document.getElementById('modal-editar-cat').classList.remove('hidden');
+            document.getElementById('modal-editar-cat').classList.add('flex');
+            document.getElementById('input-editar-cat-nombre').focus();
+        }
+
+        function cerrarModalEditarCategoria() {
+            document.getElementById('modal-editar-cat').classList.add('hidden');
+            document.getElementById('modal-editar-cat').classList.remove('flex');
+            categoriaEditandoId = null;
+        }
+
+        document.getElementById('btn-cancelar-editar-cat').addEventListener('click', cerrarModalEditarCategoria);
+
+        document.getElementById('btn-editar-cat-var').addEventListener('click', () => {
+            tipoEditarCatEsFijo = false;
+            actualizarBotonesTipoEditarCat();
+        });
+
+        document.getElementById('btn-editar-cat-fijo').addEventListener('click', () => {
+            tipoEditarCatEsFijo = true;
+            actualizarBotonesTipoEditarCat();
+        });
+
+        function actualizarBotonesTipoEditarCat() {
+            const btnVar = document.getElementById('btn-editar-cat-var');
+            const btnFij = document.getElementById('btn-editar-cat-fijo');
+            if (tipoEditarCatEsFijo) {
+                btnFij.className = "py-2.5 rounded-xl text-xs font-bold border border-emerald-500/40 bg-emerald-500/20 text-emerald-300";
+                btnVar.className = "py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800 text-slate-400";
+            } else {
+                btnVar.className = "py-2.5 rounded-xl text-xs font-bold border border-emerald-500/40 bg-emerald-500/20 text-emerald-300";
+                btnFij.className = "py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800 text-slate-400";
+            }
+        }
+
+        document.getElementById('btn-guardar-editar-cat').addEventListener('click', async () => {
+            if (!categoriaEditandoId) return;
+            const nombre = document.getElementById('input-editar-cat-nombre').value.trim();
+            const inputEmojiCustom = document.getElementById('input-emoji-editar-personalizado');
+            if (inputEmojiCustom && inputEmojiCustom.value.trim()) {
+                iconoEditarCatSeleccionado = inputEmojiCustom.value.trim();
+            }
+
+            if (!nombre) {
+                mostrarToast('Escribe un nombre válido', 'error');
+                return;
+            }
+
+            const { data: { session } } = await db.auth.getSession();
+            if (!session) {
+                mostrarToast('Inicia sesión para editar categorías', 'error');
+                return;
+            }
+
+            const payloadUpdate = {
+                nombre: escapeHTML(nombre),
+                icono: escapeHTML(iconoEditarCatSeleccionado),
+                es_fijo: tipoEditarCatEsFijo
+            };
+
+            const { error } = await db.from('categorias').update(payloadUpdate).eq('id', categoriaEditandoId).eq('user_id', session.user.id);
+            if (error) {
+                mostrarToast('Error al actualizar: ' + error.message, 'error');
+                return;
+            }
+
+            let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+            categorias = categorias.map(c => c.id === categoriaEditandoId ? { ...c, ...payloadUpdate } : c);
+            localStorage.setItem('categorias_cache', JSON.stringify(categorias));
+
+            cerrarModalEditarCategoria();
+            renderizarCategoriasFlujo();
+            mostrarToast('Categoría actualizada con éxito');
+        });
+
+
 
         function abrirModalNuevaCategoria() {
             document.getElementById('input-nueva-cat-nombre').value = '';
