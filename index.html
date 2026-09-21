@@ -1825,16 +1825,17 @@
             inputEmojiCustom.value = cat.icono || '🍿';
             iconoEditarCatSeleccionado = cat.icono || '🍿';
 
-            inputEmojiCustom.addEventListener('input', (e) => {
+            const gridEmojis = document.getElementById('selector-iconos-editar-cat');
+            gridEmojis.innerHTML = '';
+
+            inputEmojiCustom.oninput = (e) => {
                 const val = e.target.value.trim();
                 if (val) {
                     iconoEditarCatSeleccionado = val;
                     gridEmojis.querySelectorAll('button').forEach(btn => btn.className = 'p-2 rounded-xl text-xl flex items-center justify-center bg-slate-900 border border-slate-800');
                 }
-            });
+            };
 
-            const gridEmojis = document.getElementById('selector-iconos-editar-cat');
-            gridEmojis.innerHTML = '';
             listaEmojisPopulares.forEach((emoji) => {
                 const b = document.createElement('button');
                 b.type = 'button';
