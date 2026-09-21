@@ -2357,32 +2357,35 @@
 
         function calcularVentanaPeriodo(periodo, fechaInicioGuardada, fechaFinGuardada, autoRenovar) {
             const ahora = new Date();
-            let inicio = new Date();
-            let fin = new Date();
+            let inicio, fin;
+
+            const anio = ahora.getFullYear();
+            const mes = ahora.getMonth();
+            const dia = ahora.getDate();
 
             if (periodo === 'semanal') {
                 const diaSemana = (ahora.getDay() + 6) % 7;
-                inicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - diaSemana, 0, 0, 0);
-                fin = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate() + 6, 23, 59, 59, 999);
+                inicio = new Date(anio, mes, dia - diaSemana, 0, 0, 0, 0);
+                fin = new Date(anio, mes, dia - diaSemana + 6, 23, 59, 59, 999);
             } else if (periodo === 'quincenal') {
-                if (ahora.getDate() <= 15) {
-                    inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1, 0, 0, 0);
-                    fin = new Date(ahora.getFullYear(), ahora.getMonth(), 15, 23, 59, 59, 999);
+                if (dia <= 15) {
+                    inicio = new Date(anio, mes, 1, 0, 0, 0, 0);
+                    fin = new Date(anio, mes, 15, 23, 59, 59, 999);
                 } else {
-                    inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 16, 0, 0, 0);
-                    fin = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59, 999);
+                    inicio = new Date(anio, mes, 16, 0, 0, 0, 0);
+                    fin = new Date(anio, mes + 1, 0, 23, 59, 59, 999);
                 }
             } else if (periodo === 'trimestral') {
-                const q = Math.floor(ahora.getMonth() / 3);
-                inicio = new Date(ahora.getFullYear(), q * 3, 1, 0, 0, 0);
-                fin = new Date(ahora.getFullYear(), q * 3 + 3, 0, 23, 59, 59, 999);
+                const q = Math.floor(mes / 3);
+                inicio = new Date(anio, q * 3, 1, 0, 0, 0, 0);
+                fin = new Date(anio, q * 3 + 3, 0, 23, 59, 59, 999);
             } else if (periodo === 'semestral') {
-                const sem = ahora.getMonth() < 6 ? 0 : 6;
-                inicio = new Date(ahora.getFullYear(), sem, 1, 0, 0, 0);
-                fin = new Date(ahora.getFullYear(), sem + 6, 0, 23, 59, 59, 999);
+                const sem = mes < 6 ? 0 : 6;
+                inicio = new Date(anio, sem, 1, 0, 0, 0, 0);
+                fin = new Date(anio, sem + 6, 0, 23, 59, 59, 999);
             } else if (periodo === 'anual') {
-                inicio = new Date(ahora.getFullYear(), 0, 1, 0, 0, 0);
-                fin = new Date(ahora.getFullYear(), 11, 31, 23, 59, 59, 999);
+                inicio = new Date(anio, 0, 1, 0, 0, 0, 0);
+                fin = new Date(anio, 11, 31, 23, 59, 59, 999);
             } else if (periodo === 'personalizado' && fechaInicioGuardada && fechaFinGuardada) {
                 inicio = new Date(fechaInicioGuardada);
                 fin = new Date(fechaFinGuardada);
@@ -2394,8 +2397,8 @@
                     }
                 }
             } else {
-                inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1, 0, 0, 0);
-                fin = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59, 999);
+                inicio = new Date(anio, mes, 1, 0, 0, 0, 0);
+                fin = new Date(anio, mes + 1, 0, 23, 59, 59, 999);
             }
             return { inicio: inicio.toISOString(), fin: fin.toISOString() };
         }
