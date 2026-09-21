@@ -436,7 +436,7 @@
         </header>
 
         <div class="flex-1 flex flex-col justify-center items-center px-4 w-full max-w-md mx-auto">
-            <div id="accesos-frecuentes-inicio" class="flex gap-2 mb-3 w-full justify-center overflow-x-hidden"></div>
+            <div id="accesos-frecuentes-inicio" class="flex gap-2 mb-3 w-full max-w-xs overflow-x-auto no-scrollbar px-2 shrink-0 justify-start sm:justify-center"></div>
             <span id="fecha-actual" class="text-slate-400 text-[11px] tracking-wider uppercase font-semibold mb-3 border border-slate-800/80 px-3.5 py-1 rounded-full bg-slate-900/60 backdrop-blur-md"></span>
             <div id="monto-display" class="text-5xl sm:text-6xl md:text-7xl font-black tracking-tight text-white transition-all drop-shadow-md text-center tabular-nums truncate max-w-full px-2">$ 0</div>
         </div>
@@ -3269,12 +3269,14 @@
             if (!contenedor) return;
             contenedor.innerHTML = '';
             
-            const catsGastos = categorias.filter(c => c.tipo === 'gasto').slice(0, 3);
+            const catsGastos = categorias.filter(c => c.tipo === 'gasto');
+            if (catsGastos.length === 0) return;
+
             catsGastos.forEach(cat => {
                 const b = document.createElement('button');
                 b.type = 'button';
-                b.className = "flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-full text-xs font-bold text-slate-300 active:scale-95 transition-all cursor-pointer shadow-sm";
-                b.innerHTML = `<span>${escapeHTML(cat.icono)}</span> <span>${escapeHTML(cat.nombre)}</span>`;
+                b.className = "flex items-center gap-1.5 px-3 py-1.5 bg-slate-900/90 border border-slate-800/80 rounded-full text-xs font-semibold text-slate-300 active:scale-95 transition-all shrink-0 cursor-pointer shadow-sm hover:border-emerald-500/40";
+                b.innerHTML = `<span>${escapeHTML(cat.icono)}</span> <span class="max-w-[90px] truncate">${escapeHTML(cat.nombre)}</span>`;
                 b.addEventListener('click', () => {
                     if (parseInt(monto) <= 0) {
                         mostrarToast('Digita un monto primero', 'error');
