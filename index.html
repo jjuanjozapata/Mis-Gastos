@@ -62,6 +62,7 @@
         </div>
     </div>
 
+    <!-- Modal Notas / Detalle -->
     <div id="modal-notas" class="hidden fixed inset-0 z-[120] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-6">
         <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl">
             <h3 class="text-xl font-bold text-white mb-2">Detalle del Movimiento</h3>
@@ -74,6 +75,7 @@
         </div>
     </div>
 
+    <!-- Modal Flujo de Registro -->
     <div id="modal-flujo" class="hidden fixed inset-0 z-[110] bg-slate-950/95 backdrop-blur-xl justify-center items-end sm:items-center p-0 pb-0 sm:p-6">
         <div class="bg-slate-900 w-full h-[80vh] sm:h-auto sm:max-h-[85vh] rounded-t-[2.5rem] sm:rounded-3xl p-6 border-t sm:border border-slate-800 shadow-[0_-20px_40px_rgba(0,0,0,0.5)] flex flex-col relative transition-transform">
             <div class="w-12 h-1.5 bg-slate-800 rounded-full mx-auto mb-6 shrink-0 sm:hidden"></div>
@@ -127,6 +129,7 @@
         </div>
     </div>
 
+    <!-- Modal Selección Tipo de Plan -->
     <div id="modal-tipo-plan" class="hidden fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-xl justify-center items-end sm:items-center p-0 sm:p-6 pb-0">
         <div class="bg-slate-900 w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6 border border-slate-800 shadow-[0_-20px_40px_rgba(0,0,0,0.5)] transform transition-transform">
             <div class="w-12 h-1.5 bg-slate-800 rounded-full mx-auto mb-6 sm:hidden"></div>
@@ -163,6 +166,7 @@
         </div>
     </div>
 
+    <!-- Modal Formulario Plan -->
     <div id="modal-form-plan" class="hidden fixed inset-0 z-[110] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-6">
         <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl">
             <h3 id="titulo-form-plan" class="text-xl font-bold text-white mb-6">Nuevo Plan</h3>
@@ -186,6 +190,7 @@
         </div>
     </div>
 
+    <!-- Pantalla 1: Captura Rápida -->
     <div id="pantalla-captura" class="flex-1 flex flex-col min-h-0 relative">
         <header class="shrink-0 p-5 flex justify-between items-center">
             <div class="flex items-center gap-2">
@@ -220,6 +225,7 @@
         </div>
     </div>
 
+    <!-- Pantalla 2: Planes -->
     <div id="pantalla-planes" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-950 min-h-0">
         <div class="p-5 pb-12 flex flex-col h-full overflow-x-hidden">
             <h2 class="text-2xl font-bold text-white mb-6">Planes, Metas y Deudas</h2>
@@ -228,6 +234,7 @@
         <button id="btn-fab-plan" class="hidden absolute bottom-24 right-6 w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center text-slate-900 text-3xl font-light shadow-[0_10px_20px_rgba(16,185,129,0.3)] active:scale-90 transition-transform z-50">+</button>
     </div>
 
+    <!-- Pantalla 3: Reportes / Dashboard -->
     <div id="pantalla-dashboard" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-950 min-h-0">
         <div class="p-5 pb-12">
             <div class="flex justify-between items-center mb-6 gap-2">
@@ -272,6 +279,7 @@
                 </div>
             </div>
 
+            <!-- Modelo 50/30/20 -->
             <div class="bg-slate-900 rounded-3xl p-5 mb-4 border border-slate-800 shadow-lg">
                 <div class="flex justify-between items-center mb-3">
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Modelo Financiero 50/30/20</p>
@@ -293,6 +301,7 @@
                 </div>
             </div>
 
+            <!-- Simulador de Recorte de Gastos Hormiga -->
             <div class="bg-slate-900 rounded-3xl p-5 mb-4 border border-slate-800 shadow-lg">
                 <div class="flex justify-between items-center mb-3">
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Simulador de Recorte de Gastos</p>
@@ -367,6 +376,7 @@
         </div>
     </div>
 
+    <!-- Pantalla 4: Ajustes -->
     <div id="pantalla-ajustes" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-950 min-h-0 p-5">
         <h2 class="text-2xl font-bold text-white mb-6">Ajustes</h2>
         
@@ -401,6 +411,7 @@
         </div>
     </div>
 
+    <!-- Barra de Navegación Inferior -->
     <nav class="shrink-0 w-full bg-slate-950 border-t border-slate-900 flex justify-around items-center h-[70px] pb-safe relative z-[90]">
         <button id="tab-captura" class="flex flex-col items-center justify-center w-full h-full tab-activa transition-colors">
             <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
@@ -420,6 +431,7 @@
         </button>
     </nav>
 
+    <!-- Lógica de Negocio y Control Staff -->
     <script>
         const db = supabase.createClient(
             'https://znszebnjcgjfzxvnexxd.supabase.co', 
@@ -475,7 +487,6 @@
         document.getElementById('btn-desbloquear').addEventListener('click', async () => {
             if (window.PublicKeyCredential) {
                 try {
-                    // Simulación de autenticación biométrica WebAuthn o desbloqueo exitoso
                     document.getElementById('modal-biometrico').classList.add('hidden');
                     document.getElementById('modal-biometrico').classList.remove('flex');
                     mostrarToast('Acceso autorizado');
@@ -982,7 +993,7 @@
                 await generarRecomendacionSueldo(valorGasto);
             }
 
-            // 4. ABONOS DIRECTOS A DEUDAS (Si el gasto coincide con una deuda registrada)
+            // Abonos directos a deudas si el concepto coincide
             if (catObj && catObj.tipo === 'gasto' && notaGasto) {
                 const { data: planes } = await db.from('planes').select('*').eq('tipo', 'deuda');
                 if (planes) {
