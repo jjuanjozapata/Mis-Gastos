@@ -7,6 +7,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#020617" id="meta-theme-color">
     
     <title>Mis Gastos</title>
     
@@ -705,7 +706,7 @@
             </select>
             <p class="text-xs text-slate-500 mb-2">Color de acento visual de la app:</p>
             <div class="grid grid-cols-3 gap-2">
-                <button type="button" class="btn-tema py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs cursor-pointer">Esmeralda</button>
+                <button type="button" class="btn-tema py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs cursor-pointer" data-tema="emerald">Esmeralda</button>
                 <button type="button" class="btn-tema py-2.5 rounded-xl bg-blue-500 text-slate-950 font-bold text-xs cursor-pointer" data-tema="blue">Azul Océano</button>
                 <button type="button" class="btn-tema py-2.5 rounded-xl bg-purple-500 text-slate-950 font-bold text-xs cursor-pointer" data-tema="purple">Púrpura</button>
             </div>
@@ -720,8 +721,6 @@
                 <button id="btn-exportar-pdf" class="py-3 bg-teal-500/10 text-teal-300 border border-teal-500/20 font-bold rounded-xl active:bg-teal-500/20 transition-all text-[11px] cursor-pointer">Imprimir PDF</button>
             </div>
         </div>
-
-        
 
         <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg">
             <p class="text-slate-300 font-bold text-sm mb-2">Conexión con Atajos de iOS</p>
@@ -762,7 +761,6 @@
 
         const escapeHTML = str => str ? DOMPurify.sanitize(String(str), { ALLOWED_TAGS: [], ALLOWED_ATTR: [] }) : '';
         
-        // Lector seguro de LocalStorage para prevenir caídas por corrupción de datos
         function leerStorageSeguro(clave, valorPorDefecto) {
             try {
                 const item = localStorage.getItem(clave);
@@ -776,11 +774,11 @@
         let monedaActual = localStorage.getItem('moneda_mis_gastos') || 'COP';
         let modoPrivacidad = localStorage.getItem('modo_privacidad_gastos') === 'true';
 
-        // Capturador global de errores asíncronos en red o promesas
         window.addEventListener('unhandledrejection', event => {
             console.warn('Operación en segundo plano pausada por red o sesión:', event.reason);
             event.preventDefault();
         });
+
         let ultimoBalanceCalculado = 0;
         let ultimosIngresosCalculados = 0;
         let ultimosGastosCalculados = 0;
@@ -1081,7 +1079,6 @@
                         let cats = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
                         
                         if (!cat.user_id) {
-                            // Categoría global del sistema: la filtramos localmente para que no reaparezca
                             cats = cats.filter(c => c.id !== cat.id);
                             localStorage.setItem('categorias_cache', JSON.stringify(cats));
                             mostrarToast(`Categoría "${cat.nombre}" eliminada`);
@@ -1161,7 +1158,6 @@
                     document.getElementById('modal-rollover').classList.add('flex');
                 }
 
-                // Automatización de fijos: verificar planes recurrentes
                 const { data: { session } } = await db.auth.getSession();
                 if (session) {
                     const { data: planes } = await db.from('planes').select('*').eq('user_id', session.user.id).eq('tipo', 'limite').eq('auto_renovar', true);
@@ -1352,25 +1348,43 @@
             });
         });
 
+        // Parser aritmético seguro en reemplazo de eval() para mitigar riesgos de inyección
+        function calcularExpresionSegura(expr) {
+            try {
+                const tokens = expr.trim().split(/\s+/);
+                if (tokens.length === 0) return 0;
+                let acumulado = parseFloat(tokens[0]);
+                for (let i = 1; i < tokens.length; i += 2) {
+                    const operador = tokens[i];
+                    const siguienteNum = parseFloat(tokens[i + 1]);
+                    if (isNaN(siguienteNum)) break;
+                    if (operador === '+') acumulado += siguienteNum;
+                    else if (operador === '-') acumulado -= siguienteNum;
+                }
+                return isFinite(acumulado) ? acumulado : 0;
+            } catch (err) {
+                return NaN;
+            }
+        }
+
         const btnIgual = document.getElementById('btn-igual');
         if (btnIgual) {
             btnIgual.addEventListener('click', () => {
                 if (expresionCalculadora) {
-                    try {
-                        const expresionFinal = expresionCalculadora + monto;
-                        const resultado = eval(expresionFinal);
-                        if (!isNaN(resultado) && isFinite(resultado)) {
-                            monto = String(Math.max(0, Math.round(resultado)));
-                            expresionCalculadora = '';
-                            actualizarPantalla();
-                        }
-                    } catch (err) {
+                    const expresionFinal = expresionCalculadora + monto;
+                    const resultado = calcularExpresionSegura(expresionFinal);
+                    if (!isNaN(resultado)) {
+                        monto = String(Math.max(0, Math.round(resultado)));
+                        expresionCalculadora = '';
+                        actualizarPantalla();
+                    } else {
                         mostrarToast('Operación inválida', 'error');
                         expresionCalculadora = '';
                     }
                 }
             });
         }
+
         let categoriaPendiente = null;
         let tipoActual = 'gasto';
         let tipoSubCatActual = 'variable';
@@ -2869,7 +2883,6 @@
             document.getElementById('cuenta-tarjetas-val').textContent = formatearMoneda(totalesCuentas['Tarjetas']);
             document.getElementById('cuenta-transferencia-val').textContent = formatearMoneda(totalesCuentas['Transferencia']);
 
-            // Cálculo de Patrimonio Neto (Activos líquidos - Deudas de planes)
             db.from('planes').select('*').eq('user_id', session.user.id).then(({ data: planesData }) => {
                 let totalDeudasPendientes = 0;
                 let totalAhorrosMetas = 0;
@@ -2997,7 +3010,6 @@
                 const cuenta = (t.cuenta || '').toLowerCase();
                 
                 const pasaCuenta = cuentaFiltroActiva === 'todas' || t.cuenta === cuentaFiltroActiva;
-                // Soporta búsqueda por hashtag o texto normal
                 const pasaTexto = !query || notas.includes(query) || catNombre.includes(query) || cuenta.includes(query) || (query.startsWith('#') && notas.includes(query));
                 
                 return pasaCuenta && pasaTexto;
@@ -3005,7 +3017,6 @@
             renderizarListaTransacciones(filtradas, mapaCat);
         }
 
-        // Reconocimiento de Voz
         const btnVoz = document.getElementById('btn-voz');
         if (btnVoz) {
             btnVoz.addEventListener('click', () => {
@@ -3047,8 +3058,6 @@
             document.getElementById('dash-porcentaje').textContent = `${pDisp}%`;
             document.getElementById('dash-bar').style.width = `${pDisp}%`;
 
-        
-
             if (totalIngresado > 0) {
                 const necPct = Math.round((totalNecesidades / totalIngresado) * 100);
                 const desPct = Math.round((totalDeseos / totalIngresado) * 100);
@@ -3074,7 +3083,6 @@
 
             const ahora = new Date();
             const mesSeleccionado = parseInt(document.getElementById('selector-mes-excel').value);
-            const diasEnMes = new Date(ahora.getFullYear(), mesSeleccionado + 1, 0).getDate();
             const diasTranscurridos = Math.max(1, ahora.getDate());
             
             const promedio = totalGastado / diasTranscurridos;
@@ -3250,8 +3258,14 @@
 
         document.querySelectorAll('.btn-tema').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const tema = e.target.getAttribute('data-tema') || 'emerald';
+                const tema = e.currentTarget.getAttribute('data-tema') || 'emerald';
                 localStorage.setItem('tema_color_app', tema);
+                
+                const metaTheme = document.getElementById('meta-theme-color');
+                if (tema === 'blue') metaTheme.setAttribute('content', '#3b82f6');
+                else if (tema === 'purple') metaTheme.setAttribute('content', '#a855f7');
+                else metaTheme.setAttribute('content', '#10b981');
+
                 mostrarToast('Tema de color guardado');
             });
         });
@@ -3270,7 +3284,6 @@
             }
         }
 
-        // Inicializar caché local de forma segura solo si no existe previo registro
         if (!localStorage.getItem('categorias_cache') && navigator.onLine) {
             sincronizarCategoriasCache();
         }
