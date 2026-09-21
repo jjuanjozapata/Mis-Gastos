@@ -163,12 +163,16 @@
                 </div>
 
                 <div id="flujo-paso-2" class="hidden flex-col h-full min-h-0">
-                    <div class="flex items-center gap-3 mb-4 shrink-0 mt-1">
+                    <div class="flex items-center gap-3 mb-3 shrink-0 mt-1">
                         <button id="btn-retroceder-flujo" class="w-9 h-9 flex items-center justify-center rounded-full bg-slate-800 text-slate-300 active:scale-90 transition-transform cursor-pointer">←</button>
                         <div>
                             <h3 class="text-lg font-bold text-white">Selecciona Categoría</h3>
                             <p id="flujo-tipo-label" class="text-[10px] text-emerald-400 uppercase tracking-wider font-bold"></p>
                         </div>
+                    </div>
+
+                    <div class="mb-3 shrink-0">
+                        <input type="text" id="input-buscar-categoria" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-emerald-500" placeholder="🔍 Buscar categoría..." autocomplete="off">
                     </div>
                     
                     <div class="mb-3 shrink-0" id="seccion-filtros-cat">
@@ -364,7 +368,8 @@
                 <span class="text-xs font-bold text-slate-400 tracking-wider">MIS GASTOS</span>
             </div>
             <div class="flex items-center gap-2">
-                <button id="btn-privacidad" class="bg-slate-900 text-slate-300 border border-slate-800 w-9 h-9 rounded-full flex items-center justify-center text-xs active:scale-95 transition-all shadow-sm" title="Ocultar / Mostrar Saldos">👁️</button>
+                <button id="btn-ahorro-expres" class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-2 rounded-full text-xs font-bold active:scale-95 transition-all shadow-sm flex items-center gap-1" title="Ahorro exprés a fondo de emergencia">⚡ Ahorrar</button>
+                <button id="btn-privacidad" class="bg-slate-900 text-slate-300 border border-slate-800/80 w-9 h-9 rounded-full flex items-center justify-center text-xs active:scale-95 transition-all shadow-sm" title="Ocultar / Mostrar Saldos">👁️</button>
                 <button id="btn-cuenta" class="bg-slate-900 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-full text-xs font-bold tracking-widest uppercase active:scale-95 transition-all shadow-md">Efectivo</button>
             </div>
         </header>
@@ -919,6 +924,50 @@
             localStorage.setItem('mes_actual_registro', periodoActual);
         }
 
+const btnAhorroExpres = document.getElementById('btn-ahorro-expres');
+        if (btnAhorroExpres) {
+            btnAhorroExpres.addEventListener('click', async () => {
+                const valMonto = parseInt(monto);
+                if (isNaN(valMonto) || valMonto <= 0) {
+                    mostrarToast('Digita primero el monto en pantalla para apartar como ahorro', 'error');
+                    return;
+                }
+
+                const { data: { session } } = await db.auth.getSession();
+                if (!session) {
+                    mostrarToast('Inicia sesión para usar el ahorro exprés', 'error');
+                    return;
+                }
+
+                // Buscar si existe un plan de tipo meta marcado como fondo de emergencia
+                const { data: metas } = await db.from('planes')
+                    .select('*')
+                    .eq('tipo', 'meta')
+                    .eq('user_id', session.user.id);
+
+                const metaEmergencia = (metas || []).find(p => p.es_fondo_emergencia) || (metas || [])[0];
+
+                if (!metaEmergencia) {
+                    mostrarToast('Crea primero una Meta o Fondo de Emergencia en la pestaña Planes', 'error');
+                    cambiarTab('planes');
+                    return;
+                }
+
+                const nuevoAcumulado = parseFloat(metaEmergencia.monto_acumulado || 0) + valMonto;
+                const { error: errUp } = await db.from('planes').update({ monto_acumulado: nuevoAcumulado }).eq('id', metaEmergencia.id);
+
+                if (!errUp) {
+                    mostrarToast(`⚡ ¡${formatearMoneda(valMonto)} guardados en "${metaEmergencia.titulo}"!`);
+                    limpiar();
+                    cargarPlanes();
+                    cargarEstadisticas();
+                } else {
+                    mostrarToast('Error al procesar ahorro: ' + errUp.message, 'error');
+                }
+            });
+        }
+
+
         const btnCerrarRollover = document.getElementById('btn-cerrar-rollover');
         if (btnCerrarRollover) btnCerrarRollover.addEventListener('click', cerrarModalRollover);
 
@@ -1275,8 +1324,12 @@
             });
             
             catsFiltradas.forEach(cat => {
+                const wrapper = document.createElement('div');
+                wrapper.className = "relative flex flex-col";
+
                 const btn = document.createElement('button');
-                btn.className = "flex flex-col items-center justify-center p-3 bg-slate-800 rounded-2xl active:bg-emerald-600 active:scale-95 transition-all border border-slate-700 shadow-md min-h-[85px]";
+                btn.type = "button";
+                btn.className = "flex-1 flex flex-col items-center justify-center p-3 bg-slate-800 rounded-2xl active:bg-emerald-600 active:scale-95 transition-all border border-slate-700 shadow-md min-h-[85px]";
                 btn.innerHTML = `<span class="text-2xl mb-2">${escapeHTML(cat.icono)}</span><span class="text-[9px] font-bold text-slate-300 uppercase tracking-wider text-center leading-tight">${escapeHTML(cat.nombre)}</span>`;
                 btn.addEventListener('click', () => {
                     if (cat.nombre.toUpperCase().includes('OTROS') || cat.nombre.toUpperCase().includes('EXTRA') || cat.nombre.toUpperCase().includes('MEKATO')) {
@@ -1285,7 +1338,34 @@
                         guardarTransaccion(cat.id, '');
                     }
                 });
-                contenedor.appendChild(btn);
+                wrapper.appendChild(btn);
+
+                // Botón de eliminar categoría (si pertenece al usuario o no es esencial del sistema)
+                if (cat.user_id && !['MERCADO', 'ARRIENDO', 'SERVICIOS'].includes(cat.nombre.toUpperCase())) {
+                    const btnDeleteCat = document.createElement('button');
+                    btnDeleteCat.type = "button";
+                    btnDeleteCat.className = "absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-slate-900 text-slate-400 hover:text-red-400 border border-slate-700 flex items-center justify-center text-[10px] shadow-md z-10 active:scale-90 transition-colors";
+                    btnDeleteCat.innerHTML = "✕";
+                    btnDeleteCat.title = "Eliminar categoría";
+                    btnDeleteCat.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        if (!confirm(`¿Deseas eliminar la categoría "${cat.nombre}"?`)) return;
+                        
+                        const { error } = await db.from('categorias').delete().eq('id', cat.id);
+                        if (!error) {
+                            let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+                            categorias = categorias.filter(c => c.id !== cat.id);
+                            localStorage.setItem('categorias_cache', JSON.stringify(categorias));
+                            mostrarToast(`Categoría "${cat.nombre}" eliminada`);
+                            renderizarCategoriasFlujo();
+                        } else {
+                            mostrarToast('Error al eliminar: ' + error.message, 'error');
+                        }
+                    });
+                    wrapper.appendChild(btnDeleteCat);
+                }
+
+                contenedor.appendChild(wrapper);
             });
 
             const btnNuevaCat = document.createElement('button');
@@ -1552,6 +1632,22 @@
                 btnVar.className = "py-2.5 rounded-xl text-xs font-bold border border-emerald-500/40 bg-emerald-500/20 text-emerald-300";
                 btnFij.className = "py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800 text-slate-400";
             }
+        }
+
+        const inputBuscarCat = document.getElementById('input-buscar-categoria');
+        if (inputBuscarCat) {
+            inputBuscarCat.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase().trim();
+                const botonesCat = document.querySelectorAll('#flujo-categorias-container > div, #flujo-categorias-container > button');
+                botonesCat.forEach(el => {
+                    const texto = el.textContent.toLowerCase();
+                    if (texto.includes(query) || el.id === 'btn-nueva-cat-rapida') {
+                        el.style.display = 'flex';
+                    } else {
+                        el.style.display = 'none';
+                    }
+                });
+            });
         }
 
         document.getElementById('btn-guardar-nueva-cat').addEventListener('click', async () => {
@@ -1951,6 +2047,16 @@
                 queue.push(payload);
                 localStorage.setItem('offline_queue', JSON.stringify(queue));
                 mostrarToast('Guardado offline. Se sincronizará al conectar.', 'error');
+            }
+
+            // Alerta motivacional de control financiero
+            if (catObj && catObj.tipo === 'gasto') {
+                const porcentajeGastoDash = ultimosIngresosCalculados > 0 ? Math.round((valorGasto / ultimosIngresosCalculados) * 100) : 0;
+                if (porcentajeGastoDash >= 20) {
+                    setTimeout(() => {
+                        mostrarToast(`⚠️ Este gasto representa el ${porcentajeGastoDash}% de tus ingresos totales. ¡Vigila tu margen!`, 'error');
+                    }, 500);
+                }
             }
             
             if (navigator.vibrate) navigator.vibrate(50);
