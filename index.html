@@ -614,11 +614,17 @@
         });
 
         document.getElementById('btn-registrar').addEventListener('click', async () => {
-            const email = document.getElementById('auth-email').value.trim();
+            const email = document.getElementById('auth-email').value.trim().toLowerCase();
             const password = document.getElementById('auth-password').value.trim();
 
             if (!email || !password) {
                 mostrarToast('Ingresa correo y contraseña', 'error');
+                return;
+            }
+
+            // Bloqueo de dominio exclusivo
+            if (!email.endsWith('@misgastos.com')) {
+                mostrarToast('Solo se permiten cuentas corporativas @misgastos.com', 'error');
                 return;
             }
             
