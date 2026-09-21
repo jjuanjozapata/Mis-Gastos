@@ -992,7 +992,7 @@
                 contenedor.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">No hay categorías cargadas.</p>';
             } else {
                 categorias.forEach(cat => {
-                    const esEditable = Boolean(cat.user_id) && !['MERCADO', 'ARRIENDO', 'SERVICIOS'].includes(cat.nombre.toUpperCase());
+                    const esEditable = true;
                     const item = document.createElement('div');
                     item.className = "flex items-center justify-between p-3 bg-slate-950 rounded-2xl border border-slate-800";
                     item.innerHTML = `
@@ -1019,15 +1019,26 @@
                         });
                         item.querySelector('.btn-del-admin').addEventListener('click', async () => {
                             if (!confirm(`¿Deseas eliminar la categoría "${cat.nombre}"?`)) return;
-                            const { error } = await db.from('categorias').delete().eq('id', cat.id);
-                            if (!error) {
-                                let cats = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+                            let cats = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+                            const catActual = cats.find(c => c.id === cat.id);
+
+                            if (catActual && !catActual.user_id) {
                                 cats = cats.filter(c => c.id !== cat.id);
                                 localStorage.setItem('categorias_cache', JSON.stringify(cats));
                                 mostrarToast(`Categoría "${cat.nombre}" eliminada`);
                                 abrirModalGestionarCategorias();
+                                renderizarCategoriasFlujo();
                             } else {
-                                mostrarToast('No se puede eliminar: tiene transacciones asociadas.', 'error');
+                                const { error } = await db.from('categorias').delete().eq('id', cat.id);
+                                if (!error) {
+                                    cats = cats.filter(c => c.id !== cat.id);
+                                    localStorage.setItem('categorias_cache', JSON.stringify(cats));
+                                    mostrarToast(`Categoría "${cat.nombre}" eliminada`);
+                                    abrirModalGestionarCategorias();
+                                    renderizarCategoriasFlujo();
+                                } else {
+                                    mostrarToast('No se puede eliminar: tiene transacciones asociadas.', 'error');
+                                }
                             }
                         });
                     }
@@ -1790,15 +1801,33 @@
                 es_fijo: tipoEditarCatEsFijo
             };
 
-            const { error } = await db.from('categorias').update(payloadUpdate).eq('id', categoriaEditandoId).eq('user_id', session.user.id);
-            if (error) {
-                mostrarToast('Error al actualizar: ' + error.message, 'error');
-                return;
-            }
-
             let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
-            categorias = categorias.map(c => c.id === categoriaEditandoId ? { ...c, ...payloadUpdate } : c);
-            localStorage.setItem('categorias_cache', JSON.stringify(categorias));
+            const catActual = categorias.find(c => c.id === categoriaEditandoId);
+
+            if (catActual && !catActual.user_id) {
+                const { data: nuevaCatData, error: errIns } = await db.from('categorias').insert([{
+                    nombre: payloadUpdate.nombre,
+                    icono: payloadUpdate.icono,
+                    tipo: catActual.tipo,
+                    es_fijo: payloadUpdate.es_fijo,
+                    user_id: session.user.id
+                }]).select();
+
+                if (errIns) {
+                    mostrarToast('Error al actualizar categoría: ' + errIns.message, 'error');
+                    return;
+                }
+                categorias = categorias.map(c => c.id === categoriaEditandoId ? { ...nuevaCatData[0] } : c);
+                localStorage.setItem('categorias_cache', JSON.stringify(categorias));
+            } else {
+                const { error } = await db.from('categorias').update(payloadUpdate).eq('id', categoriaEditandoId).eq('user_id', session.user.id);
+                if (error) {
+                    mostrarToast('Error al actualizar: ' + error.message, 'error');
+                    return;
+                }
+                categorias = categorias.map(c => c.id === categoriaEditandoId ? { ...c, ...payloadUpdate } : c);
+                localStorage.setItem('categorias_cache', JSON.stringify(categorias));
+            }
 
             cerrarModalEditarCategoria();
             renderizarCategoriasFlujo();
@@ -2575,9 +2604,20 @@
             }
 
             let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
-            if (navigator.onLine && categorias.length === 0) {
+            if (categorias.length === 0) {
+                categorias = [
+                    { id: 'fallback-1', nombre: 'Mercado', icono: '🛒', tipo: 'gasto', es_fijo: false },
+                    { id: 'fallback-2', nombre: 'Arriendo', icono: '🏠', tipo: 'gasto', es_fijo: true },
+                    { id: 'fallback-3', nombre: 'Servicios', icono: '💡', tipo: 'gasto', es_fijo: true },
+                    { id: 'fallback-4', nombre: 'Salario', icono: '📈', tipo: 'ingreso', es_fijo: false }
+                ];
+            }
+            if (navigator.onLine) {
                 const { data: catData } = await db.from('categorias').select('*');
-                if (catData) { categorias = catData; localStorage.setItem('categorias_cache', JSON.stringify(catData)); }
+                if (catData && catData.length > 0) { 
+                    categorias = catData; 
+                    localStorage.setItem('categorias_cache', JSON.stringify(catData)); 
+                }
             }
 
             const { data: transacciones, error: errTrans } = await db.from('transacciones')
@@ -2587,7 +2627,7 @@
                                                                 .lte('fecha', finISO)
                                                                 .order('fecha', { ascending: false });
             
-            if (errTrans || !categorias.length) return;
+            if (errTrans) return;
             transaccionesCacheActuales = transacciones || [];
 
             let totalGastado = 0;
