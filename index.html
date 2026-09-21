@@ -1045,7 +1045,10 @@
             const contenedor = document.getElementById('lista-categorias-admin');
             contenedor.innerHTML = '';
             let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+            let idsEliminadas = JSON.parse(localStorage.getItem('categorias_eliminadas_ids') || '[]');
             
+            // Filtrar las que fueron eliminadas previamente por el usuario
+            categorias = categorias.filter(c => !idsEliminadas.includes(c.id));
             const catsFiltradas = categorias.filter(c => c.tipo === tipoAdminActivo);
 
             if (catsFiltradas.length === 0) {
@@ -1076,27 +1079,26 @@
 
                     item.querySelector('.btn-del-admin').addEventListener('click', async () => {
                         if (!confirm(`¿Deseas eliminar la categoría "${cat.nombre}"?`)) return;
-                        let cats = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
                         
-                        if (!cat.user_id) {
-                            cats = cats.filter(c => c.id !== cat.id);
-                            localStorage.setItem('categorias_cache', JSON.stringify(cats));
-                            mostrarToast(`Categoría "${cat.nombre}" eliminada`);
-                            abrirModalGestionarCategorias();
-                            renderizarCategoriasFlujo();
-                        } else {
-                            const { error } = await db.from('categorias').delete().eq('id', cat.id);
-                            if (!error) {
-                                cats = cats.filter(c => c.id !== cat.id);
-                                localStorage.setItem('categorias_cache', JSON.stringify(cats));
-                                mostrarToast(`Categoría "${cat.nombre}" eliminada`);
-                                abrirModalGestionarCategorias();
-                                renderizarCategoriasFlujo();
-                            } else {
-                                mostrarToast('No se puede eliminar: tiene transacciones asociadas.', 'error');
-                            }
+                        let idsEliminadas = JSON.parse(localStorage.getItem('categorias_eliminadas_ids') || '[]');
+                        if (!idsEliminadas.includes(cat.id)) {
+                            idsEliminadas.push(cat.id);
+                            localStorage.setItem('categorias_eliminadas_ids', JSON.stringify(idsEliminadas));
                         }
+
+                        let cats = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+                        cats = cats.filter(c => c.id !== cat.id);
+                        localStorage.setItem('categorias_cache', JSON.stringify(cats));
+
+                        if (cat.user_id) {
+                            await db.from('categorias').delete().eq('id', cat.id);
+                        }
+
+                        mostrarToast(`Categoría "${cat.nombre}" eliminada definitivamente`);
+                        abrirModalGestionarCategorias();
+                        renderizarCategoriasFlujo();
                     });
+
                     contenedor.appendChild(item);
                 });
             }
@@ -1348,7 +1350,6 @@
             });
         });
 
-        // Parser aritmético seguro en reemplazo de eval() para mitigar riesgos de inyección
         function calcularExpresionSegura(expr) {
             try {
                 const tokens = expr.trim().split(/\s+/);
@@ -1549,6 +1550,22 @@
             renderizarCategoriasFlujo();
         }
 
+        async function sincronizarCategoriasCache() {
+            try {
+                let categoriasLocales = leerStorageSeguro('categorias_cache', []);
+                if (navigator.onLine) {
+                    const { data } = await db.from('categorias').select('*').order('nombre');
+                    if (data && data.length > 0) {
+                        let idsEliminadas = JSON.parse(localStorage.getItem('categorias_eliminadas_ids') || '[]');
+                        const categoriasFiltradas = data.filter(c => !idsEliminadas.includes(c.id));
+                        localStorage.setItem('categorias_cache', JSON.stringify(categoriasFiltradas));
+                    }
+                }
+            } catch (err) {
+                console.warn('Sincronización de categorías omitida por estado offline o error.');
+            }
+        }
+
         async function renderizarCategoriasFlujo() {
             const contenedor = document.getElementById('flujo-categorias-container');
             contenedor.innerHTML = '';
@@ -1608,9 +1625,16 @@
             }
 
             let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+            let idsEliminadas = JSON.parse(localStorage.getItem('categorias_eliminadas_ids') || '[]');
+            
+            categorias = categorias.filter(c => !idsEliminadas.includes(c.id));
+
             if (navigator.onLine && categorias.length === 0) {
                 const { data } = await db.from('categorias').select('*').order('nombre');
-                if (data) { categorias = data; localStorage.setItem('categorias_cache', JSON.stringify(data)); }
+                if (data) { 
+                    categorias = data.filter(c => !idsEliminadas.includes(c.id)); 
+                    localStorage.setItem('categorias_cache', JSON.stringify(categorias)); 
+                }
             }
             
             const catsFiltradas = categorias.filter(c => {
@@ -2205,9 +2229,12 @@
                 campoAuto.classList.remove('hidden');
 
                 let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+                let idsEliminadas = JSON.parse(localStorage.getItem('categorias_eliminadas_ids') || '[]');
+                categorias = categorias.filter(c => !idsEliminadas.includes(c.id));
+
                 if (categorias.length === 0) {
                     const { data } = await db.from('categorias').select('*').order('nombre');
-                    if (data) categorias = data;
+                    if (data) categorias = data.filter(c => !idsEliminadas.includes(c.id));
                 }
                 const selectCat = document.getElementById('select-categoria-plan');
                 selectCat.innerHTML = '<option value="">-- Elige la categoría --</option>';
@@ -2791,6 +2818,9 @@
             }
 
             let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+            let idsEliminadas = JSON.parse(localStorage.getItem('categorias_eliminadas_ids') || '[]');
+            categorias = categorias.filter(c => !idsEliminadas.includes(c.id));
+
             if (categorias.length === 0) {
                 categorias = [
                     { id: 'fallback-1', nombre: 'Mercado', icono: '🛒', tipo: 'gasto', es_fijo: false },
@@ -2802,8 +2832,8 @@
             if (navigator.onLine) {
                 const { data: catData } = await db.from('categorias').select('*');
                 if (catData && catData.length > 0) { 
-                    categorias = catData; 
-                    localStorage.setItem('categorias_cache', JSON.stringify(catData)); 
+                    categorias = catData.filter(c => !idsEliminadas.includes(c.id)); 
+                    localStorage.setItem('categorias_cache', JSON.stringify(categorias)); 
                 }
             }
 
@@ -3000,6 +3030,9 @@
         function filtrarYRenderizarHistorial() {
             const query = (inputBuscarHistorial ? inputBuscarHistorial.value : '').toLowerCase().trim();
             let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+            let idsEliminadas = JSON.parse(localStorage.getItem('categorias_eliminadas_ids') || '[]');
+            categorias = categorias.filter(c => !idsEliminadas.includes(c.id));
+            
             const mapaCat = {};
             categorias.forEach(c => { mapaCat[c.id] = c; });
 
@@ -3269,20 +3302,6 @@
                 mostrarToast('Tema de color guardado');
             });
         });
-
-        async function sincronizarCategoriasCache() {
-            try {
-                let categoriasLocales = leerStorageSeguro('categorias_cache', []);
-                if (categoriasLocales.length === 0 && navigator.onLine) {
-                    const { data } = await db.from('categorias').select('*').order('nombre');
-                    if (data && data.length > 0) {
-                        localStorage.setItem('categorias_cache', JSON.stringify(data));
-                    }
-                }
-            } catch (err) {
-                console.warn('Sincronización de categorías omitida por estado offline o error.');
-            }
-        }
 
         if (!localStorage.getItem('categorias_cache') && navigator.onLine) {
             sincronizarCategoriasCache();
