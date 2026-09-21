@@ -2376,67 +2376,76 @@
             const matrizContainer = document.getElementById('matriz-presupuesto-excel');
             matrizContainer.innerHTML = '';
             
-            // Consultar planes de tipo 'limite' activos para cruzar presupuestos reales
-            db.from('planes').select('*').eq('tipo', 'limite').eq('user_id', session.user.id).then(({ data: planesLimites }) => {
-                const mapaLimites = {};
-                if (planesLimites) {
+            // Obtener sesión activa de forma segura
+            db.auth.getSession().then(({ data: { session: activeSession } }) => {
+                const userId = activeSession ? activeSession.user.id : null;
+                
+                const renderMatrixWithLimits = (planesLimites = []) => {
+                    const mapaLimites = {};
                     planesLimites.forEach(p => { mapaLimites[p.categoria_id] = parseFloat(p.monto); });
-                }
 
-                ordenados.forEach(item => {
-                    const row = document.createElement('div');
-                    row.className = "flex flex-col gap-1.5 bg-slate-950/50 p-3.5 rounded-2xl border border-slate-800/80 text-xs";
-                    
-                    const presupuestoBase = mapaLimites[item.id] || item.presupuesto || 400000;
-                    const diferencia = presupuestoBase - item.gastado;
-                    const porcentajeUso = presupuestoBase > 0 ? Math.min(150, Math.round((item.gastado / presupuestoBase) * 100)) : 0;
-                    
-                    let barraColor = "bg-emerald-500";
-                    let alertaColor = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
-                    let textoEstado = "Óptimo";
+                    ordenados.forEach(item => {
+                        const row = document.createElement('div');
+                        row.className = "flex flex-col gap-1.5 bg-slate-950/50 p-3.5 rounded-2xl border border-slate-800/80 text-xs";
+                        
+                        const presupuestoBase = mapaLimites[item.id] || item.presupuesto || 400000;
+                        const diferencia = presupuestoBase - item.gastado;
+                        const porcentajeUso = presupuestoBase > 0 ? Math.min(150, Math.round((item.gastado / presupuestoBase) * 100)) : 0;
+                        
+                        let barraColor = "bg-emerald-500";
+                        let alertaColor = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
+                        let textoEstado = "Óptimo";
 
-                    if (porcentajeUso >= 80 && porcentajeUso < 100) {
-                        barraColor = "bg-amber-500";
-                        alertaColor = "text-amber-400 bg-amber-500/10 border-amber-500/20";
-                        textoEstado = "Alerta (80%)";
-                    } else if (porcentajeUso >= 100) {
-                        barraColor = "bg-red-500";
-                        alertaColor = "text-red-400 bg-red-500/10 border-red-500/20";
-                        textoEstado = "Sobregiro";
-                    }
+                        if (porcentajeUso >= 80 && porcentajeUso < 100) {
+                            barraColor = "bg-amber-500";
+                            alertaColor = "text-amber-400 bg-amber-500/10 border-amber-500/20";
+                            textoEstado = "Alerta (80%)";
+                        } else if (porcentajeUso >= 100) {
+                            barraColor = "bg-red-500";
+                            alertaColor = "text-red-400 bg-red-500/10 border-red-500/20";
+                            textoEstado = "Sobregiro";
+                        }
 
-                    row.innerHTML = `
-                        <div class="flex justify-between items-center">
-                            <div class="flex items-center gap-2">
-                                <span>${escapeHTML(item.icono)}</span>
-                                <span class="font-bold text-white">${escapeHTML(item.nombre)}</span>
+                        row.innerHTML = `
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center gap-2">
+                                    <span>${escapeHTML(item.icono)}</span>
+                                    <span class="font-bold text-white">${escapeHTML(item.nombre)}</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-slate-400">Real: <strong class="text-white tabular-nums">${formatearMoneda(item.gastado)}</strong></span>
+                                    <button type="button" class="btn-editar-presupuesto w-6 h-6 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xs transition-colors border border-slate-800" data-catid="${item.id}" data-catnombre="${escapeHTML(item.nombre)}" data-presupuesto="${presupuestoBase}" title="Cambiar presupuesto">⚙️</button>
+                                    <span class="text-[9px] font-bold px-2 py-0.5 rounded-full border ${alertaColor}">${textoEstado}</span>
+                                </div>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-slate-400">Real: <strong class="text-white tabular-nums">${formatearMoneda(item.gastado)}</strong></span>
-                                <button type="button" class="btn-editar-presupuesto w-6 h-6 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xs transition-colors border border-slate-800" data-catid="${item.id}" data-catnombre="${escapeHTML(item.nombre)}" data-presupuesto="${presupuestoBase}" title="Cambiar presupuesto">⚙️</button>
-                                <span class="text-[9px] font-bold px-2 py-0.5 rounded-full border ${alertaColor}">${textoEstado}</span>
+                            <div class="flex justify-between text-[10px] text-slate-500 font-semibold pt-1">
+                                <span>Presupuesto: ${formatearMoneda(presupuestoBase)}</span>
+                                <span class="${diferencia < 0 ? 'text-red-400 font-bold' : 'text-slate-400'}">Dif: ${formatearMoneda(diferencia)} (${porcentajeUso}%)</span>
                             </div>
-                        </div>
-                        <div class="flex justify-between text-[10px] text-slate-500 font-semibold pt-1">
-                            <span>Presupuesto: ${formatearMoneda(presupuestoBase)}</span>
-                            <span class="${diferencia < 0 ? 'text-red-400 font-bold' : 'text-slate-400'}">Dif: ${formatearMoneda(diferencia)} (${porcentajeUso}%)</span>
-                        </div>
-                        <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden border border-slate-800">
-                            <div class="${barraColor} h-1.5 rounded-full transition-all duration-500" style="width: ${Math.min(100, porcentajeUso)}%"></div>
-                        </div>
-                    `;
-                    matrizContainer.appendChild(row);
-                });
-
-                // Vincular eventos de clic a los botones de engranaje ⚙️
-                matrizContainer.querySelectorAll('.btn-editar-presupuesto').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const catId = e.currentTarget.getAttribute('data-catid');
-                        const catNombre = e.currentTarget.getAttribute('data-catnombre');
-                        const presActual = e.currentTarget.getAttribute('data-presupuesto');
-                        abrirModalEditarPresupuesto(catId, catNombre, presActual);
+                            <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden border border-slate-800">
+                                <div class="${barraColor} h-1.5 rounded-full transition-all duration-500" style="width: ${Math.min(100, porcentajeUso)}%"></div>
+                            </div>
+                        `;
+                        matrizContainer.appendChild(row);
                     });
-                });
+
+                    matrizContainer.querySelectorAll('.btn-editar-presupuesto').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            const catId = e.currentTarget.getAttribute('data-catid');
+                            const catNombre = e.currentTarget.getAttribute('data-catnombre');
+                            const presActual = e.currentTarget.getAttribute('data-presupuesto');
+                            abrirModalEditarPresupuesto(catId, catNombre, presActual);
+                        });
+                    });
+                };
+
+                if (userId) {
+                    db.from('planes').select('*').eq('tipo', 'limite').eq('user_id', userId).then(({ data: planesLimites }) => {
+                        renderMatrixWithLimits(planesLimites || []);
+                    });
+                } else {
+                    renderMatrixWithLimits([]);
+                }
             });
 
             const labelsGrafico = [];
