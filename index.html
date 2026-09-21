@@ -762,8 +762,25 @@
 
         const escapeHTML = str => str ? DOMPurify.sanitize(String(str), { ALLOWED_TAGS: [], ALLOWED_ATTR: [] }) : '';
         
+        // Lector seguro de LocalStorage para prevenir caídas por corrupción de datos
+        function leerStorageSeguro(clave, valorPorDefecto) {
+            try {
+                const item = localStorage.getItem(clave);
+                return item ? JSON.parse(item) : valorPorDefecto;
+            } catch (e) {
+                console.warn(`Aviso: Error al parsear ${clave} en localStorage, reiniciando valor.`);
+                return valorPorDefecto;
+            }
+        }
+
         let monedaActual = localStorage.getItem('moneda_mis_gastos') || 'COP';
         let modoPrivacidad = localStorage.getItem('modo_privacidad_gastos') === 'true';
+
+        // Capturador global de errores asíncronos en red o promesas
+        window.addEventListener('unhandledrejection', event => {
+            console.warn('Operación en segundo plano pausada por red o sesión:', event.reason);
+            event.preventDefault();
+        });
         let ultimoBalanceCalculado = 0;
         let ultimosIngresosCalculados = 0;
         let ultimosGastosCalculados = 0;
@@ -3235,16 +3252,20 @@
         });
 
         async function sincronizarCategoriasCache() {
-            let categoriasLocales = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
-            if (categoriasLocales.length === 0 && navigator.onLine) {
-                const { data } = await db.from('categorias').select('*').order('nombre');
-                if (data && data.length > 0) {
-                    localStorage.setItem('categorias_cache', JSON.stringify(data));
+            try {
+                let categoriasLocales = leerStorageSeguro('categorias_cache', []);
+                if (categoriasLocales.length === 0 && navigator.onLine) {
+                    const { data } = await db.from('categorias').select('*').order('nombre');
+                    if (data && data.length > 0) {
+                        localStorage.setItem('categorias_cache', JSON.stringify(data));
+                    }
                 }
+            } catch (err) {
+                console.warn('Sincronización de categorías omitida por estado offline o error.');
             }
         }
 
-        // Solo inicializamos el caché local si está totalmente vacío al cargar la página por primera vez
+        // Inicializar caché local de forma segura solo si no existe previo registro
         if (!localStorage.getItem('categorias_cache') && navigator.onLine) {
             sincronizarCategoriasCache();
         }
