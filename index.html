@@ -1359,7 +1359,14 @@
             
             categorias.forEach(c => { 
                 mapaCat[c.id] = c;
-                if(c.tipo === 'gasto') reporteGastos[c.id] = { nombre: escapeHTML(c.nombre), icono: c.icono, gastado: 0 }; 
+                if(c.tipo === 'gasto') {
+                    reporteGastos[c.id] = { 
+                        nombre: escapeHTML(c.nombre), 
+                        icono: c.icono, 
+                        gastado: 0,
+                        presupuesto: c.presupuesto_base || 400000 
+                    }; 
+                }
             });
 
             const contenedorHistorial = document.getElementById('historial-transacciones');
@@ -1494,27 +1501,43 @@
             
             ordenados.forEach(item => {
                 const row = document.createElement('div');
-                row.className = "flex justify-between items-center bg-slate-950/40 p-3 rounded-xl border border-slate-800/80 text-xs";
+                row.className = "flex flex-col gap-1.5 bg-slate-950/50 p-3.5 rounded-2xl border border-slate-800/80 text-xs";
                 
+                const presupuestoBase = item.presupuesto || 500000; // Calibrado al estándar del Excel
+                const diferencia = presupuestoBase - item.gastado;
+                const porcentajeUso = presupuestoBase > 0 ? Math.min(150, Math.round((item.gastado / presupuestoBase) * 100)) : 0;
+                
+                let barraColor = "bg-emerald-500";
                 let alertaColor = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
                 let textoEstado = "Óptimo";
-                if (item.gastado > 300000) { 
+
+                if (porcentajeUso >= 80 && porcentajeUso < 100) {
+                    barraColor = "bg-amber-500";
                     alertaColor = "text-amber-400 bg-amber-500/10 border-amber-500/20";
-                    textoEstado = "Alerta 70%";
-                }
-                if (item.gastado > 600000) {
+                    textoEstado = "Alerta";
+                } else if (porcentajeUso >= 100) {
+                    barraColor = "bg-red-500";
                     alertaColor = "text-red-400 bg-red-500/10 border-red-500/20";
                     textoEstado = "Sobregiro";
                 }
 
                 row.innerHTML = `
-                    <div class="flex items-center gap-2">
-                        <span>${escapeHTML(item.icono)}</span>
-                        <span class="font-bold text-white">${escapeHTML(item.nombre)}</span>
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <span>${escapeHTML(item.icono)}</span>
+                            <span class="font-bold text-white">${escapeHTML(item.nombre)}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-slate-400">Real: <strong class="text-white">${formatearMoneda(item.gastado)}</strong></span>
+                            <span class="text-[9px] font-bold px-2 py-0.5 rounded-full border ${alertaColor}">${textoEstado}</span>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <span class="text-slate-400">Real: <strong class="text-white">${formatearMoneda(item.gastado)}</strong></span>
-                        <span class="text-[9px] font-bold px-2 py-0.5 rounded-full border ${alertaColor}">${textoEstado}</span>
+                    <div class="flex justify-between text-[10px] text-slate-500 font-semibold pt-1">
+                        <span>Presupuesto: ${formatearMoneda(presupuestoBase)}</span>
+                        <span>${porcentajeUso}% consumido</span>
+                    </div>
+                    <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden border border-slate-800">
+                        <div class="${barraColor} h-1.5 rounded-full transition-all duration-500" style="width: ${Math.min(100, porcentajeUso)}%"></div>
                     </div>
                 `;
                 matrizContainer.appendChild(row);
