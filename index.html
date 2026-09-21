@@ -76,13 +76,15 @@
     </div>
 
     <div id="modal-rollover" class="hidden fixed inset-0 z-[140] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-6">
-        <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl text-center">
-            <div class="text-3xl mb-3">🔄</div>
+        <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl text-center relative">
+            <button type="button" id="btn-cerrar-rollover" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-sm active:scale-90 transition-all cursor-pointer">✕</button>
+            <div class="text-3xl mb-3 mt-1">🔄</div>
             <h3 class="text-xl font-bold text-white mb-2">Cierre de Mes Detectado</h3>
             <p id="texto-rollover" class="text-slate-400 text-sm mb-6">Tienes un saldo restante del mes pasado. ¿Qué deseas hacer con este dinero?</p>
             <div class="space-y-3">
-                <button id="btn-rollover-ahorro" class="w-full py-3.5 rounded-xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-colors">Mandar a Fondo de Emergencia</button>
-                <button id="btn-rollover-colchon" class="w-full py-3.5 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors">Pasar como Colchón del Nuevo Mes</button>
+                <button id="btn-rollover-ahorro" class="w-full py-3.5 rounded-xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-colors cursor-pointer">Mandar a Fondo de Emergencia</button>
+                <button id="btn-rollover-colchon" class="w-full py-3.5 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors cursor-pointer">Pasar como Colchón del Nuevo Mes</button>
+                <button id="btn-rollover-omitir" class="w-full py-2.5 text-xs text-slate-400 hover:text-slate-200 transition-colors font-medium">Omitir por ahora</button>
             </div>
         </div>
     </div>
@@ -238,11 +240,11 @@
 
                 <div id="campo-fechas-plan" class="hidden grid grid-cols-2 gap-2 bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
                     <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Inicio</label>
+                        <label for="input-fecha-inicio-plan" class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Inicio</label>
                         <input type="date" id="input-fecha-inicio-plan" class="w-full bg-slate-900 text-xs text-white p-2 rounded-xl border border-slate-800">
                     </div>
                     <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Fin</label>
+                        <label for="input-fecha-fin-plan" class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Fin</label>
                         <input type="date" id="input-fecha-fin-plan" class="w-full bg-slate-900 text-xs text-white p-2 rounded-xl border border-slate-800">
                     </div>
                 </div>
@@ -291,17 +293,17 @@
 
             <div class="space-y-4 mb-6">
                 <div>
-                    <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Nombre</label>
+                    <label for="input-nueva-cat-nombre" class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Nombre</label>
                     <input type="text" id="input-nueva-cat-nombre" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500" placeholder="Ej. Mekatos, Cine, Cursos..." autocomplete="off">
                 </div>
 
                 <div>
-                    <label class="text-[10px] uppercase font-bold text-slate-400 block mb-2">Selecciona un Icono</label>
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block mb-2">Selecciona un Icono</span>
                     <div id="selector-iconos-cat" class="grid grid-cols-6 gap-2 p-2 bg-slate-950 rounded-2xl border border-slate-800 max-h-36 overflow-y-auto"></div>
                 </div>
 
                 <div id="seccion-tipo-nueva-cat">
-                    <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Tipo de Gasto</label>
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Tipo de Gasto</span>
                     <div class="grid grid-cols-2 gap-2">
                         <button type="button" id="btn-nueva-cat-var" class="py-2.5 rounded-xl text-xs font-bold border border-emerald-500/40 bg-emerald-500/20 text-emerald-300">Variable</button>
                         <button type="button" id="btn-nueva-cat-fijo" class="py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800 text-slate-400">Fijo / Factura</button>
