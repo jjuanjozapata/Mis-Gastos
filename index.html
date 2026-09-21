@@ -2953,19 +2953,7 @@
             document.getElementById('dash-porcentaje').textContent = `${pDisp}%`;
             document.getElementById('dash-bar').style.width = `${pDisp}%`;
 
-            const badgeEstado = document.getElementById('badge-estado-presupuesto');
-            if (badgeEstado) {
-                if (balanceReal < 0) {
-                    badgeEstado.className = "bg-red-500/20 text-red-400 border border-red-500/30 text-[9px] uppercase font-bold px-2.5 py-1 rounded-full";
-                    badgeEstado.textContent = "Sobregiro";
-                } else if (pDisp < 20) {
-                    badgeEstado.className = "bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[9px] uppercase font-bold px-2.5 py-1 rounded-full";
-                    badgeEstado.textContent = "Alerta";
-                } else {
-                    badgeEstado.className = "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] uppercase font-bold px-2.5 py-1 rounded-full";
-                    badgeEstado.textContent = "Óptimo";
-                }
-            }
+        
 
             if (totalIngresado > 0) {
                 const necPct = Math.round((totalNecesidades / totalIngresado) * 100);
