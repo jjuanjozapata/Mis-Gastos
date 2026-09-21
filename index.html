@@ -756,7 +756,14 @@
     <script>
         const db = supabase.createClient(
             'https://znszebnjcgjfzxvnexxd.supabase.co', 
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpuc3plYm5qY2dqZnp4dm5leHhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4NzkwNzcsImV4cCI6MjEwNTQ1NTA3N30.Od66KMiiuXPrzAUfuiprc7Q7SF3909lxDeBevMK25h0'
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpuc3plYm5qY2dqZnp4dm5leHhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4NzkwNzcsImV4cCI6MjEwNTQ1NTA3N30.Od66KMiiuXPrzAUfuiprc7Q7SF3909lxDeBevMK25h0',
+            {
+                auth: {
+                    storage: window.sessionStorage,
+                    autoRefreshToken: true,
+                    persistSession: true
+                }
+            }
         );
 
         const escapeHTML = str => str ? DOMPurify.sanitize(String(str), { ALLOWED_TAGS: [], ALLOWED_ATTR: [] }) : '';
@@ -3037,7 +3044,11 @@
 
         const inputBuscarHistorial = document.getElementById('input-buscar-historial');
         if (inputBuscarHistorial) {
-            inputBuscarHistorial.addEventListener('input', () => filtrarYRenderizarHistorial());
+            let debounceTimer;
+            inputBuscarHistorial.addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => filtrarYRenderizarHistorial(), 300);
+            });
         }
 
         function filtrarYRenderizarHistorial() {
