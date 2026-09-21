@@ -15,7 +15,7 @@
     <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2933/2933116.png">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2933/2933116.png">
 
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self' https://znszebnjcgjfzxvnexxd.supabase.co https://worldtimeapi.org https://cdn.jsdelivr.net https://cdn-icons-png.flaticon.com https://cdn.tailwindcss.com; img-src 'self' data: https://cdn-icons-png.flaticon.com; worker-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self' https://znszebnjcgjfzxvnexxd.supabase.co https://cdn.jsdelivr.net https://cdn-icons-png.flaticon.com https://cdn.tailwindcss.com; img-src 'self' data: https://cdn-icons-png.flaticon.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
     
     <script>
         const originalWarn = console.warn;
@@ -1197,13 +1197,15 @@
             // Mitigación Zero-Trust: Validar tiempo contra servidor para evitar manipulación de reloj local
             if (navigator.onLine) {
                 try {
-                    const res = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC', { cache: 'no-store' });
-                    if (res.ok) {
-                        const data = await res.json();
-                        ahora = new Date(data.datetime);
+                    // Hacemos un ping a nuestro propio dominio (Vercel) para leer la hora oficial del servidor.
+                    // Esto evita depender de APIs de terceros que se caen (ERR_CONNECTION_RESET).
+                    const res = await fetch(window.location.origin, { method: 'HEAD', cache: 'no-store' });
+                    const fechaServidor = res.headers.get('date');
+                    if (fechaServidor) {
+                        ahora = new Date(fechaServidor);
                     }
                 } catch (e) {
-                    // Fallback silencioso si la API de tiempo falla
+                    // Fallback silencioso al reloj local si falla la red
                 }
             }
 
