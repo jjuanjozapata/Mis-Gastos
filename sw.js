@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v18-staff';
+const CACHE_VERSION = 'v19-staff';
 const CACHE_NAME = `gastos-${CACHE_VERSION}`;
 const ASSETS = ['/', '/index.html', '/manifest.json'];
 
@@ -24,7 +24,6 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
     
-    // Ignorar dominios externos y CDNs para evitar bloqueos CSP y conflictos CORS
     if (!url.origin.includes(self.location.origin) || url.protocol === 'chrome-extension:') {
         return;
     }

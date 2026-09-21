@@ -30,7 +30,7 @@
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
     <style>
         body { padding-bottom: env(safe-area-inset-bottom); height: 100dvh; overscroll-behavior-y: none; -webkit-user-select: none; user-select: none; }
-        button, input { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        button, input, select { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
         .tab-activa { color: #10b981; }
         .tab-inactiva { color: #64748b; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -43,7 +43,7 @@
 
     <div id="modal-notas" class="hidden fixed inset-0 z-[120] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-6">
         <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl">
-            <h3 class="text-xl font-bold text-white mb-2">Detalle de la transacción</h3>
+            <h3 class="text-xl font-bold text-white mb-2">Detalle del Movimiento</h3>
             <p class="text-slate-400 text-sm mb-5">Escribe brevemente el concepto.</p>
             <input type="text" id="input-notas" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 mb-6 text-lg" placeholder="Ej. Compras, Netflix, Salario..." autocomplete="off">
             <div class="flex gap-3">
@@ -68,8 +68,8 @@
                     <button id="btn-tipo-gasto" class="w-full bg-slate-800 p-5 rounded-[2rem] border border-slate-700 active:bg-slate-700 active:scale-[0.98] transition-all flex items-center gap-5 shadow-lg">
                         <div class="w-14 h-14 bg-red-500/10 rounded-full flex items-center justify-center text-red-400 border border-red-500/20 text-2xl">📉</div>
                         <div class="text-left">
-                            <span class="block text-lg font-bold text-white">Es un Gasto</span>
-                            <span class="block text-xs text-slate-400">Salida de dinero, compras, pagos</span>
+                            <span class="block text-lg font-bold text-white">Es un Gasto / Fijo</span>
+                            <span class="block text-xs text-slate-400">Salidas, mercado, facturas, arriendo</span>
                         </div>
                         <span class="ml-auto text-slate-500">›</span>
                     </button>
@@ -77,7 +77,7 @@
                         <div class="w-14 h-14 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-400 border border-emerald-500/20 text-2xl">📈</div>
                         <div class="text-left">
                             <span class="block text-lg font-bold text-white">Es un Ingreso</span>
-                            <span class="block text-xs text-slate-400">Entrada de dinero, salarios, ventas</span>
+                            <span class="block text-xs text-slate-400">Salarios, ventas, entradas extras</span>
                         </div>
                         <span class="ml-auto text-slate-500">›</span>
                     </button>
@@ -100,22 +100,31 @@
     <div id="modal-tipo-plan" class="hidden fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-xl justify-center items-end sm:items-center p-0 sm:p-6 pb-0">
         <div class="bg-slate-900 w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6 border border-slate-800 shadow-[0_-20px_40px_rgba(0,0,0,0.5)] transform transition-transform">
             <div class="w-12 h-1.5 bg-slate-800 rounded-full mx-auto mb-6 sm:hidden"></div>
-            <h3 class="text-xl font-bold text-white mb-6">Crear Plan</h3>
+            <h3 class="text-xl font-bold text-white mb-6">Gestión de Planes</h3>
             
             <button id="btn-crear-limite" class="w-full flex items-center gap-4 bg-slate-800/50 hover:bg-slate-800 p-4 rounded-2xl border border-slate-700/50 mb-3 transition-colors text-left">
                 <div class="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center text-red-400 border border-red-500/20">🛡️</div>
                 <div>
-                    <p class="text-sm font-bold text-white">Controlar un gasto</p>
-                    <p class="text-xs text-slate-400">Tope máximo para una categoría</p>
+                    <p class="text-sm font-bold text-white">Controlar Límite / Fijo</p>
+                    <p class="text-xs text-slate-400">Tope o gasto obligatorio mensual</p>
                 </div>
                 <span class="ml-auto text-slate-500">›</span>
             </button>
             
-            <button id="btn-crear-meta" class="w-full flex items-center gap-4 bg-slate-800/50 hover:bg-slate-800 p-4 rounded-2xl border border-slate-700/50 mb-6 transition-colors text-left">
+            <button id="btn-crear-meta" class="w-full flex items-center gap-4 bg-slate-800/50 hover:bg-slate-800 p-4 rounded-2xl border border-slate-700/50 mb-3 transition-colors text-left">
                 <div class="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20">🎯</div>
                 <div>
-                    <p class="text-sm font-bold text-white">Ahorrar para una meta</p>
-                    <p class="text-xs text-slate-400">Registra aportes a un objetivo</p>
+                    <p class="text-sm font-bold text-white">Meta de Ahorro</p>
+                    <p class="text-xs text-slate-400">Fondo de emergencia u objetivo</p>
+                </div>
+                <span class="ml-auto text-slate-500">›</span>
+            </button>
+
+            <button id="btn-crear-deuda" class="w-full flex items-center gap-4 bg-slate-800/50 hover:bg-slate-800 p-4 rounded-2xl border border-slate-700/50 mb-6 transition-colors text-left">
+                <div class="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/20">💳</div>
+                <div>
+                    <p class="text-sm font-bold text-white">Registrar Deuda / Crédito</p>
+                    <p class="text-xs text-slate-400">Control de abonos y saldo</p>
                 </div>
                 <span class="ml-auto text-slate-500">›</span>
             </button>
@@ -135,8 +144,8 @@
 
             <div class="space-y-4 mb-8">
                 <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800">
-                    <label class="text-xs font-bold text-slate-500 block mb-2">Nombre o Categoría</label>
-                    <input type="text" id="input-nombre-plan" class="w-full bg-transparent text-sm text-white focus:outline-none" placeholder="Ej. Viaje, Comida..." autocomplete="off">
+                    <label class="text-xs font-bold text-slate-500 block mb-2">Nombre o Concepto</label>
+                    <input type="text" id="input-nombre-plan" class="w-full bg-transparent text-sm text-white focus:outline-none" placeholder="Ej. Arriendo, Tarjeta..." autocomplete="off">
                 </div>
             </div>
 
@@ -148,7 +157,8 @@
     </div>
 
     <div id="pantalla-captura" class="flex-1 flex flex-col min-h-0 relative">
-        <header class="shrink-0 p-5 flex justify-end items-center">
+        <header class="shrink-0 p-5 flex justify-between items-center">
+            <span class="text-xs font-bold text-slate-400 tracking-wider">MIS GASTOS PWA</span>
             <button id="btn-cuenta" class="bg-slate-900 text-emerald-400 border border-emerald-500/20 px-5 py-2 rounded-full text-xs font-bold tracking-widest uppercase active:scale-95 transition-all shadow-md">Efectivo</button>
         </header>
 
@@ -176,7 +186,7 @@
 
     <div id="pantalla-planes" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-950 min-h-0">
         <div class="p-5 pb-12 flex flex-col h-full overflow-x-hidden">
-            <h2 class="text-2xl font-bold text-white mb-6">Planes y Metas</h2>
+            <h2 class="text-2xl font-bold text-white mb-6">Planes, Metas y Deudas</h2>
             <div id="contenedor-planes" class="space-y-4 flex-1"></div>
         </div>
         <button id="btn-fab-plan" class="hidden absolute bottom-24 right-6 w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center text-slate-900 text-3xl font-light shadow-[0_10px_20px_rgba(16,185,129,0.3)] active:scale-90 transition-transform z-50">+</button>
@@ -218,23 +228,49 @@
                 </div>
             </div>
 
+            <!-- Modelo 50/30/20 del Excel -->
             <div class="bg-slate-900 rounded-3xl p-5 mb-4 border border-slate-800 shadow-lg">
                 <div class="flex justify-between items-center mb-3">
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Modelo Financiero 50/30/20</p>
-                    <span class="text-[10px] text-emerald-400 font-semibold">Óptimo</span>
+                    <span id="estado-modelo" class="text-[10px] text-emerald-400 font-semibold">Óptimo</span>
                 </div>
                 <div class="grid grid-cols-3 gap-2 text-center">
                     <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                        <span class="text-[10px] text-slate-500 font-bold block mb-1">Necesidades</span>
+                        <span class="text-[10px] text-slate-500 font-bold block mb-1">Necesidades (50%)</span>
                         <span id="stat-50" class="text-xs font-bold text-white">50%</span>
                     </div>
                     <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                        <span class="text-[10px] text-slate-500 font-bold block mb-1">Deseos</span>
+                        <span class="text-[10px] text-slate-500 font-bold block mb-1">Deseos (30%)</span>
                         <span id="stat-30" class="text-xs font-bold text-white">30%</span>
                     </div>
                     <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                        <span class="text-[10px] text-slate-500 font-bold block mb-1">Ahorro/Deuda</span>
+                        <span class="text-[10px] text-slate-500 font-bold block mb-1">Ahorro/Deuda (20%)</span>
                         <span id="stat-20" class="text-xs font-bold text-emerald-400">20%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Simulador de Recorte de Gastos Hormiga -->
+            <div class="bg-slate-900 rounded-3xl p-5 mb-4 border border-slate-800 shadow-lg">
+                <div class="flex justify-between items-center mb-3">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Simulador de Recorte de Gastos</p>
+                    <span class="text-[10px] text-amber-400 font-semibold">Ahorro Hormiga</span>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex justify-between text-xs text-slate-300">
+                        <span>Gasto diario recortable:</span>
+                        <span id="sim-diario-val" class="font-bold text-white">$ 10.000</span>
+                    </div>
+                    <input type="range" id="range-simulador" min="0" max="50000" step="5000" value="10000" class="w-full accent-emerald-500 bg-slate-950">
+                    <div class="grid grid-cols-2 gap-2 text-center pt-2 border-t border-slate-800">
+                        <div class="bg-slate-950 p-2 rounded-xl">
+                            <span class="text-[9px] text-slate-500 block font-bold">MENSUAL</span>
+                            <span id="sim-mensual" class="text-xs font-bold text-emerald-400">$ 300.000</span>
+                        </div>
+                        <div class="bg-slate-950 p-2 rounded-xl">
+                            <span class="text-[9px] text-slate-500 block font-bold">ANUAL</span>
+                            <span id="sim-anual" class="text-xs font-bold text-emerald-400">$ 3.600.000</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -267,7 +303,7 @@
             </div>
 
             <div class="bg-slate-900 rounded-3xl p-6 mb-6 border border-slate-800">
-                <p class="text-white text-sm font-bold mb-4">Gastos por Categoría</p>
+                <p class="text-white text-sm font-bold mb-4">Gastos por Categoría y Concentración</p>
                 <div class="relative flex justify-center h-56">
                     <canvas id="graficoCategorias"></canvas>
                 </div>
@@ -285,13 +321,17 @@
 
     <div id="pantalla-ajustes" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-950 min-h-0 p-5">
         <h2 class="text-2xl font-bold text-white mb-6">Ajustes</h2>
-        <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg">
+        <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg mb-4">
             <p class="text-slate-300 font-bold text-sm mb-2">Conexión con Atajos de iOS</p>
             <p class="text-xs text-slate-500 mb-4 leading-relaxed">Configura tu iPhone para registrar gastos con doble toque. Copia la URL e insértala en tu Atajo:</p>
             <button id="btn-copiar-atajo" class="w-full mt-2 flex items-center justify-center gap-2 py-4 bg-slate-800 text-emerald-400 font-bold rounded-2xl active:bg-slate-700 active:scale-[0.98] border border-emerald-500/20 transition-all">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                 <span id="btn-copiar-texto">Copiar Enlace para iOS</span>
             </button>
+        </div>
+        <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg">
+            <p class="text-slate-300 font-bold text-sm mb-2">Sincronización con Excel</p>
+            <p class="text-xs text-slate-500 mb-4">Todas las categorías oficiales de tu plantilla (Mercado, Restaurante, Arriendo, Salud, etc.) están sincronizadas en tiempo real con Supabase y caché offline.</p>
         </div>
     </div>
 
@@ -532,11 +572,13 @@
 
         document.getElementById('btn-crear-limite').addEventListener('click', () => abrirFormularioPlan('limite'));
         document.getElementById('btn-crear-meta').addEventListener('click', () => abrirFormularioPlan('meta'));
+        document.getElementById('btn-crear-deuda').addEventListener('click', () => abrirFormularioPlan('deuda'));
 
         function abrirFormularioPlan(tipo) {
             cerrarModalPlanes();
             tipoPlanActivo = tipo;
-            document.getElementById('titulo-form-plan').textContent = tipo === 'limite' ? 'Nuevo Límite de Gasto' : 'Nueva Meta de Ahorro';
+            const titulos = { limite: 'Controlar Límite / Fijo', meta: 'Nueva Meta de Ahorro', deuda: 'Registrar Deuda' };
+            document.getElementById('titulo-form-plan').textContent = titulos[tipo] || 'Nuevo Plan';
             document.getElementById('input-monto-plan').value = '';
             document.getElementById('input-nombre-plan').value = '';
             document.getElementById('modal-form-plan').classList.remove('hidden');
@@ -592,8 +634,8 @@
                     <div class="w-20 h-20 bg-slate-900 rounded-full flex items-center justify-center border border-slate-800 mb-6 shadow-lg">
                         <span class="text-3xl text-emerald-500 font-light">+</span>
                     </div>
-                    <h3 class="text-lg font-bold text-white mb-2">No tienes ningún plan</h3>
-                    <p class="text-sm text-slate-500 mb-8 max-w-xs">Crea límites de gasto o metas de ahorro para organizar tu dinero</p>
+                    <h3 class="text-lg font-bold text-white mb-2">No tienes ningún plan o meta</h3>
+                    <p class="text-sm text-slate-500 mb-8 max-w-xs">Organiza tus gastos fijos, metas de ahorro y deudas al estilo de tu plantilla de Excel</p>
                     <button id="btn-primer-plan" class="text-emerald-400 font-bold text-sm tracking-widest uppercase">CREAR MI PRIMER PLAN</button>
                 </div>`;
                 document.getElementById('btn-primer-plan').addEventListener('click', abrirModalPlanes);
@@ -604,7 +646,13 @@
             contenedor.innerHTML = '';
             
             data.forEach(p => {
-                const isLimite = p.tipo === 'limite';
+                const tipo = p.tipo;
+                const configTipo = {
+                    limite: { color: 'red', icon: '🛡️', label: 'Gasto Fijo / Límite' },
+                    meta: { color: 'emerald', icon: '🎯', label: 'Meta de Ahorro' },
+                    deuda: { color: 'blue', icon: '💳', label: 'Crédito / Deuda' }
+                }[tipo] || { color: 'slate', icon: '📌', label: 'Plan' };
+
                 const wrapper = document.createElement('div');
                 wrapper.className = "relative overflow-hidden rounded-3xl mb-4 bg-red-500 flex justify-end";
                 
@@ -618,9 +666,9 @@
                 tarjeta.className = "bg-slate-900 p-5 rounded-3xl border border-slate-800 shadow-md relative z-10 w-full transition-transform duration-200 touch-pan-y";
                 tarjeta.innerHTML = `
                     <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center border ${isLimite ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}">${isLimite ? '🛡️' : '🎯'}</div>
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center border bg-${configTipo.color}-500/10 text-${configTipo.color}-400 border-${configTipo.color}-500/20">${configTipo.icon}</div>
                         <div>
-                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">${isLimite ? 'Límite Mensual' : 'Meta de Ahorro'}</p>
+                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">${configTipo.label}</p>
                             <p class="text-sm font-bold text-white">${escapeHTML(p.titulo)}</p>
                         </div>
                     </div>
@@ -717,6 +765,15 @@
                 mostrarToast('Transacción eliminada');
             }
         }
+
+        // Simulador de recorte de gastos hormiga interactivo
+        const rangeSimulador = document.getElementById('range-simulador');
+        rangeSimulador.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value) || 0;
+            document.getElementById('sim-diario-val').textContent = formateador.format(val);
+            document.getElementById('sim-mensual').textContent = formateador.format(val * 30);
+            document.getElementById('sim-anual').textContent = formateador.format(val * 365);
+        });
 
         async function cargarEstadisticas() {
             const filtro = document.getElementById('filtro-tiempo').value;
@@ -836,6 +893,7 @@
             document.getElementById('dash-porcentaje').textContent = `${pDisp}%`;
             document.getElementById('dash-bar').style.width = `${pDisp}%`;
 
+            // Aplicación exacta del modelo 50/30/20 de tu Excel
             if (totalIngresado > 0) {
                 const necPct = Math.min(100, Math.round((totalGastado * 0.5 / totalIngresado) * 100));
                 const desPct = Math.min(100, Math.round((totalGastado * 0.3 / totalIngresado) * 100));
