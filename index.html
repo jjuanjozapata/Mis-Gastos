@@ -2464,6 +2464,10 @@
             }
 
             const payload = { 
+                id: 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+                    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                }),
                 monto: valorGasto, 
                 categoria_id: categoriaId, 
                 cuenta: cuentaActual, 
@@ -2486,7 +2490,13 @@
             } else {
                 let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
                 queue.push(payload);
-                localStorage.setItem('offline_queue', JSON.stringify(queue));
+                try {
+                    localStorage.setItem('offline_queue', JSON.stringify(queue));
+                } catch (e) {
+                    // Si se llena el almacenamiento local, eliminamos los registros más antiguos (FIFO)
+                    queue.shift();
+                    localStorage.setItem('offline_queue', JSON.stringify(queue));
+                }
                 mostrarToast('Guardado offline. Se sincronizará al conectar.', 'error');
             }
 
@@ -3239,8 +3249,12 @@
 
         function renderizarGraficoDonut(labels, data, centerText, customColors = null) {
             const canvasEl = document.getElementById('graficoCategorias');
+            if (!canvasEl) return;
             const ctx = canvasEl.getContext('2d');
-            if (graficoInstancia) graficoInstancia.destroy();
+            if (graficoInstancia) {
+                graficoInstancia.destroy();
+                graficoInstancia = null;
+            }
             
             graficoInstancia = new Chart(ctx, {
                 type: 'doughnut',
