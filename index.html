@@ -145,24 +145,23 @@
                     </button>
                 </div>
 
-                <div id="flujo-paso-2" class="hidden flex-col h-full">
-                    <div class="flex items-center gap-3 mb-6 shrink-0 mt-2">
-                        <button id="btn-retroceder-flujo" class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-800 text-slate-300 active:scale-90 transition-transform">←</button>
+                <div id="flujo-paso-2" class="hidden flex-col h-full min-h-0">
+                    <div class="flex items-center gap-3 mb-4 shrink-0 mt-1">
+                        <button id="btn-retroceder-flujo" class="w-9 h-9 flex items-center justify-center rounded-full bg-slate-800 text-slate-300 active:scale-90 transition-transform cursor-pointer">←</button>
                         <div>
-                            <h3 class="text-xl font-extrabold text-white">Selecciona Categoría</h3>
-                            <p id="flujo-tipo-label" class="text-xs text-slate-400 uppercase tracking-wider font-bold"></p>
+                            <h3 class="text-lg font-bold text-white">Selecciona Categoría</h3>
+                            <p id="flujo-tipo-label" class="text-[10px] text-emerald-400 uppercase tracking-wider font-bold"></p>
                         </div>
                     </div>
                     
-                    <div class="mb-4 shrink-0" id="seccion-filtros-cat">
-                        <p class="text-[10px] uppercase font-bold text-slate-400 block mb-2 tracking-wider">Separación Contable</p>
+                    <div class="mb-3 shrink-0" id="seccion-filtros-cat">
                         <div class="grid grid-cols-2 gap-2">
-                            <button id="filtro-cat-variable" class="py-2.5 px-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition-all">Gastos Variables</button>
-                            <button id="filtro-cat-fijo" class="py-2.5 px-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 text-xs font-bold transition-all">Gastos Fijos / Facturas</button>
+                            <button id="filtro-cat-variable" class="py-2 px-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition-all">Variables</button>
+                            <button id="filtro-cat-fijo" class="py-2 px-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 text-xs font-bold transition-all">Fijos / Facturas</button>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-3 gap-3 overflow-y-auto pb-8" id="flujo-categorias-container"></div>
+                    <div class="flex-1 overflow-y-auto pr-1 pb-10 grid grid-cols-3 gap-2.5 no-scrollbar" id="flujo-categorias-container"></div>
                 </div>
             </div>
         </div>
@@ -330,35 +329,35 @@
             </div>
         </header>
 
-        <div class="flex-1 flex flex-col justify-center items-center px-6">
-            <span id="fecha-actual" class="text-slate-500 text-[10px] tracking-widest uppercase font-bold mb-4 border border-slate-800 px-3 py-1 rounded-full bg-slate-900/50"></span>
-            <div id="monto-display" class="text-[72px] sm:text-[90px] font-extrabold tracking-tighter text-white transition-colors drop-shadow-lg">$ 0</div>
+        <div class="flex-1 flex flex-col justify-center items-center px-4 w-full max-w-md mx-auto">
+            <span id="fecha-actual" class="text-slate-400 text-[11px] tracking-wider uppercase font-semibold mb-3 border border-slate-800/80 px-3.5 py-1 rounded-full bg-slate-900/60 backdrop-blur-md"></span>
+            <div id="monto-display" class="text-5xl sm:text-6xl md:text-7xl font-black tracking-tight text-white transition-all drop-shadow-md text-center tabular-nums truncate max-w-full px-2">$ 0</div>
         </div>
 
-        <div class="shrink-0 grid grid-cols-3 gap-3 p-5 bg-slate-900 rounded-t-[2.5rem] border-t border-slate-800 shadow-[0_-20px_40px_rgba(0,0,0,0.4)]">
-            <button class="num-btn py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all" data-num="1">1</button>
-            <button class="num-btn py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all" data-num="2">2</button>
-            <button class="num-btn py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all" data-num="3">3</button>
-            <button class="num-btn py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all" data-num="4">4</button>
-            <button class="num-btn py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all" data-num="5">5</button>
-            <button class="num-btn py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all" data-num="6">6</button>
-            <button class="num-btn py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all" data-num="7">7</button>
-            <button class="num-btn py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all" data-num="8">8</button>
-            <button class="num-btn py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all" data-num="9">9</button>
-            <button id="btn-limpiar" class="py-4 text-xl font-bold text-slate-500 bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">C</button>
-            <button class="num-btn py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all" data-num="0">0</button>
-            <button id="btn-borrar" class="py-4 text-2xl font-semibold bg-slate-800/80 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">⌫</button>
-            <button id="btn-siguiente" class="col-span-3 py-5 text-lg font-bold bg-emerald-500 text-slate-950 rounded-2xl active:bg-emerald-400 active:scale-[0.98] transition-all tracking-widest uppercase shadow-[0_0_20px_rgba(16,185,129,0.2)]">Siguiente</button>
+        <div class="shrink-0 grid grid-cols-3 gap-2.5 p-5 bg-slate-900/95 backdrop-blur-xl rounded-t-[2.2rem] border-t border-slate-800/80 shadow-[0_-15px_30px_rgba(0,0,0,0.6)] max-w-md mx-auto w-full">
+            <button class="num-btn py-3.5 text-2xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-2xl text-white active:bg-emerald-500 active:text-slate-950 active:scale-95 transition-all" data-num="1">1</button>
+            <button class="num-btn py-3.5 text-2xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-2xl text-white active:bg-emerald-500 active:text-slate-950 active:scale-95 transition-all" data-num="2">2</button>
+            <button class="num-btn py-3.5 text-2xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-2xl text-white active:bg-emerald-500 active:text-slate-950 active:scale-95 transition-all" data-num="3">3</button>
+            <button class="num-btn py-3.5 text-2xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-2xl text-white active:bg-emerald-500 active:text-slate-950 active:scale-95 transition-all" data-num="4">4</button>
+            <button class="num-btn py-3.5 text-2xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-2xl text-white active:bg-emerald-500 active:text-slate-950 active:scale-95 transition-all" data-num="5">5</button>
+            <button class="num-btn py-3.5 text-2xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-2xl text-white active:bg-emerald-500 active:text-slate-950 active:scale-95 transition-all" data-num="6">6</button>
+            <button class="num-btn py-3.5 text-2xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-2xl text-white active:bg-emerald-500 active:text-slate-950 active:scale-95 transition-all" data-num="7">7</button>
+            <button class="num-btn py-3.5 text-2xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-2xl text-white active:bg-emerald-500 active:text-slate-950 active:scale-95 transition-all" data-num="8">8</button>
+            <button class="num-btn py-3.5 text-2xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-2xl text-white active:bg-emerald-500 active:text-slate-950 active:scale-95 transition-all" data-num="9">9</button>
+            <button id="btn-limpiar" class="py-3.5 text-lg font-bold text-slate-400 bg-slate-800/40 border border-slate-800 rounded-2xl active:bg-red-500/20 active:text-red-400 active:scale-95 transition-all">C</button>
+            <button class="num-btn py-3.5 text-2xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-2xl text-white active:bg-emerald-500 active:text-slate-950 active:scale-95 transition-all" data-num="0">0</button>
+            <button id="btn-borrar" class="py-3.5 text-xl font-semibold text-slate-300 bg-slate-800/40 border border-slate-800 rounded-2xl active:bg-slate-700 active:scale-95 transition-all">⌫</button>
+            <button id="btn-siguiente" class="col-span-3 py-4 text-base font-bold bg-emerald-500 text-slate-950 rounded-2xl active:bg-emerald-400 active:scale-[0.98] transition-all tracking-wider uppercase shadow-[0_0_25px_rgba(16,185,129,0.25)]">Continuar</button>
         </div>
     </div>
 
     <!-- Pantalla 2: Planes -->
-    <div id="pantalla-planes" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-950 min-h-0">
-        <div class="p-5 pb-12 flex flex-col h-full overflow-x-hidden">
-            <h2 class="text-2xl font-bold text-white mb-6">Planes, Metas y Deudas</h2>
+    <div id="pantalla-planes" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-950 min-h-0 relative">
+        <div class="p-5 pb-28 flex flex-col min-h-full overflow-x-hidden">
+            <h2 class="text-2xl font-bold text-white mb-6 tracking-tight">Planes, Metas y Deudas</h2>
             <div id="contenedor-planes" class="space-y-4 flex-1"></div>
         </div>
-        <button id="btn-fab-plan" class="hidden absolute bottom-24 right-6 w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center text-slate-900 text-3xl font-light shadow-[0_10px_20px_rgba(16,185,129,0.3)] active:scale-90 transition-transform z-50">+</button>
+        <button id="btn-fab-plan" class="hidden fixed bottom-24 right-6 w-14 h-14 bg-emerald-500 hover:bg-emerald-400 rounded-full flex items-center justify-center text-slate-950 text-3xl font-semibold shadow-[0_10px_25px_rgba(16,185,129,0.35)] active:scale-90 transition-all z-40 cursor-pointer">+</button>
     </div>
 
     <!-- Pantalla 3: Reportes -->
@@ -813,14 +812,15 @@
         });
 
         function comprobarRolloverMes() {
-            const mesGuardado = localStorage.getItem('mes_actual_registro');
-            const mesActual = new Date().getMonth().toString();
+            const ahora = new Date();
+            const periodoActual = `${ahora.getFullYear()}-${ahora.getMonth()}`;
+            const periodoGuardado = localStorage.getItem('mes_actual_registro');
             
-            if (mesGuardado && mesGuardado !== mesActual) {
+            if (periodoGuardado && periodoGuardado !== periodoActual) {
                 document.getElementById('modal-rollover').classList.remove('hidden');
                 document.getElementById('modal-rollover').classList.add('flex');
             }
-            localStorage.setItem('mes_actual_registro', mesActual);
+            localStorage.setItem('mes_actual_registro', periodoActual);
         }
 
         document.getElementById('btn-rollover-ahorro').addEventListener('click', async () => {
@@ -1857,12 +1857,14 @@
         }
 
         async function eliminarTransaccion(id) {
-            if(!confirm("¿Eliminar este registro permanentemente?")) return;
+            if (!confirm("¿Deseas eliminar este registro permanentemente?")) return;
             const { error } = await db.from('transacciones').delete().eq('id', id);
-            if(!error) {
-                cargarEstadisticas();
-                mostrarToast('Transacción eliminada');
+            if (error) {
+                mostrarToast('No se pudo borrar: ' + error.message, 'error');
+                return;
             }
+            mostrarToast('Transacción eliminada');
+            await cargarEstadisticas();
         }
 
         const rangeSimulador = document.getElementById('range-simulador');
@@ -1884,18 +1886,21 @@
             const filtro = document.getElementById('filtro-tiempo').value;
             const mesSeleccionado = parseInt(document.getElementById('selector-mes-excel').value);
             const ahora = new Date();
-            let inicioISO, finISO;
+            let inicioDate, finDate;
             
             if (filtro === 'dia') {
-                inicioISO = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()).toISOString();
-                finISO = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() + 1).toISOString();
+                inicioDate = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 0, 0, 0, 0);
+                finDate = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 23, 59, 59, 999);
             } else if (filtro === 'anio') {
-                inicioISO = new Date(ahora.getFullYear(), 0, 1).toISOString();
-                finISO = new Date(ahora.getFullYear() + 1, 0, 1).toISOString();
+                inicioDate = new Date(ahora.getFullYear(), 0, 1, 0, 0, 0, 0);
+                finDate = new Date(ahora.getFullYear(), 11, 31, 23, 59, 59, 999);
             } else {
-                inicioISO = new Date(ahora.getFullYear(), mesSeleccionado, 1).toISOString();
-                finISO = new Date(ahora.getFullYear(), mesSeleccionado + 1, 1).toISOString();
+                inicioDate = new Date(ahora.getFullYear(), mesSeleccionado, 1, 0, 0, 0, 0);
+                finDate = new Date(ahora.getFullYear(), mesSeleccionado + 1, 0, 23, 59, 59, 999);
             }
+
+            const inicioISO = inicioDate.toISOString();
+            const finISO = finDate.toISOString();
 
             let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
             if (navigator.onLine && categorias.length === 0) {
