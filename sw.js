@@ -1,6 +1,14 @@
-const CACHE_VERSION = 'v19-staff';
+const CACHE_VERSION = 'v20-calibrado';
 const CACHE_NAME = `gastos-${CACHE_VERSION}`;
-const ASSETS = ['/', '/index.html', '/manifest.json'];
+const ASSETS = [
+    '/',
+    '/index.html',
+    '/manifest.json',
+    'https://cdn.tailwindcss.com',
+    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
+    'https://cdn.jsdelivr.net/npm/chart.js',
+    'https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js'
+];
 
 self.addEventListener('install', event => {
     self.skipWaiting();

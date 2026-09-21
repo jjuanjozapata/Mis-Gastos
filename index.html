@@ -30,16 +30,29 @@
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
     <style>
         :root { color-scheme: dark; }
-        body { padding-bottom: env(safe-area-inset-bottom); height: 100dvh; overscroll-behavior-y: none; -webkit-user-select: none; user-select: none; }
-        button, input, select { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        body { 
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom); 
+            height: 100dvh; 
+            overscroll-behavior-y: none; 
+            -webkit-user-select: none; 
+            user-select: none; 
+        }
+        button, input, select { 
+            touch-action: manipulation; 
+            -webkit-tap-highlight-color: transparent; 
+            font-size: 16px; /* Impide auto-zoom en iOS Safari */
+        }
         .tab-activa { color: #10b981; }
         .tab-inactiva { color: #64748b; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         select option { background-color: #0f172a; color: #f8fafc; }
+        .tabular-nums { font-variant-numeric: tabular-nums; }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden relative">
+<body class="bg-slate-950 text-slate-100 flex flex-col items-center justify-center font-sans select-none overflow-hidden relative">
+    <div class="w-full max-w-md h-full flex flex-col relative bg-slate-950 sm:border-x sm:border-slate-800/80 shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden">
     
     <div id="network-banner" class="hidden fixed top-0 left-0 right-0 z-[200] bg-red-500 text-slate-950 text-center text-xs font-bold py-1.5 transition-all">
         📡 Sin conexión a internet. Los registros se almacenarán localmente en cola segura.
@@ -549,9 +562,12 @@
         </div>
 
         <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg mb-4">
-            <p class="text-slate-300 font-bold text-sm mb-2">Respaldo Local de Datos</p>
-            <p class="text-xs text-slate-500 mb-4">Exporta todo tu historial en un archivo JSON seguro.</p>
-            <button id="btn-exportar-json" class="w-full py-4 bg-slate-800 text-emerald-400 font-bold rounded-2xl active:bg-slate-700 border border-emerald-500/20 transition-all text-sm">📥 Descargar Respaldo JSON</button>
+            <p class="text-slate-300 font-bold text-sm mb-2">Respaldo y Exportación Contable</p>
+            <p class="text-xs text-slate-500 mb-4">Descarga tus transacciones formateadas para Excel o una copia técnica JSON.</p>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <button id="btn-exportar-csv" class="flex-1 py-3.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold rounded-2xl active:bg-emerald-500/20 transition-all text-xs">📊 Exportar a Excel (CSV)</button>
+                <button id="btn-exportar-json" class="flex-1 py-3.5 bg-slate-800 text-slate-300 border border-slate-700 font-bold rounded-2xl active:bg-slate-700 transition-all text-xs">📥 Copia JSON</button>
+            </div>
         </div>
 
         <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg">
@@ -582,6 +598,7 @@
             <span class="text-[10px] font-bold">Ajustes</span>
         </button>
     </nav>
+    </div>
 
     <!-- JavaScript Principal -->
     <script>
@@ -593,7 +610,7 @@
         const escapeHTML = str => str ? DOMPurify.sanitize(String(str), { ALLOWED_TAGS: [], ALLOWED_ATTR: [] }) : '';
         
         let monedaActual = localStorage.getItem('moneda_mis_gastos') || 'COP';
-        let modoPrivacidad = false;
+        let modoPrivacidad = localStorage.getItem('modo_privacidad_gastos') === 'true';
         let ultimoBalanceCalculado = 0;
         let ultimosIngresosCalculados = 0;
         let ultimosGastosCalculados = 0;
@@ -641,17 +658,44 @@
 
         async function sincronizarColaOffline() {
             let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
-            if (queue.length === 0) return;
+            let queuePlanes = JSON.parse(localStorage.getItem('offline_queue_planes') || '[]');
+            
+            if (queue.length === 0 && queuePlanes.length === 0) return;
             const { data: { session } } = await db.auth.getSession();
             if (!session) return;
 
-            const itemsConUsuario = queue.map(item => ({ ...item, user_id: session.user.id }));
-            const { error } = await db.from('transacciones').insert(itemsConUsuario);
+            let huboSincronizacion = false;
 
-            if (!error) {
-                localStorage.removeItem('offline_queue');
-                mostrarToast('Sincronizados registros pendientes offline');
+            // 1. Sincronizar transacciones pendientes
+            if (queue.length > 0) {
+                const itemsConUsuario = queue.map(item => ({ ...item, user_id: session.user.id }));
+                const { error: errTrans } = await db.from('transacciones').insert(itemsConUsuario);
+                if (!errTrans) {
+                    localStorage.removeItem('offline_queue');
+                    huboSincronizacion = true;
+                }
+            }
+
+            // 2. Sincronizar actualizaciones de planes (metas y deudas)
+            if (queuePlanes.length > 0) {
+                let erroresPlanes = false;
+                for (let op of queuePlanes) {
+                    const { error: errPlan } = await db.from('planes')
+                        .update({ monto_acumulado: op.nuevoAcumulado })
+                        .eq('id', op.planId)
+                        .eq('user_id', session.user.id);
+                    if (errPlan) erroresPlanes = true;
+                }
+                if (!erroresPlanes) {
+                    localStorage.removeItem('offline_queue_planes');
+                    huboSincronizacion = true;
+                }
+            }
+
+            if (huboSincronizacion) {
+                mostrarToast('⚡ Sincronizados registros pendientes offline');
                 cargarEstadisticas();
+                cargarPlanes();
             }
         }
 
@@ -879,8 +923,51 @@
             a.download = `respaldo-mis-gastos-${new Date().toISOString().slice(0,10)}.json`;
             a.click();
             URL.revokeObjectURL(url);
-            mostrarToast('Respaldo descargado con éxito');
+            mostrarToast('Respaldo JSON descargado con éxito');
         });
+
+        const btnExportCsv = document.getElementById('btn-exportar-csv');
+        if (btnExportCsv) {
+            btnExportCsv.addEventListener('click', async () => {
+                const { data: { session } } = await db.auth.getSession();
+                if (!session) {
+                    mostrarToast('Inicia sesión para exportar tus datos', 'error');
+                    return;
+                }
+                const { data: trans } = await db.from('transacciones').select('*').eq('user_id', session.user.id).order('fecha', { ascending: false });
+                if (!trans || trans.length === 0) {
+                    mostrarToast('No hay transacciones para exportar', 'error');
+                    return;
+                }
+
+                let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+                const mapaCat = {};
+                categorias.forEach(c => { mapaCat[c.id] = c; });
+
+                // Encabezados con formato idéntico a las hojas del libro de Excel
+                let csvContent = '\uFEFF'; // BOM UTF-8 para que Excel reconozca tildes y caracteres especiales
+                csvContent += 'ID;Fecha;Tipo;Categoria;Subtipo;Cuenta;Monto;Notas\r\n';
+
+                trans.forEach(t => {
+                    const cat = mapaCat[t.categoria_id] || { nombre: 'Sin categoría', tipo: 'gasto', es_fijo: false };
+                    const fechaFormateada = t.fecha ? t.fecha.slice(0, 10) : '';
+                    const tipoMov = cat.tipo === 'ingreso' ? 'Ingreso' : 'Gasto';
+                    const subtipo = cat.es_fijo ? 'Fijo / Factura' : 'Variable';
+                    const notasLimpias = (t.notas || '').replace(/;/g, ',').replace(/\n/g, ' ');
+                    
+                    csvContent += `"${t.id}";"${fechaFormateada}";"${tipoMov}";"${cat.nombre}";"${subtipo}";"${t.cuenta || ''}";${t.monto};"${notasLimpias}"\r\n`;
+                });
+
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `libro-diario-gastos-${new Date().toISOString().slice(0,10)}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+                mostrarToast('Archivo CSV generado para Excel');
+            });
+        }
 
         document.getElementById('btn-copiar-atajo').addEventListener('click', () => {
             navigator.clipboard.writeText(window.location.href);
@@ -891,12 +978,15 @@
             mostrarToast('Enlace listo para tu atajo');
         });
 
+        document.getElementById('btn-privacidad').textContent = modoPrivacidad ? '🔒' : '👁️';
+
         document.getElementById('btn-privacidad').addEventListener('click', () => {
             modoPrivacidad = !modoPrivacidad;
+            localStorage.setItem('modo_privacidad_gastos', modoPrivacidad);
             document.getElementById('btn-privacidad').textContent = modoPrivacidad ? '🔒' : '👁️';
             actualizarPantalla();
             if (!document.getElementById('pantalla-dashboard').classList.contains('hidden')) {
-                renderizarDashboardUI(ultimoBalanceCalculado, ultimosIngresosCalculados, ultimosGastosCalculados, ultimaMatrizGastos);
+                cargarEstadisticas();
             }
             if (navigator.vibrate) navigator.vibrate(20);
         });
@@ -913,8 +1003,10 @@
         let tipoPlanActivo = '';
         
         const listaCuentas = ['Efectivo', 'Bancos', 'Tarjetas', 'Transferencia'];
-        let cuentaIndex = 0;
+        let cuentaGuardada = localStorage.getItem('cuenta_mis_gastos');
+        let cuentaIndex = listaCuentas.includes(cuentaGuardada) ? listaCuentas.indexOf(cuentaGuardada) : 0;
         let cuentaActual = listaCuentas[cuentaIndex];
+        document.getElementById('btn-cuenta').textContent = cuentaActual;
 
         document.getElementById('fecha-actual').textContent = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }).format(new Date());
 
@@ -958,6 +1050,7 @@
         document.getElementById('btn-cuenta').addEventListener('click', () => {
             cuentaIndex = (cuentaIndex + 1) % listaCuentas.length;
             cuentaActual = listaCuentas[cuentaIndex];
+            localStorage.setItem('cuenta_mis_gastos', cuentaActual);
             document.getElementById('btn-cuenta').textContent = cuentaActual;
             if (navigator.vibrate) navigator.vibrate(20);
         });
@@ -1165,63 +1258,95 @@
         async function aplicarAporteMeta(plan) {
             const valorAporte = parseInt(monto);
             const { data: { session } } = await db.auth.getSession();
-            const nuevoAcumulado = parseFloat(plan.monto_acumulado || 0) + valorAporte;
-            const { error } = await db.from('planes').update({ monto_acumulado: nuevoAcumulado }).eq('id', plan.id);
-            
-            if (!error) {
-                let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
-                const catAhorro = categorias.find(c => c.nombre.toLowerCase().includes('ahorro') || c.nombre.toLowerCase().includes('meta')) || categorias[0];
-
-                if (session && catAhorro) {
-                    await db.from('transacciones').insert([{
-                        monto: valorAporte,
-                        categoria_id: catAhorro.id,
-                        cuenta: cuentaActual,
-                        fecha: new Date().toISOString(),
-                        notas: `Aporte a meta: ${plan.titulo}`,
-                        user_id: session.user.id
-                    }]);
-                }
-
-                mostrarToast(`🎯 ¡Aporte de ${formatearMoneda(valorAporte)} sumado a "${plan.titulo}"!`);
-                cerrarFlujo();
-                limpiar();
-                cargarPlanes();
-                cargarEstadisticas();
-            } else {
-                mostrarToast('Error al registrar aporte: ' + error.message, 'error');
+            if (!session) {
+                mostrarToast('Inicia sesión para gestionar metas', 'error');
+                return;
             }
+
+            const nuevoAcumulado = parseFloat(plan.monto_acumulado || 0) + valorAporte;
+            let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+            const catAhorro = categorias.find(c => c.nombre.toLowerCase().includes('ahorro') || c.nombre.toLowerCase().includes('meta')) || categorias[0];
+
+            const txPayload = {
+                monto: valorAporte,
+                categoria_id: catAhorro ? catAhorro.id : null,
+                cuenta: cuentaActual,
+                fecha: new Date().toISOString(),
+                notas: `Aporte a meta: ${plan.titulo}`,
+                user_id: session.user.id
+            };
+
+            if (navigator.onLine) {
+                const { error: errPlan } = await db.from('planes').update({ monto_acumulado: nuevoAcumulado }).eq('id', plan.id);
+                if (errPlan) {
+                    mostrarToast('Error al registrar aporte: ' + errPlan.message, 'error');
+                    return;
+                }
+                if (catAhorro) await db.from('transacciones').insert([txPayload]);
+            } else {
+                // Guardar en cola offline tanto la transacción como el acumulado del plan
+                let queueTx = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+                queueTx.push(txPayload);
+                localStorage.setItem('offline_queue', JSON.stringify(queueTx));
+
+                let queuePlanes = JSON.parse(localStorage.getItem('offline_queue_planes') || '[]');
+                queuePlanes.push({ planId: plan.id, nuevoAcumulado });
+                localStorage.setItem('offline_queue_planes', JSON.stringify(queuePlanes));
+                mostrarToast('Aporte guardado offline. Se sincronizará al recuperar conexión.');
+            }
+
+            mostrarToast(`🎯 Aporte de ${formatearMoneda(valorAporte)} sumado a "${plan.titulo}"`);
+            cerrarFlujo();
+            limpiar();
+            cargarPlanes();
+            cargarEstadisticas();
         }
 
         async function aplicarAbonoDeuda(plan) {
             const valorAbono = parseInt(monto);
             const { data: { session } } = await db.auth.getSession();
-            const nuevoAcumulado = parseFloat(plan.monto_acumulado || 0) + valorAbono;
-            
-            const { error: errPlan } = await db.from('planes').update({ monto_acumulado: nuevoAcumulado }).eq('id', plan.id);
-            if (!errPlan) {
-                let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
-                const catDeuda = categorias.find(c => c.nombre.toLowerCase().includes('deuda') || c.nombre.toLowerCase().includes('credito') || c.nombre.toLowerCase().includes('financiero')) || categorias[0];
-
-                if (session && catDeuda) {
-                    await db.from('transacciones').insert([{
-                        monto: valorAbono,
-                        categoria_id: catDeuda.id,
-                        cuenta: cuentaActual,
-                        fecha: new Date().toISOString(),
-                        notas: `Abono a deuda: ${plan.titulo}`,
-                        user_id: session.user.id
-                    }]);
-                }
-
-                mostrarToast(`💳 Abono de ${formatearMoneda(valorAbono)} aplicado a "${plan.titulo}"`);
-                cerrarFlujo();
-                limpiar();
-                cargarPlanes();
-                cargarEstadisticas();
-            } else {
-                mostrarToast('Error al aplicar abono: ' + errPlan.message, 'error');
+            if (!session) {
+                mostrarToast('Inicia sesión para gestionar deudas', 'error');
+                return;
             }
+
+            const nuevoAcumulado = parseFloat(plan.monto_acumulado || 0) + valorAbono;
+            let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+            const catDeuda = categorias.find(c => c.nombre.toLowerCase().includes('deuda') || c.nombre.toLowerCase().includes('credito') || c.nombre.toLowerCase().includes('financiero')) || categorias[0];
+
+            const txPayload = {
+                monto: valorAbono,
+                categoria_id: catDeuda ? catDeuda.id : null,
+                cuenta: cuentaActual,
+                fecha: new Date().toISOString(),
+                notas: `Abono a deuda: ${plan.titulo}`,
+                user_id: session.user.id
+            };
+
+            if (navigator.onLine) {
+                const { error: errPlan } = await db.from('planes').update({ monto_acumulado: nuevoAcumulado }).eq('id', plan.id);
+                if (errPlan) {
+                    mostrarToast('Error al aplicar abono: ' + errPlan.message, 'error');
+                    return;
+                }
+                if (catDeuda) await db.from('transacciones').insert([txPayload]);
+            } else {
+                // Guardar en cola offline
+                let queueTx = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+                queueTx.push(txPayload);
+                localStorage.setItem('offline_queue', JSON.stringify(queueTx));
+
+                let queuePlanes = JSON.parse(localStorage.getItem('offline_queue_planes') || '[]');
+                queuePlanes.push({ planId: plan.id, nuevoAcumulado });
+                localStorage.setItem('offline_queue_planes', JSON.stringify(queuePlanes));
+                mostrarToast('Abono guardado offline. Se sincronizará al conectar.');
+            }
+
+            mostrarToast(`💳 Abono de ${formatearMoneda(valorAbono)} aplicado a "${plan.titulo}"`);
+            cerrarFlujo();
+            limpiar();
+            cargarPlanes();
+            cargarEstadisticas();
         }
 
         function abrirModalNuevaCategoria() {
@@ -1475,6 +1600,9 @@
         });
 
         document.getElementById('btn-guardar-plan').addEventListener('click', async () => {
+            const btnGuardar = document.getElementById('btn-guardar-plan');
+            if (btnGuardar.disabled) return;
+
             const rawMonto = document.getElementById('input-monto-plan').value.replace(/\D/g, '');
             const montoVal = parseInt(rawMonto);
             const tituloVal = document.getElementById('input-nombre-plan').value.trim();
@@ -1492,6 +1620,9 @@
                 return;
             }
 
+            btnGuardar.disabled = true;
+            btnGuardar.classList.add('opacity-50');
+
             const payload = { 
                 tipo: tipoPlanActivo, 
                 monto: montoVal, 
@@ -1504,6 +1635,8 @@
                 const catId = document.getElementById('select-categoria-plan').value;
                 if (!catId) {
                     mostrarToast('Selecciona la categoría a controlar', 'error');
+                    btnGuardar.disabled = false;
+                    btnGuardar.classList.remove('opacity-50');
                     return;
                 }
                 payload.categoria_id = catId;
@@ -1522,6 +1655,8 @@
             }
 
             const { error } = await db.from('planes').insert([payload]);
+            btnGuardar.disabled = false;
+            btnGuardar.classList.remove('opacity-50');
             
             if(!error) {
                 cerrarFormularioPlan();
@@ -1611,15 +1746,20 @@
             }
         }
 
+        let guardandoTransaccionActiva = false;
+
         async function guardarTransaccion(categoriaId, notaGasto) {
+            if (guardandoTransaccionActiva) return;
             const valorGasto = parseInt(monto);
-            if (valorGasto === 0) return;
+            if (isNaN(valorGasto) || valorGasto <= 0) return;
 
             const { data: { session } } = await db.auth.getSession();
             if (!session) {
                 mostrarToast('Debes iniciar sesión para registrar movimientos', 'error');
                 return;
             }
+
+            guardandoTransaccionActiva = true;
 
             let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
             const catObj = categorias.find(c => c.id === categoriaId);
@@ -1637,7 +1777,7 @@
                 categoria_id: categoriaId, 
                 cuenta: cuentaActual, 
                 fecha: new Date().toISOString(),
-                notas: notaGasto ? escapeHTML(notaGasto) : null,
+                notas: notaGasto ? escapeHTML(notaGasto.trim().slice(0, 150)) : null,
                 user_id: session.user.id
             };
             
@@ -1646,6 +1786,7 @@
             if (navigator.onLine) {
                 const { error } = await db.from('transacciones').insert([payload]);
                 if (error) {
+                    guardandoTransaccionActiva = false;
                     display.style.color = '#ef4444'; 
                     setTimeout(() => display.style.color = 'white', 1000);
                     mostrarToast('Error al sincronizar con Supabase: ' + error.message, 'error');
@@ -1665,7 +1806,11 @@
                 display.style.color = 'white';
                 cerrarFlujo();
                 limpiar();
+                guardandoTransaccionActiva = false;
                 mostrarToast('Transacción registrada con éxito');
+                if (!document.getElementById('pantalla-dashboard').classList.contains('hidden')) {
+                    cargarEstadisticas();
+                }
             }, 300);
         }
 
@@ -1901,7 +2046,7 @@
         async function cargarEstadisticas() {
             const { data: { session } } = await db.auth.getSession();
             if (!session) {
-                renderizarDashboardUI(0, 0, 0, []);
+                renderizarDashboardUI(0, 0, 0, [], 0, 0, 0);
                 document.getElementById('historial-transacciones').innerHTML = '';
                 return;
             }
@@ -1909,21 +2054,23 @@
             const filtro = document.getElementById('filtro-tiempo').value;
             const mesSeleccionado = parseInt(document.getElementById('selector-mes-excel').value);
             const ahora = new Date();
-            let inicioDate, finDate;
+            let inicioISO, finISO;
             
             if (filtro === 'dia') {
-                inicioDate = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 0, 0, 0, 0);
-                finDate = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 23, 59, 59, 999);
+                const y = ahora.getFullYear(), m = String(ahora.getMonth() + 1).padStart(2, '0'), d = String(ahora.getDate()).padStart(2, '0');
+                inicioISO = `${y}-${m}-${d}T00:00:00.000`;
+                finISO = `${y}-${m}-${d}T23:59:59.999`;
             } else if (filtro === 'anio') {
-                inicioDate = new Date(ahora.getFullYear(), 0, 1, 0, 0, 0, 0);
-                finDate = new Date(ahora.getFullYear(), 11, 31, 23, 59, 59, 999);
+                const y = ahora.getFullYear();
+                inicioISO = `${y}-01-01T00:00:00.000`;
+                finISO = `${y}-12-31T23:59:59.999`;
             } else {
-                inicioDate = new Date(ahora.getFullYear(), mesSeleccionado, 1, 0, 0, 0, 0);
-                finDate = new Date(ahora.getFullYear(), mesSeleccionado + 1, 0, 23, 59, 59, 999);
+                const y = ahora.getFullYear();
+                const m = String(mesSeleccionado + 1).padStart(2, '0');
+                const ultDia = new Date(y, mesSeleccionado + 1, 0).getDate();
+                inicioISO = `${y}-${m}-01T00:00:00.000`;
+                finISO = `${y}-${m}-${String(ultDia).padStart(2, '0')}T23:59:59.999`;
             }
-
-            const inicioISO = inicioDate.toISOString();
-            const finISO = finDate.toISOString();
 
             let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
             if (navigator.onLine && categorias.length === 0) {
@@ -1935,13 +2082,17 @@
                                                                 .select('*')
                                                                 .eq('user_id', session.user.id)
                                                                 .gte('fecha', inicioISO)
-                                                                .lt('fecha', finISO)
+                                                                .lte('fecha', finISO)
                                                                 .order('fecha', { ascending: false });
             
             if (errTrans || !categorias.length) return;
 
             let totalGastado = 0;
             let totalIngresado = 0;
+            let totalNecesidades = 0;
+            let totalDeseos = 0;
+            let totalAhorrosYDeudas = 0;
+
             const reporteGastos = {};
             const mapaCat = {};
             
@@ -1949,8 +2100,10 @@
                 mapaCat[c.id] = c;
                 if(c.tipo === 'gasto') {
                     reporteGastos[c.id] = { 
+                        id: c.id,
                         nombre: escapeHTML(c.nombre), 
                         icono: c.icono, 
+                        es_fijo: Boolean(c.es_fijo),
                         gastado: 0,
                         presupuesto: c.presupuesto_base || 400000 
                     }; 
@@ -1975,6 +2128,18 @@
                 } else if (cat.tipo === 'gasto') {
                     totalGastado += valor;
                     if(reporteGastos[t.categoria_id]) reporteGastos[t.categoria_id].gastado += valor;
+
+                    // Calibración exacta según clasificación contable del Excel:
+                    const nombreUpper = cat.nombre.toUpperCase();
+                    const esAhorroODeuda = nombreUpper.includes('AHORRO') || nombreUpper.includes('META') || nombreUpper.includes('DEUDA') || (t.notas && (t.notas.includes('Aporte a meta') || t.notas.includes('Abono a deuda')));
+                    
+                    if (esAhorroODeuda) {
+                        totalAhorrosYDeudas += valor;
+                    } else if (cat.es_fijo || ['ARRIENDO', 'SERVICIOS', 'SUSCRIPCIONES', 'MADRE', 'FACTURAS', 'SEGURO', 'INTERNET'].some(k => nombreUpper.includes(k))) {
+                        totalNecesidades += valor;
+                    } else {
+                        totalDeseos += valor;
+                    }
                 }
 
                 if (index < 20) {
@@ -2009,7 +2174,7 @@
                     valDiv.className = "flex items-center gap-4";
                     
                     const montoSpan = document.createElement('span');
-                    montoSpan.className = `text-sm font-bold ${isIngreso ? 'text-emerald-400' : 'text-white'}`;
+                    montoSpan.className = `text-sm font-bold tabular-nums ${isIngreso ? 'text-emerald-400' : 'text-white'}`;
                     montoSpan.textContent = `${isIngreso ? '+' : '-'}${formatearMoneda(valor)}`;
                     
                     const btnBorrar = document.createElement('button');
@@ -2031,10 +2196,10 @@
             ultimosGastosCalculados = totalGastado;
             ultimaMatrizGastos = Object.values(reporteGastos);
 
-            renderizarDashboardUI(balanceReal, totalIngresado, totalGastado, ultimaMatrizGastos);
+            renderizarDashboardUI(balanceReal, totalIngresado, totalGastado, ultimaMatrizGastos, totalNecesidades, totalDeseos, totalAhorrosYDeudas);
         }
 
-        function renderizarDashboardUI(balanceReal, totalIngresado, totalGastado, arrGastos) {
+        function renderizarDashboardUI(balanceReal, totalIngresado, totalGastado, arrGastos, totalNecesidades = 0, totalDeseos = 0, totalAhorros = 0) {
             let pDisp = totalIngresado > 0 ? ((balanceReal / totalIngresado) * 100).toFixed(0) : 0;
             if(pDisp < 0) pDisp = 0; if(pDisp > 100) pDisp = 100;
 
@@ -2057,12 +2222,27 @@
             }
 
             if (totalIngresado > 0) {
-                const necPct = Math.min(100, Math.round((totalGastado * 0.5 / totalIngresado) * 100));
-                const desPct = Math.min(100, Math.round((totalGastado * 0.3 / totalIngresado) * 100));
-                const ahoPct = Math.max(0, 100 - necPct - desPct);
-                document.getElementById('stat-50').textContent = `${necPct}%`;
-                document.getElementById('stat-30').textContent = `${desPct}%`;
-                document.getElementById('stat-20').textContent = `${ahoPct}%`;
+                // Cálculo real frente a los ingresos ingresados:
+                const necPct = Math.round((totalNecesidades / totalIngresado) * 100);
+                const desPct = Math.round((totalDeseos / totalIngresado) * 100);
+                const ahoPct = Math.round((totalAhorros / totalIngresado) * 100);
+                
+                const elNec = document.getElementById('stat-50');
+                const elDes = document.getElementById('stat-30');
+                const elAho = document.getElementById('stat-20');
+                
+                elNec.textContent = `${necPct}%`;
+                elNec.className = `text-xs font-bold ${necPct > 50 ? 'text-red-400' : 'text-white'}`;
+                
+                elDes.textContent = `${desPct}%`;
+                elDes.className = `text-xs font-bold ${desPct > 30 ? 'text-amber-400' : 'text-white'}`;
+                
+                elAho.textContent = `${ahoPct}%`;
+                elAho.className = `text-xs font-bold ${ahoPct >= 20 ? 'text-emerald-400' : 'text-slate-300'}`;
+            } else {
+                document.getElementById('stat-50').textContent = '0%';
+                document.getElementById('stat-30').textContent = '0%';
+                document.getElementById('stat-20').textContent = '0%';
             }
 
             const ahora = new Date();
@@ -2084,47 +2264,56 @@
             const matrizContainer = document.getElementById('matriz-presupuesto-excel');
             matrizContainer.innerHTML = '';
             
-            ordenados.forEach(item => {
-                const row = document.createElement('div');
-                row.className = "flex flex-col gap-1.5 bg-slate-950/50 p-3.5 rounded-2xl border border-slate-800/80 text-xs";
-                
-                const presupuestoBase = item.presupuesto || 500000;
-                const porcentajeUso = presupuestoBase > 0 ? Math.min(150, Math.round((item.gastado / presupuestoBase) * 100)) : 0;
-                
-                let barraColor = "bg-emerald-500";
-                let alertaColor = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
-                let textoEstado = "Óptimo";
-
-                if (porcentajeUso >= 80 && porcentajeUso < 100) {
-                    barraColor = "bg-amber-500";
-                    alertaColor = "text-amber-400 bg-amber-500/10 border-amber-500/20";
-                    textoEstado = "Alerta";
-                } else if (porcentajeUso >= 100) {
-                    barraColor = "bg-red-500";
-                    alertaColor = "text-red-400 bg-red-500/10 border-red-500/20";
-                    textoEstado = "Sobregiro";
+            // Consultar planes de tipo 'limite' activos para cruzar presupuestos reales
+            db.from('planes').select('*').eq('tipo', 'limite').eq('user_id', session.user.id).then(({ data: planesLimites }) => {
+                const mapaLimites = {};
+                if (planesLimites) {
+                    planesLimites.forEach(p => { mapaLimites[p.categoria_id] = parseFloat(p.monto); });
                 }
 
-                row.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <div class="flex items-center gap-2">
-                            <span>${escapeHTML(item.icono)}</span>
-                            <span class="font-bold text-white">${escapeHTML(item.nombre)}</span>
+                ordenados.forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = "flex flex-col gap-1.5 bg-slate-950/50 p-3.5 rounded-2xl border border-slate-800/80 text-xs";
+                    
+                    const presupuestoBase = mapaLimites[item.id] || item.presupuesto || 400000;
+                    const diferencia = presupuestoBase - item.gastado;
+                    const porcentajeUso = presupuestoBase > 0 ? Math.min(150, Math.round((item.gastado / presupuestoBase) * 100)) : 0;
+                    
+                    let barraColor = "bg-emerald-500";
+                    let alertaColor = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
+                    let textoEstado = "Óptimo";
+
+                    if (porcentajeUso >= 80 && porcentajeUso < 100) {
+                        barraColor = "bg-amber-500";
+                        alertaColor = "text-amber-400 bg-amber-500/10 border-amber-500/20";
+                        textoEstado = "Alerta (80%)";
+                    } else if (porcentajeUso >= 100) {
+                        barraColor = "bg-red-500";
+                        alertaColor = "text-red-400 bg-red-500/10 border-red-500/20";
+                        textoEstado = "Sobregiro";
+                    }
+
+                    row.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <span>${escapeHTML(item.icono)}</span>
+                                <span class="font-bold text-white">${escapeHTML(item.nombre)}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-slate-400">Real: <strong class="text-white tabular-nums">${formatearMoneda(item.gastado)}</strong></span>
+                                <span class="text-[9px] font-bold px-2 py-0.5 rounded-full border ${alertaColor}">${textoEstado}</span>
+                            </div>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-slate-400">Real: <strong class="text-white">${formatearMoneda(item.gastado)}</strong></span>
-                            <span class="text-[9px] font-bold px-2 py-0.5 rounded-full border ${alertaColor}">${textoEstado}</span>
+                        <div class="flex justify-between text-[10px] text-slate-500 font-semibold pt-1">
+                            <span>Presupuesto: ${formatearMoneda(presupuestoBase)}</span>
+                            <span class="${diferencia < 0 ? 'text-red-400 font-bold' : 'text-slate-400'}">Dif: ${formatearMoneda(diferencia)} (${porcentajeUso}%)</span>
                         </div>
-                    </div>
-                    <div class="flex justify-between text-[10px] text-slate-500 font-semibold pt-1">
-                        <span>Presupuesto: ${formatearMoneda(presupuestoBase)}</span>
-                        <span>${porcentajeUso}% consumido</span>
-                    </div>
-                    <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden border border-slate-800">
-                        <div class="${barraColor} h-1.5 rounded-full transition-all duration-500" style="width: ${Math.min(100, porcentajeUso)}%"></div>
-                    </div>
-                `;
-                matrizContainer.appendChild(row);
+                        <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden border border-slate-800">
+                            <div class="${barraColor} h-1.5 rounded-full transition-all duration-500" style="width: ${Math.min(100, porcentajeUso)}%"></div>
+                        </div>
+                    `;
+                    matrizContainer.appendChild(row);
+                });
             });
 
             const labelsGrafico = [];
