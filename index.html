@@ -39,18 +39,16 @@
 </head>
 <body class="bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden relative">
     
-    <!-- Banner de Estado de Red Inteligente -->
     <div id="network-banner" class="hidden fixed top-0 left-0 right-0 z-[200] bg-red-500 text-slate-950 text-center text-xs font-bold py-1.5 transition-all">
         📡 Sin conexión a internet. Los registros se almacenarán localmente en cola segura.
     </div>
 
     <div id="toast-container" class="fixed top-12 left-1/2 -translate-x-1/2 z-[150] flex flex-col gap-2 pointer-events-none w-11/12 max-w-sm"></div>
     
-    <!-- Pantalla de Bienvenida / Onboarding -->
     <div id="modal-bienvenida" class="hidden fixed inset-0 z-[300] bg-slate-950 flex-col justify-center items-center p-6 text-center">
         <div class="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-400 border border-emerald-500/20 text-5xl mb-6 shadow-[0_0_30px_rgba(16,185,129,0.2)]">📊</div>
         <h2 class="text-3xl font-extrabold text-white mb-3">Mis Gastos</h2>
-        <p class="text-slate-400 text-sm mb-10 max-w-xs leading-relaxed">Toma el control absoluto de tus finanzas. Empieza sin registro o sincroniza tu cuenta corporativa.</p>
+        <p class="text-slate-400 text-sm mb-10 max-w-xs leading-relaxed">Toma el control de tus finanzas. Empieza como invitado o crea tu cuenta personal.</p>
         
         <div class="w-full max-w-xs space-y-4">
             <button id="btn-bienvenida-anonimo" class="w-full py-4 rounded-2xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-all text-base shadow-lg flex items-center justify-center gap-2">
@@ -70,15 +68,13 @@
         </div>
     </div>
 
-    <!-- Pantalla de Bloqueo Biométrico / PIN -->
     <div id="modal-biometrico" class="hidden fixed inset-0 z-[200] bg-slate-950 flex-col justify-center items-center p-6 text-center">
         <div class="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-400 border border-emerald-500/20 text-4xl mb-6 animate-pulse">🔒</div>
         <h3 class="text-2xl font-bold text-white mb-2">Acceso Protegido</h3>
-        <p class="text-slate-400 text-sm mb-8 max-w-xs">Usa tu huella, reconocimiento facial o clave para desbloquear tus finanzas.</p>
+        <p class="text-slate-400 text-sm mb-8 max-w-xs">Usa tu huella, rostro o clave para desbloquear tus finanzas.</p>
         <button id="btn-desbloquear" class="w-full max-w-xs py-4 rounded-2xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-all text-base shadow-lg">Desbloquear App</button>
     </div>
 
-    <!-- Modal Rollover Cierre de Mes -->
     <div id="modal-rollover" class="hidden fixed inset-0 z-[140] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-6">
         <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl text-center">
             <div class="text-3xl mb-3">🔄</div>
@@ -91,7 +87,6 @@
         </div>
     </div>
 
-    <!-- Modal Notas / Detalle -->
     <div id="modal-notas" class="hidden fixed inset-0 z-[120] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-6">
         <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl">
             <h3 class="text-xl font-bold text-white mb-2">Detalle del Movimiento</h3>
@@ -104,7 +99,6 @@
         </div>
     </div>
 
-    <!-- Modal Flujo de Registro -->
     <div id="modal-flujo" class="hidden fixed inset-0 z-[110] bg-slate-950/95 backdrop-blur-xl justify-center items-end sm:items-center p-0 pb-0 sm:p-6">
         <div class="bg-slate-900 w-full h-[80vh] sm:h-auto sm:max-h-[85vh] rounded-t-[2.5rem] sm:rounded-3xl p-6 border-t sm:border border-slate-800 shadow-[0_-20px_40px_rgba(0,0,0,0.5)] flex flex-col relative transition-transform">
             <div class="w-12 h-1.5 bg-slate-800 rounded-full mx-auto mb-6 shrink-0 sm:hidden"></div>
@@ -145,7 +139,7 @@
                         <div class="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-400 border border-blue-500/20 text-xl">💳</div>
                         <div class="text-left">
                             <span class="block text-base font-bold text-white">Abonar a Deuda</span>
-                            <span class="block text-xs text-slate-400">Tarjeta Nu, créditos, saldos pendientes</span>
+                            <span class="block text-xs text-slate-400">Tarjetas, créditos, saldos pendientes</span>
                         </div>
                         <span class="ml-auto text-slate-500">›</span>
                     </button>
@@ -174,7 +168,6 @@
         </div>
     </div>
 
-    <!-- Modal Selección Tipo de Plan -->
     <div id="modal-tipo-plan" class="hidden fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-xl justify-center items-end sm:items-center p-0 sm:p-6 pb-0">
         <div class="bg-slate-900 w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6 border border-slate-800 shadow-[0_-20px_40px_rgba(0,0,0,0.5)] transform transition-transform">
             <div class="w-12 h-1.5 bg-slate-800 rounded-full mx-auto mb-6 sm:hidden"></div>
@@ -211,7 +204,6 @@
         </div>
     </div>
 
-    <!-- Modal Formulario Plan Ampliado -->
     <div id="modal-form-plan" class="hidden fixed inset-0 z-[110] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-4">
         <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl max-h-[90vh] overflow-y-auto no-scrollbar">
             <h3 id="titulo-form-plan" class="text-xl font-bold text-white mb-4">Nuevo Plan</h3>
@@ -293,7 +285,6 @@
         </div>
     </div>
 
-    <!-- Modal Crear Nueva Categoría Personalizada -->
     <div id="modal-nueva-cat" class="hidden fixed inset-0 z-[130] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-5">
         <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl">
             <h3 class="text-xl font-bold text-white mb-1">Nueva Categoría</h3>
@@ -370,7 +361,7 @@
         <button id="btn-fab-plan" class="hidden absolute bottom-24 right-6 w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center text-slate-900 text-3xl font-light shadow-[0_10px_20px_rgba(16,185,129,0.3)] active:scale-90 transition-transform z-50">+</button>
     </div>
 
-    <!-- Pantalla 3: Reportes / Dashboard -->
+    <!-- Pantalla 3: Reportes -->
     <div id="pantalla-dashboard" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-950 min-h-0">
         <div class="p-5 pb-12">
             <div class="flex justify-between items-center mb-6 gap-2">
@@ -415,11 +406,10 @@
                 </div>
             </div>
 
-            <!-- Modelo 50/30/20 -->
             <div class="bg-slate-900 rounded-3xl p-5 mb-4 border border-slate-800 shadow-lg">
                 <div class="flex justify-between items-center mb-3">
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Modelo Financiero 50/30/20</p>
-                    <span class="text-[10px] text-emerald-400 font-semibold">Regla de Oro</span>
+                    <span class="text-[10px] text-emerald-400 font-semibold">Distribución Teórica</span>
                 </div>
                 <div class="grid grid-cols-3 gap-2 text-center">
                     <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
@@ -437,7 +427,6 @@
                 </div>
             </div>
 
-            <!-- Simulador de Recorte de Gastos Hormiga -->
             <div class="bg-slate-900 rounded-3xl p-5 mb-4 border border-slate-800 shadow-lg">
                 <div class="flex justify-between items-center mb-3">
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Simulador de Recorte de Gastos</p>
@@ -524,7 +513,7 @@
                 <div id="contenedor-no-autenticado" class="space-y-3">
                     <div>
                         <label for="auth-email" class="sr-only">Correo electrónico</label>
-                        <input type="email" id="auth-email" class="w-full bg-slate-950 text-white text-sm rounded-xl px-4 py-3 border border-slate-800 outline-none focus:border-emerald-500" placeholder="correo@misgastos.com" autocomplete="email">
+                        <input type="email" id="auth-email" class="w-full bg-slate-950 text-white text-sm rounded-xl px-4 py-3 border border-slate-800 outline-none focus:border-emerald-500" placeholder="tu_correo@gmail.com" autocomplete="email">
                     </div>
                     <div>
                         <label for="auth-password" class="sr-only">Contraseña</label>
@@ -571,7 +560,7 @@
         </div>
     </div>
 
-    <!-- Barra de Navegación Inferior -->
+    <!-- Navegación Inferior -->
     <nav class="shrink-0 w-full bg-slate-950 border-t border-slate-900 flex justify-around items-center h-[70px] pb-safe relative z-[90]">
         <button id="tab-captura" class="flex flex-col items-center justify-center w-full h-full tab-activa transition-colors">
             <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
@@ -591,7 +580,7 @@
         </button>
     </nav>
 
-    <!-- Lógica de Negocio y Control -->
+    <!-- JavaScript Principal -->
     <script>
         const db = supabase.createClient(
             'https://znszebnjcgjfzxvnexxd.supabase.co', 
@@ -602,7 +591,6 @@
         
         let monedaActual = localStorage.getItem('moneda_mis_gastos') || 'COP';
         let modoPrivacidad = false;
-        let ultimaListaTransacciones = [];
         let ultimoBalanceCalculado = 0;
         let ultimosIngresosCalculados = 0;
         let ultimosGastosCalculados = 0;
@@ -635,7 +623,6 @@
             mostrarToast('Moneda actualizada con éxito');
         });
 
-        // Estado de Red Offline / Online
         function actualizarEstadoRed() {
             const banner = document.getElementById('network-banner');
             if (!navigator.onLine) {
@@ -655,16 +642,16 @@
             const { data: { session } } = await db.auth.getSession();
             if (!session) return;
 
-            for (let item of queue) {
-                item.user_id = session.user.id;
-                await db.from('transacciones').insert([item]);
+            const itemsConUsuario = queue.map(item => ({ ...item, user_id: session.user.id }));
+            const { error } = await db.from('transacciones').insert(itemsConUsuario);
+
+            if (!error) {
+                localStorage.removeItem('offline_queue');
+                mostrarToast('Sincronizados registros pendientes offline');
+                cargarEstadisticas();
             }
-            localStorage.removeItem('offline_queue');
-            mostrarToast('Sincronizados registros pendientes offline');
-            cargarEstadisticas();
         }
 
-        // GESTIÓN DE AUTENTICACIÓN SUPABASE
         async function verificarEstadoSesion() {
             const { data: { session } } = await db.auth.getSession();
             actualizarUIIngreso(session);
@@ -767,15 +754,16 @@
                 return;
             }
 
-            if (!email.endsWith('@misgastos.com')) {
-                mostrarToast('Solo se permiten cuentas corporativas @misgastos.com', 'error');
+            const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!regexEmail.test(email)) {
+                mostrarToast('Ingresa un correo electrónico válido', 'error');
                 return;
             }
             
             const { data: { session } } = await db.auth.getSession();
             
             if (session && session.user && session.user.is_anonymous) {
-                const { data, error } = await db.auth.updateUser({ email, password });
+                const { error } = await db.auth.updateUser({ email, password });
                 if (error) {
                     mostrarToast('Error al vincular cuenta: ' + error.message, 'error');
                 } else {
@@ -784,11 +772,11 @@
                     verificarEstadoSesion();
                 }
             } else {
-                const { data, error } = await db.auth.signUp({ email, password });
+                const { error } = await db.auth.signUp({ email, password });
                 if (error) {
                     mostrarToast('Error al registrarse: ' + error.message, 'error');
                 } else {
-                    mostrarToast('¡Cuenta creada con éxito! Entrando...');
+                    mostrarToast('¡Cuenta creada con éxito!');
                     document.getElementById('auth-password').value = '';
                 }
             }
@@ -924,9 +912,9 @@
         const centerTextPlugin = {
             id: 'centerText',
             beforeDraw: function(chart) {
-                if (chart.config.type !== 'doughnut' || !chart.config.options.plugins.centerText) return;
+                if (chart.config.type !== 'doughnut' || !chart.config.options.plugins?.centerText) return;
                 let width = chart.width, height = chart.height, ctx = chart.ctx;
-                ctx.restore();
+                ctx.save();
                 let text = chart.config.options.plugins.centerText.text || "$ 0";
                 ctx.font = "bold 1.2rem sans-serif";
                 ctx.textBaseline = "middle";
@@ -939,7 +927,7 @@
                 ctx.fillStyle = "#94a3b8";
                 let subTextX = Math.round((width - ctx.measureText(subText).width) / 2);
                 ctx.fillText(subText, subTextX, textY + 20);
-                ctx.save();
+                ctx.restore();
             }
         };
         Chart.register(centerTextPlugin);
@@ -978,7 +966,7 @@
             if (navigator.vibrate) navigator.vibrate(15);
         });
 
-       let iconoNuevaCatSeleccionado = '🍿';
+        let iconoNuevaCatSeleccionado = '🍿';
         let tipoNuevaCatEsFijo = false;
         const listaEmojisPopulares = ['🍿','🛒','🍔','🚗','💊','💡','🎮','👕','✈️','🐾','💈','📚','☕','🏋️','🍻','🎁','🍕','🏠','🐶','💻','📱','🔧','🥗','🥖','🚴','🎧'];
 
@@ -1144,7 +1132,6 @@
                 contenedor.appendChild(btn);
             });
 
-            // Botón para crear nueva categoría en pantalla
             const btnNuevaCat = document.createElement('button');
             btnNuevaCat.className = "flex flex-col items-center justify-center p-3 bg-slate-800/40 rounded-2xl active:bg-slate-700 border border-dashed border-emerald-500/40 shadow-sm min-h-[85px]";
             btnNuevaCat.innerHTML = `<span class="text-2xl mb-1 text-emerald-400 font-light">+</span><span class="text-[9px] font-bold text-emerald-400 uppercase tracking-wider text-center">Nueva</span>`;
@@ -1154,13 +1141,30 @@
 
         async function aplicarAporteMeta(plan) {
             const valorAporte = parseInt(monto);
+            const { data: { session } } = await db.auth.getSession();
             const nuevoAcumulado = parseFloat(plan.monto_acumulado || 0) + valorAporte;
             const { error } = await db.from('planes').update({ monto_acumulado: nuevoAcumulado }).eq('id', plan.id);
+            
             if (!error) {
+                let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+                const catAhorro = categorias.find(c => c.nombre.toLowerCase().includes('ahorro') || c.nombre.toLowerCase().includes('meta')) || categorias[0];
+
+                if (session && catAhorro) {
+                    await db.from('transacciones').insert([{
+                        monto: valorAporte,
+                        categoria_id: catAhorro.id,
+                        cuenta: cuentaActual,
+                        fecha: new Date().toISOString(),
+                        notas: `Aporte a meta: ${plan.titulo}`,
+                        user_id: session.user.id
+                    }]);
+                }
+
                 mostrarToast(`🎯 ¡Aporte de ${formatearMoneda(valorAporte)} sumado a "${plan.titulo}"!`);
                 cerrarFlujo();
                 limpiar();
                 cargarPlanes();
+                cargarEstadisticas();
             } else {
                 mostrarToast('Error al registrar aporte: ' + error.message, 'error');
             }
@@ -1313,12 +1317,13 @@
         document.getElementById('tab-planes').addEventListener('click', () => cambiarTab('planes'));
         document.getElementById('tab-dashboard').addEventListener('click', () => cambiarTab('dashboard'));
         document.getElementById('tab-ajustes').addEventListener('click', () => cambiarTab('ajustes'));
+        
         document.getElementById('filtro-tiempo').addEventListener('change', (e) => {
             const selectorMes = document.getElementById('selector-mes-excel');
-            if (e.target.value === 'anio') {
-                selectorMes.classList.add('hidden');
-            } else {
+            if (e.target.value === 'mes') {
                 selectorMes.classList.remove('hidden');
+            } else {
+                selectorMes.classList.add('hidden');
             }
             cargarEstadisticas();
         });
@@ -1542,7 +1547,7 @@
                         fin = new Date(fin.getTime() + duracionMs);
                     }
                 }
-            } else { // mensual por defecto
+            } else {
                 inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1, 0, 0, 0);
                 fin = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59, 999);
             }
@@ -1576,9 +1581,9 @@
                 const porcentaje = tope > 0 ? Math.round((gastadoTotal / tope) * 100) : 0;
 
                 if (gastadoTotal >= tope) {
-                    mostrarToast(`🚨 ¡Sobregiro! Superaste el límite en "${lim.titulo}" (${formatearMoneda(gastadoTotal)} de ${formatearMoneda(tope)})`, 'error');
+                    mostrarToast(`🚨 Sobregiro en "${lim.titulo}" (${formatearMoneda(gastadoTotal)} de ${formatearMoneda(tope)})`, 'error');
                 } else if (porcentaje >= 80) {
-                    mostrarToast(`⚠️ ¡Alerta! Consumiste el ${porcentaje}% del límite en "${lim.titulo}"`, 'error');
+                    mostrarToast(`⚠️ Consumiste el ${porcentaje}% del límite en "${lim.titulo}"`, 'error');
                 }
             }
         }
@@ -1683,7 +1688,7 @@
             
             planes.forEach(p => {
                 const tipo = p.tipo;
-                let colorBase = 'emerald';
+                let estiloBadge = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
                 let iconoTipo = '🎯';
                 let etiquetaTipo = 'Meta de Ahorro';
                 let barraColor = 'bg-emerald-500';
@@ -1692,7 +1697,7 @@
                 let textoMetricaSecundaria = '';
 
                 if (tipo === 'limite') {
-                    colorBase = 'red';
+                    estiloBadge = 'bg-red-500/10 text-red-400 border-red-500/20';
                     iconoTipo = '🛡️';
                     etiquetaTipo = `Límite (${(p.periodo || 'mensual').toUpperCase()})`;
                     
@@ -1708,18 +1713,18 @@
 
                     if (porcentaje >= 100) {
                         barraColor = 'bg-red-500';
-                        colorBase = 'red';
+                        estiloBadge = 'bg-red-500/10 text-red-400 border-red-500/20';
                         textoMetricaSecundaria += ' • ¡SOBREGIRO!';
                     } else if (porcentaje >= 80) {
                         barraColor = 'bg-amber-500';
-                        colorBase = 'amber';
+                        estiloBadge = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
                         textoMetricaSecundaria += ' • ALERTA';
                     } else {
                         barraColor = 'bg-emerald-500';
-                        colorBase = 'emerald';
+                        estiloBadge = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
                     }
                 } else if (tipo === 'meta') {
-                    colorBase = 'emerald';
+                    estiloBadge = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
                     iconoTipo = p.es_fondo_emergencia ? '🚨' : '🎯';
                     etiquetaTipo = p.es_fondo_emergencia ? 'Fondo de Emergencia' : 'Meta de Ahorro';
                     const acum = parseFloat(p.monto_acumulado || 0);
@@ -1729,7 +1734,7 @@
                     textoMetricaSecundaria = `${porcentaje}% acumulado`;
                     barraColor = 'bg-emerald-500';
                 } else if (tipo === 'deuda') {
-                    colorBase = 'blue';
+                    estiloBadge = 'bg-blue-500/10 text-blue-400 border-blue-500/20';
                     iconoTipo = '💳';
                     etiquetaTipo = 'Crédito / Deuda';
                     const totalDeuda = parseFloat(p.monto);
@@ -1755,7 +1760,7 @@
                 tarjeta.innerHTML = `
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full flex items-center justify-center border bg-${colorBase}-500/10 text-${colorBase}-400 border-${colorBase}-500/20 text-lg">${iconoTipo}</div>
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center border ${estiloBadge} text-lg">${iconoTipo}</div>
                             <div>
                                 <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">${etiquetaTipo}</p>
                                 <p class="text-sm font-bold text-white">${escapeHTML(p.titulo)}</p>
@@ -1777,6 +1782,7 @@
                 let startX = 0, currentX = 0, isDragging = false;
                 tarjeta.addEventListener('touchstart', e => { 
                     startX = e.touches[0].clientX; 
+                    currentX = startX;
                     isDragging = true; 
                     tarjeta.style.transition = 'none';
                 }, {passive: true});
@@ -1822,7 +1828,7 @@
                         totalFijosYDeudas += parseFloat(p.monto);
                     } else if (p.tipo === 'deuda') {
                         const pendiente = Math.max(0, parseFloat(p.monto) - parseFloat(p.monto_acumulado || 0));
-                        totalFijosYDeudas += Math.min(pendiente, parseFloat(p.monto) * 0.10); // Cuota o valor representativo
+                        totalFijosYDeudas += Math.min(pendiente, parseFloat(p.monto) * 0.10);
                     }
                     if (p.tipo === 'meta' && p.es_fondo_emergencia) {
                         tieneFondoEmergencia = true;
@@ -1992,9 +1998,6 @@
             });
 
             const balanceReal = totalIngresado - totalGastado;
-            let pDisp = totalIngresado > 0 ? ((balanceReal / totalIngresado) * 100).toFixed(0) : 0;
-            if(pDisp < 0) pDisp = 0; if(pDisp > 100) pDisp = 100;
-
             ultimoBalanceCalculado = balanceReal;
             ultimosIngresosCalculados = totalIngresado;
             ultimosGastosCalculados = totalGastado;
@@ -2057,8 +2060,7 @@
                 const row = document.createElement('div');
                 row.className = "flex flex-col gap-1.5 bg-slate-950/50 p-3.5 rounded-2xl border border-slate-800/80 text-xs";
                 
-                const presupuestoBase = item.presupuesto || 500000; // Calibrado al estándar del Excel
-                const diferencia = presupuestoBase - item.gastado;
+                const presupuestoBase = item.presupuesto || 500000;
                 const porcentajeUso = presupuestoBase > 0 ? Math.min(150, Math.round((item.gastado / presupuestoBase) * 100)) : 0;
                 
                 let barraColor = "bg-emerald-500";
@@ -2103,7 +2105,7 @@
             contenedorLista.innerHTML = '';
 
             if (totalGastado === 0) {
-                renderizarGraficoDonut(['Sin datos'], [1], formatearMoneda(0));
+                renderizarGraficoDonut(['Sin gastos'], [1], formatearMoneda(0), ['#334155']);
                 return;
             }
 
@@ -2129,7 +2131,7 @@
             renderizarGraficoDonut(labelsGrafico, dataGrafico, formatearMoneda(totalGastado));
         }
 
-        function renderizarGraficoDonut(labels, data, centerText) {
+        function renderizarGraficoDonut(labels, data, centerText, customColors = null) {
             const canvasEl = document.getElementById('graficoCategorias');
             const ctx = canvasEl.getContext('2d');
             if (graficoInstancia) graficoInstancia.destroy();
@@ -2140,7 +2142,7 @@
                     labels: labels,
                     datasets: [{
                         data: data,
-                        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b', '#14b8a6'],
+                        backgroundColor: customColors || ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b', '#14b8a6'],
                         borderWidth: 0
                     }]
                 },
