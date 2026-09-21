@@ -318,7 +318,10 @@
                 <h3 class="text-xl font-bold text-white">Administrar Categorías</h3>
                 <button type="button" id="btn-cerrar-gestionar-cat" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-sm cursor-pointer">✕</button>
             </div>
-            <p class="text-slate-400 text-xs mb-4">Edita o elimina tus categorías personalizadas fácilmente.</p>
+            <div class="grid grid-cols-2 gap-2 mb-4 shrink-0">
+                <button type="button" id="tab-admin-gastos" class="py-2.5 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950 transition-all cursor-pointer">Gastos</button>
+                <button type="button" id="tab-admin-ingresos" class="py-2.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-400 transition-all cursor-pointer">Ingresos</button>
+            </div>
             <div id="lista-categorias-admin" class="flex-1 overflow-y-auto space-y-2.5 pr-1 no-scrollbar mb-4"></div>
             <button type="button" id="btn-nueva-desde-admin" class="w-full py-3.5 rounded-xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 text-sm cursor-pointer">+ Crear Nueva Categoría</button>
         </div>
@@ -1021,16 +1024,19 @@
             }
         }
 
+        let tipoAdminActivo = 'gasto';
+
         function abrirModalGestionarCategorias() {
             const contenedor = document.getElementById('lista-categorias-admin');
             contenedor.innerHTML = '';
             let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
             
-            if (categorias.length === 0) {
-                contenedor.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">No hay categorías cargadas.</p>';
+            const catsFiltradas = categorias.filter(c => c.tipo === tipoAdminActivo);
+
+            if (catsFiltradas.length === 0) {
+                contenedor.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">No hay categorías en esta sección.</p>';
             } else {
-                categorias.forEach(cat => {
-                    const esEditable = true;
+                catsFiltradas.forEach(cat => {
                     const item = document.createElement('div');
                     item.className = "flex items-center justify-between p-3 bg-slate-950 rounded-2xl border border-slate-800";
                     item.innerHTML = `
@@ -1038,54 +1044,70 @@
                             <span class="text-xl">${escapeHTML(cat.icono)}</span>
                             <div>
                                 <span class="text-xs font-bold text-white block">${escapeHTML(cat.nombre)}</span>
-                                <span class="text-[10px] text-slate-400 uppercase">${cat.tipo} ${cat.es_fijo ? '• Fijo' : ''}</span>
+                                <span class="text-[10px] text-slate-400 uppercase">${cat.tipo} ${cat.es_fijo ? '• Fijo / Factura' : ''}</span>
                             </div>
                         </div>
                         <div class="flex items-center gap-1.5">
-                            ${esEditable ? `
-                                <button type="button" class="btn-edit-admin px-2.5 py-1.5 rounded-xl bg-slate-800 text-emerald-400 text-xs font-bold active:scale-95 cursor-pointer">✏️</button>
-                                <button type="button" class="btn-del-admin px-2.5 py-1.5 rounded-xl bg-red-500/10 text-red-400 text-xs font-bold active:scale-95 cursor-pointer">🗑️</button>
-                            ` : '<span class="text-[10px] text-slate-600 px-2">Sistema</span>'}
+                            <button type="button" class="btn-edit-admin px-2.5 py-1.5 rounded-xl bg-slate-800 text-emerald-400 text-xs font-bold active:scale-95 cursor-pointer">✏️</button>
+                            <button type="button" class="btn-del-admin px-2.5 py-1.5 rounded-xl bg-red-500/10 text-red-400 text-xs font-bold active:scale-95 cursor-pointer">🗑️</button>
                         </div>
                     `;
 
-                    if (esEditable) {
-                        item.querySelector('.btn-edit-admin').addEventListener('click', () => {
-                            document.getElementById('modal-gestionar-categorias').classList.add('hidden');
-                            document.getElementById('modal-gestionar-categorias').classList.remove('flex');
-                            abrirModalEditarCategoria(cat);
-                        });
-                        item.querySelector('.btn-del-admin').addEventListener('click', async () => {
-                            if (!confirm(`¿Deseas eliminar la categoría "${cat.nombre}"?`)) return;
-                            let cats = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
-                            const catActual = cats.find(c => c.id === cat.id);
+                    item.querySelector('.btn-edit-admin').addEventListener('click', () => {
+                        document.getElementById('modal-gestionar-categorias').classList.add('hidden');
+                        document.getElementById('modal-gestionar-categorias').classList.remove('flex');
+                        abrirModalEditarCategoria(cat);
+                    });
 
-                            if (catActual && !catActual.user_id) {
+                    item.querySelector('.btn-del-admin').addEventListener('click', async () => {
+                        if (!confirm(`¿Deseas eliminar la categoría "${cat.nombre}"?`)) return;
+                        let cats = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+                        
+                        if (!cat.user_id) {
+                            // Categoría global del sistema: la filtramos localmente para que no reaparezca
+                            cats = cats.filter(c => c.id !== cat.id);
+                            localStorage.setItem('categorias_cache', JSON.stringify(cats));
+                            mostrarToast(`Categoría "${cat.nombre}" eliminada`);
+                            abrirModalGestionarCategorias();
+                            renderizarCategoriasFlujo();
+                        } else {
+                            const { error } = await db.from('categorias').delete().eq('id', cat.id);
+                            if (!error) {
                                 cats = cats.filter(c => c.id !== cat.id);
                                 localStorage.setItem('categorias_cache', JSON.stringify(cats));
                                 mostrarToast(`Categoría "${cat.nombre}" eliminada`);
                                 abrirModalGestionarCategorias();
                                 renderizarCategoriasFlujo();
                             } else {
-                                const { error } = await db.from('categorias').delete().eq('id', cat.id);
-                                if (!error) {
-                                    cats = cats.filter(c => c.id !== cat.id);
-                                    localStorage.setItem('categorias_cache', JSON.stringify(cats));
-                                    mostrarToast(`Categoría "${cat.nombre}" eliminada`);
-                                    abrirModalGestionarCategorias();
-                                    renderizarCategoriasFlujo();
-                                } else {
-                                    mostrarToast('No se puede eliminar: tiene transacciones asociadas.', 'error');
-                                }
+                                mostrarToast('No se puede eliminar: tiene transacciones asociadas.', 'error');
                             }
-                        });
-                    }
+                        }
+                    });
                     contenedor.appendChild(item);
                 });
             }
 
             document.getElementById('modal-gestionar-categorias').classList.remove('hidden');
             document.getElementById('modal-gestionar-categorias').classList.add('flex');
+        }
+
+        const tabAdminGastos = document.getElementById('tab-admin-gastos');
+        const tabAdminIngresos = document.getElementById('tab-admin-ingresos');
+
+        if (tabAdminGastos && tabAdminIngresos) {
+            tabAdminGastos.addEventListener('click', () => {
+                tipoAdminActivo = 'gasto';
+                tabAdminGastos.className = "py-2.5 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950 transition-all cursor-pointer";
+                tabAdminIngresos.className = "py-2.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-400 transition-all cursor-pointer";
+                abrirModalGestionarCategorias();
+            });
+
+            tabAdminIngresos.addEventListener('click', () => {
+                tipoAdminActivo = 'ingreso';
+                tabAdminIngresos.className = "py-2.5 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950 transition-all cursor-pointer";
+                tabAdminGastos.className = "py-2.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-400 transition-all cursor-pointer";
+                abrirModalGestionarCategorias();
+            });
         }
 
         document.getElementById('btn-abrir-gestionar-cat').addEventListener('click', abrirModalGestionarCategorias);
@@ -3212,9 +3234,13 @@
         });
 
         async function sincronizarCategoriasCache() {
-            if (navigator.onLine) {
+            let categoriasLocales = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+            // Si no hay nada en caché local y hay internet, cargamos de la nube por primera vez
+            if (categoriasLocales.length === 0 && navigator.onLine) {
                 const { data } = await db.from('categorias').select('*').order('nombre');
-                if (data) localStorage.setItem('categorias_cache', JSON.stringify(data));
+                if (data && data.length > 0) {
+                    localStorage.setItem('categorias_cache', JSON.stringify(data));
+                }
             }
         }
 
