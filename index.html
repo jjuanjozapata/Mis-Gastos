@@ -1061,7 +1061,7 @@ async function guardarTransaccion(categoriaId, notaGasto) {
     }
 
     if (catObj && catObj.tipo === 'gasto' && notaGasto) {
-        const { data: planes } = await db.from('planes').select('*').eq('tipo', 'deuda');
+        const { data: planes } = await db.from('planes').select('*').eq('tipo', 'deuda').eq('user_id', session.user.id);
         if (planes) {
             const deudaEncontrada = planes.find(p => p.titulo.toLowerCase().includes(notaGasto.toLowerCase()));
             if (deudaEncontrada) {
@@ -1078,7 +1078,7 @@ async function guardarTransaccion(categoriaId, notaGasto) {
         cuenta: cuentaActual, 
         fecha: new Date().toISOString(),
         notas: notaGasto ? escapeHTML(notaGasto) : null,
-        user_id: session.user.id // <-- Asociamos directamente al usuario activo
+        user_id: session.user.id
     };
     
     const display = document.getElementById('flujo-monto-display');
@@ -1110,11 +1110,22 @@ async function guardarTransaccion(categoriaId, notaGasto) {
 }
 
         async function cargarPlanes() {
-            const { data, error } = await db.from('planes').select('*').order('creado_en', { ascending: false });
-            if(error) return;
-
+            const { data: { session } } = await db.auth.getSession();
             const contenedor = document.getElementById('contenedor-planes');
             const fab = document.getElementById('btn-fab-plan');
+
+            if (!session) {
+                contenedor.innerHTML = '';
+                fab.classList.add('hidden');
+                return;
+            }
+
+            const { data, error } = await db.from('planes')
+                .select('*')
+                .eq('user_id', session.user.id)
+                .order('creado_en', { ascending: false });
+                
+            if(error) return;
 
             if(data.length === 0) {
                 fab.classList.add('hidden');
@@ -1202,7 +1213,10 @@ async function guardarTransaccion(categoriaId, notaGasto) {
         }
 
         async function generarRecomendacionSueldo(sueldoIngresado) {
-            const { data: planes } = await db.from('planes').select('*');
+            const { data: { session } } = await db.auth.getSession();
+            if (!session) return;
+            
+            const { data: planes } = await db.from('planes').select('*').eq('user_id', session.user.id);
             let totalCompromisosFijos = 0;
             
             if (planes) {
@@ -1252,6 +1266,13 @@ async function guardarTransaccion(categoriaId, notaGasto) {
         });
 
         async function cargarEstadisticas() {
+            const { data: { session } } = await db.auth.getSession();
+            if (!session) {
+                renderizarDashboardUI(0, 0, 0, []);
+                document.getElementById('historial-transacciones').innerHTML = '';
+                return;
+            }
+
             const filtro = document.getElementById('filtro-tiempo').value;
             const mesSeleccionado = parseInt(document.getElementById('selector-mes-excel').value);
             const ahora = new Date();
@@ -1276,6 +1297,7 @@ async function guardarTransaccion(categoriaId, notaGasto) {
 
             const { data: transacciones, error: errTrans } = await db.from('transacciones')
                                                                 .select('*')
+                                                                .eq('user_id', session.user.id)
                                                                 .gte('fecha', inicioISO)
                                                                 .lt('fecha', finISO)
                                                                 .order('fecha', { ascending: false });
