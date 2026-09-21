@@ -251,7 +251,6 @@
                 </div>
             </div>
 
-            <!-- Modelo Financiero 50/30/20 -->
             <div class="bg-slate-900 rounded-3xl p-5 mb-4 border border-slate-800 shadow-lg">
                 <div class="flex justify-between items-center mb-3">
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Modelo Financiero 50/30/20</p>
@@ -273,7 +272,6 @@
                 </div>
             </div>
 
-            <!-- Simulador de Recorte de Gastos Hormiga con Frecuencia -->
             <div class="bg-slate-900 rounded-3xl p-5 mb-4 border border-slate-800 shadow-lg">
                 <div class="flex justify-between items-center mb-3">
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Simulador de Recorte de Gastos</p>
@@ -325,7 +323,6 @@
                 </div>
             </div>
 
-            <!-- Matriz Presupuesto Mensual vs Gasto Real (Plantilla Excel) -->
             <div class="bg-slate-900 rounded-3xl p-6 mb-6 border border-slate-800">
                 <div class="flex justify-between items-center mb-4">
                     <p class="text-white text-sm font-bold">Presupuesto vs Real por Categoría</p>
@@ -625,7 +622,7 @@
                 btn.className = "flex flex-col items-center justify-center p-3 bg-slate-800 rounded-2xl active:bg-emerald-600 active:scale-95 transition-all border border-slate-700 shadow-md min-h-[85px]";
                 btn.innerHTML = `<span class="text-2xl mb-2">${escapeHTML(cat.icono)}</span><span class="text-[9px] font-bold text-slate-300 uppercase tracking-wider text-center leading-tight">${escapeHTML(cat.nombre)}</span>`;
                 btn.addEventListener('click', () => {
-                    if (cat.nombre.toUpperCase().includes('OTROS') || cat.nombre.toUpperCase().includes('EXTRA')) {
+                    if (cat.nombre.toUpperCase().includes('OTROS') || cat.nombre.toUpperCase().includes('EXTRA') || cat.nombre.toUpperCase().includes('MEKATO')) {
                         abrirModal(cat.id);
                     } else {
                         guardarTransaccion(cat.id, '');
@@ -842,9 +839,55 @@
             mostrarToast('Plan eliminado');
         }
 
+        async function generarRecomendacionSueldo(sueldoIngresado) {
+            const { data: planes } = await db.from('planes').select('*');
+            let totalCompromisosFijos = 0;
+            
+            if (planes) {
+                planes.forEach(p => {
+                    if (p.tipo === 'limite' || p.tipo === 'deuda') {
+                        totalCompromisosFijos += parseFloat(p.monto);
+                    }
+                });
+            }
+
+            const baseDisponible = sueldoIngresado - totalCompromisosFijos;
+            
+            if (baseDisponible <= 0) {
+                mostrarToast("⚠️ Tus deudas o fijos superan tu sueldo. Margen de deseos en 0.", "error");
+                return;
+            }
+
+            const necesidades = baseDisponible * 0.50;
+            const deseos = baseDisponible * 0.30;
+            const ahorroDeuda = baseDisponible * 0.20;
+
+            const topeMekatos = deseos * 0.25;
+            const topeRestaurantes = deseos * 0.35;
+            const topeRegalos = deseos * 0.20;
+
+            localStorage.setItem('topes_mes_actual', JSON.stringify({
+                necesidades,
+                deseos,
+                ahorroDeuda,
+                mekatos: topeMekatos,
+                restaurantes: topeRestaurantes,
+                regalos: topeRegalos
+            }));
+
+            mostrarToast(`🎯 ¡Sueldo procesado! Sugerido Ahorro/Emergencia: ${formatearMoneda(ahorroDeuda)}`);
+        }
+
         async function guardarTransaccion(categoriaId, notaGasto) {
             const valorGasto = parseInt(monto);
             if (valorGasto === 0) return;
+
+            let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+            const catObj = categorias.find(c => c.id === categoriaId);
+            
+            if (catObj && catObj.tipo === 'ingreso') {
+                await generarRecomendacionSueldo(valorGasto);
+            }
 
             const payload = { 
                 monto: valorGasto, 
@@ -1074,16 +1117,30 @@
 
             const matrizContainer = document.getElementById('matriz-presupuesto-excel');
             matrizContainer.innerHTML = '';
+            
             ordenados.forEach(item => {
                 const row = document.createElement('div');
                 row.className = "flex justify-between items-center bg-slate-950/40 p-3 rounded-xl border border-slate-800/80 text-xs";
+                
+                let alertaColor = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
+                let textoEstado = "Óptimo";
+                if (item.gastado > 300000) { 
+                    alertaColor = "text-amber-400 bg-amber-500/10 border-amber-500/20";
+                    textoEstado = "Alerta 70%";
+                }
+                if (item.gastado > 600000) {
+                    alertaColor = "text-red-400 bg-red-500/10 border-red-500/20";
+                    textoEstado = "Sobregiro";
+                }
+
                 row.innerHTML = `
                     <div class="flex items-center gap-2">
                         <span>${escapeHTML(item.icono)}</span>
                         <span class="font-bold text-white">${escapeHTML(item.nombre)}</span>
                     </div>
-                    <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-3">
                         <span class="text-slate-400">Real: <strong class="text-white">${formatearMoneda(item.gastado)}</strong></span>
+                        <span class="text-[9px] font-bold px-2 py-0.5 rounded-full border ${alertaColor}">${textoEstado}</span>
                     </div>
                 `;
                 matrizContainer.appendChild(row);
