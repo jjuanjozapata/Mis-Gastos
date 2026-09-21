@@ -425,24 +425,32 @@
         </header>
 
         <div class="flex-1 flex flex-col justify-center items-center px-4 w-full max-w-md mx-auto">
+            <div id="accesos-frecuentes-inicio" class="flex gap-2 mb-3 w-full justify-center overflow-x-hidden"></div>
             <span id="fecha-actual" class="text-slate-400 text-[11px] tracking-wider uppercase font-semibold mb-3 border border-slate-800/80 px-3.5 py-1 rounded-full bg-slate-900/60 backdrop-blur-md"></span>
             <div id="monto-display" class="text-5xl sm:text-6xl md:text-7xl font-black tracking-tight text-white transition-all drop-shadow-md text-center tabular-nums truncate max-w-full px-2">$ 0</div>
         </div>
 
-        <div class="shrink-0 grid grid-cols-3 gap-2.5 p-5 bg-slate-900/95 backdrop-blur-xl rounded-t-[2.2rem] border-t border-slate-800/80 shadow-[0_-15px_30px_rgba(0,0,0,0.6)] max-w-md mx-auto w-full">
-            <button class="num-btn py-3.5 text-2xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-2xl text-white active:bg-emerald-500 active:text-slate-950 active:scale-95 transition-all cursor-pointer" data-num="1">1</button>
-            <button class="num-btn py-3.5 text-2xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-2xl text-white active:bg-emerald-500 active:text-slate-950 active:scale-95 transition-all cursor-pointer" data-num="2">2</button>
-            <button class="num-btn py-3.5 text-2xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-2xl text-white active:bg-emerald-500 active:text-slate-950 active:scale-95 transition-all cursor-pointer" data-num="3">3</button>
-            <button class="num-btn py-3.5 text-2xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-2xl text-white active:bg-emerald-500 active:text-slate-950 active:scale-95 transition-all cursor-pointer" data-num="4">4</button>
-            <button class="num-btn py-3.5 text-2xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-2xl text-white active:bg-emerald-500 active:text-slate-950 active:scale-95 transition-all cursor-pointer" data-num="5">5</button>
-            <button class="num-btn py-3.5 text-2xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-2xl text-white active:bg-emerald-500 active:text-slate-950 active:scale-95 transition-all cursor-pointer" data-num="6">6</button>
-            <button class="num-btn py-3.5 text-2xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-2xl text-white active:bg-emerald-500 active:text-slate-950 active:scale-95 transition-all cursor-pointer" data-num="7">7</button>
-            <button class="num-btn py-3.5 text-2xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-2xl text-white active:bg-emerald-500 active:text-slate-950 active:scale-95 transition-all cursor-pointer" data-num="8">8</button>
-            <button class="num-btn py-3.5 text-2xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-2xl text-white active:bg-emerald-500 active:text-slate-950 active:scale-95 transition-all cursor-pointer" data-num="9">9</button>
-            <button id="btn-limpiar" class="py-3.5 text-lg font-bold text-slate-400 bg-slate-800/40 border border-slate-800 rounded-2xl active:bg-red-500/20 active:text-red-400 active:scale-95 transition-all cursor-pointer">C</button>
-            <button class="num-btn py-3.5 text-2xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-2xl text-white active:bg-emerald-500 active:text-slate-950 active:scale-95 transition-all cursor-pointer" data-num="0">0</button>
-            <button id="btn-borrar" class="py-3.5 text-xl font-semibold text-slate-300 bg-slate-800/40 border border-slate-800 rounded-2xl active:bg-slate-700 active:scale-95 transition-all cursor-pointer">⌫</button>
-            <button id="btn-siguiente" class="col-span-3 py-4 text-base font-bold bg-emerald-500 text-slate-950 rounded-2xl active:bg-emerald-400 active:scale-[0.98] transition-all tracking-wider uppercase shadow-[0_0_25px_rgba(16,185,129,0.25)] cursor-pointer">Continuar</button>
+        <div class="shrink-0 grid grid-cols-4 gap-2 p-4 bg-slate-900/95 backdrop-blur-xl rounded-t-[2.2rem] border-t border-slate-800/80 shadow-[0_-15px_30px_rgba(0,0,0,0.6)] max-w-md mx-auto w-full">
+            <button class="num-btn py-3 text-xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-xl text-white active:bg-emerald-500 active:text-slate-950 cursor-pointer" data-num="1">1</button>
+            <button class="num-btn py-3 text-xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-xl text-white active:bg-emerald-500 active:text-slate-950 cursor-pointer" data-num="2">2</button>
+            <button class="num-btn py-3 text-xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-xl text-white active:bg-emerald-500 active:text-slate-950 cursor-pointer" data-num="3">3</button>
+            <button id="btn-op-sumar" class="op-btn py-3 text-xl font-bold bg-slate-800/40 border border-slate-700 text-emerald-400 rounded-xl active:bg-emerald-500/20 cursor-pointer" data-op="+">+</button>
+            
+            <button class="num-btn py-3 text-xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-xl text-white active:bg-emerald-500 active:text-slate-950 cursor-pointer" data-num="4">4</button>
+            <button class="num-btn py-3 text-xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-xl text-white active:bg-emerald-500 active:text-slate-950 cursor-pointer" data-num="5">5</button>
+            <button class="num-btn py-3 text-xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-xl text-white active:bg-emerald-500 active:text-slate-950 cursor-pointer" data-num="6">6</button>
+            <button id="btn-op-restar" class="op-btn py-3 text-xl font-bold bg-slate-800/40 border border-slate-700 text-emerald-400 rounded-xl active:bg-emerald-500/20 cursor-pointer" data-op="-">-</button>
+            
+            <button class="num-btn py-3 text-xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-xl text-white active:bg-emerald-500 active:text-slate-950 cursor-pointer" data-num="7">7</button>
+            <button class="num-btn py-3 text-xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-xl text-white active:bg-emerald-500 active:text-slate-950 cursor-pointer" data-num="8">8</button>
+            <button class="num-btn py-3 text-xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-xl text-white active:bg-emerald-500 active:text-slate-950 cursor-pointer" data-num="9">9</button>
+            <button id="btn-igual" class="py-3 text-xl font-bold bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 rounded-xl active:bg-emerald-500 active:text-slate-950 cursor-pointer row-span-2 flex items-center justify-center">=</button>
+
+            <button id="btn-limpiar" class="py-3 text-base font-bold text-slate-400 bg-slate-800/40 border border-slate-800 rounded-xl active:bg-red-500/20 cursor-pointer">C</button>
+            <button class="num-btn py-3 text-xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-xl text-white active:bg-emerald-500 active:text-slate-950 cursor-pointer" data-num="0">0</button>
+            <button id="btn-borrar" class="py-3 text-lg font-semibold text-slate-300 bg-slate-800/40 border border-slate-800 rounded-xl active:bg-slate-700 cursor-pointer">⌫</button>
+            
+            <button id="btn-siguiente" class="col-span-4 py-3.5 text-base font-bold bg-emerald-500 text-slate-950 rounded-xl active:bg-emerald-400 tracking-wider uppercase shadow-[0_0_25px_rgba(16,185,129,0.25)] cursor-pointer mt-1">Continuar</button>
         </div>
     </div>
 
@@ -473,10 +481,15 @@
             
             <div class="bg-gradient-to-br from-emerald-900/40 to-slate-900 rounded-[2rem] p-6 mb-4 border border-emerald-500/25 relative overflow-hidden shadow-xl">
                 <div class="flex justify-between items-start">
-                    <p class="text-emerald-100/60 text-xs font-bold tracking-wider mb-1">BALANCE DISPONIBLE / RESTANTE</p>
-                    <span id="badge-estado-presupuesto" class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] uppercase font-bold px-2.5 py-1 rounded-full">Óptimo</span>
+                    <p class="text-emerald-100/60 text-xs font-bold tracking-wider mb-1">PATRIMONIO NETO REAL</p>
+                    <span id="badge-patrimonio" class="bg-teal-500/20 text-teal-300 border border-teal-500/30 text-[9px] uppercase font-bold px-2.5 py-1 rounded-full">Riqueza Neta</span>
                 </div>
-                <h3 id="dash-balance" class="text-4xl font-extrabold text-white mt-1">$ 0</h3>
+                <h3 id="dash-patrimonio-neto" class="text-4xl font-extrabold text-white mt-1">$ 0</h3>
+
+                <div class="mt-4 pt-4 border-t border-emerald-500/20 flex justify-between items-center text-xs">
+                    <span class="text-emerald-200/60 font-semibold">Balance del Mes:</span>
+                    <strong id="dash-balance" class="text-white font-bold">$ 0</strong>
+                </div>
                 
                 <div class="mt-5">
                     <div class="flex justify-between text-[10px] font-bold text-emerald-200/50 mb-2">
@@ -1245,7 +1258,39 @@
         document.getElementById('selector-mes-excel').addEventListener('change', cargarEstadisticas);
 
         let monto = '0';
+        let expresionCalculadora = '';
         let graficoInstancia = null;
+
+        document.querySelectorAll('.op-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const op = e.target.getAttribute('data-op');
+                if (monto !== '0') {
+                    expresionCalculadora += monto + ' ' + op + ' ';
+                    monto = '0';
+                    actualizarPantalla();
+                }
+            });
+        });
+
+        const btnIgual = document.getElementById('btn-igual');
+        if (btnIgual) {
+            btnIgual.addEventListener('click', () => {
+                if (expresionCalculadora) {
+                    try {
+                        const expresionFinal = expresionCalculadora + monto;
+                        const resultado = eval(expresionFinal);
+                        if (!isNaN(resultado) && isFinite(resultado)) {
+                            monto = String(Math.max(0, Math.round(resultado)));
+                            expresionCalculadora = '';
+                            actualizarPantalla();
+                        }
+                    } catch (err) {
+                        mostrarToast('Operación inválida', 'error');
+                        expresionCalculadora = '';
+                    }
+                }
+            });
+        }
         let categoriaPendiente = null;
         let tipoActual = 'gasto';
         let tipoSubCatActual = 'variable';
@@ -2691,7 +2736,28 @@
             document.getElementById('cuenta-tarjetas-val').textContent = formatearMoneda(totalesCuentas['Tarjetas']);
             document.getElementById('cuenta-transferencia-val').textContent = formatearMoneda(totalesCuentas['Transferencia']);
 
+            // Cálculo de Patrimonio Neto (Activos líquidos - Deudas de planes)
+            db.from('planes').select('*').eq('user_id', session.user.id).then(({ data: planesData }) => {
+                let totalDeudasPendientes = 0;
+                let totalAhorrosMetas = 0;
+                if (planesData) {
+                    planesData.forEach(p => {
+                        if (p.tipo === 'deuda') {
+                            totalDeudasPendientes += Math.max(0, parseFloat(p.monto) - parseFloat(p.monto_acumulado || 0));
+                        }
+                        if (p.tipo === 'meta') {
+                            totalAhorrosMetas += parseFloat(p.monto_acumulado || 0);
+                        }
+                    });
+                }
+                const totalEfectivoBancos = totalesCuentas['Efectivo'] + totalesCuentas['Bancos'] + totalesCuentas['Transferencia'];
+                const patrimonioNeto = (totalEfectivoBancos + totalAhorrosMetas) - totalDeudasPendientes;
+                const elPatrimonio = document.getElementById('dash-patrimonio-neto');
+                if (elPatrimonio) elPatrimonio.textContent = formatearMoneda(patrimonioNeto);
+            });
+
             renderizarListaTransacciones(transaccionesCacheActuales, mapaCat);
+            renderizarAccesosRapidosInicio(categorias);
 
             const balanceReal = totalIngresado - totalGastado;
             ultimoBalanceCalculado = balanceReal;
@@ -2977,6 +3043,28 @@
                     },
                     cutout: '75%'
                 }
+            });
+        }
+
+        function renderizarAccesosRapidosInicio(categorias) {
+            const contenedor = document.getElementById('accesos-frecuentes-inicio');
+            if (!contenedor) return;
+            contenedor.innerHTML = '';
+            
+            const catsGastos = categorias.filter(c => c.tipo === 'gasto').slice(0, 3);
+            catsGastos.forEach(cat => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = "flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-full text-xs font-bold text-slate-300 active:scale-95 transition-all cursor-pointer shadow-sm";
+                b.innerHTML = `<span>${escapeHTML(cat.icono)}</span> <span>${escapeHTML(cat.nombre)}</span>`;
+                b.addEventListener('click', () => {
+                    if (parseInt(monto) <= 0) {
+                        mostrarToast('Digita un monto primero', 'error');
+                        return;
+                    }
+                    guardarTransaccion(cat.id, 'Gasto rápido');
+                });
+                contenedor.appendChild(b);
             });
         }
 
