@@ -2847,11 +2847,16 @@
                     if(reporteGastos[t.categoria_id]) reporteGastos[t.categoria_id].gastado += valor;
 
                     const nombreUpper = cat.nombre.toUpperCase();
-                    const esAhorroODeuda = nombreUpper.includes('AHORRO') || nombreUpper.includes('META') || nombreUpper.includes('DEUDA') || (t.notas && (t.notas.includes('Aporte a meta') || t.notas.includes('Abono a deuda')));
+                    const notasUpper = (t.notas || '').toUpperCase();
                     
+                    const esAhorroODeuda = nombreUpper.includes('AHORRO') || nombreUpper.includes('META') || nombreUpper.includes('DEUDA') || 
+                                           notasUpper.includes('APORTE A META') || notasUpper.includes('ABONO A DEUDA') || notasUpper.includes('AHORRO');
+                    
+                    const esNecesidadFija = cat.es_fijo || ['ARRIENDO', 'SERVICIOS', 'SUSCRIPCIONES', 'MADRE', 'FACTURAS', 'SEGURO', 'INTERNET', 'MERCADO', 'ALIMENTACIÓN', 'SALUD', 'TRANSPORTE'].some(k => nombreUpper.includes(k));
+
                     if (esAhorroODeuda) {
                         totalAhorrosYDeudas += valor;
-                    } else if (cat.es_fijo || ['ARRIENDO', 'SERVICIOS', 'SUSCRIPCIONES', 'MADRE', 'FACTURAS', 'SEGURO', 'INTERNET'].some(k => nombreUpper.includes(k))) {
+                    } else if (esNecesidadFija) {
                         totalNecesidades += valor;
                     } else {
                         totalDeseos += valor;
