@@ -91,6 +91,15 @@
                             <p id="flujo-tipo-label" class="text-xs text-slate-400 uppercase tracking-wider font-bold"></p>
                         </div>
                     </div>
+                    
+                    <div class="mb-4 shrink-0">
+                        <label class="text-[10px] uppercase font-bold text-slate-400 block mb-2 tracking-wider">Separación Contable</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button id="filtro-cat-variable" class="py-2.5 px-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition-all">Gastos Variables</button>
+                            <button id="filtro-cat-fijo" class="py-2.5 px-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 text-xs font-bold transition-all">Gastos Fijos / Obligaciones</button>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-3 gap-3 overflow-y-auto pb-8" id="flujo-categorias-container"></div>
                 </div>
             </div>
@@ -331,7 +340,7 @@
         </div>
         <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg">
             <p class="text-slate-300 font-bold text-sm mb-2">Sincronización con Excel</p>
-            <p class="text-xs text-slate-500 mb-4">Todas las categorías oficiales de tu plantilla (Mercado, Restaurante, Arriendo, Salud, etc.) están sincronizadas en tiempo real con Supabase y caché offline.</p>
+            <p class="text-xs text-slate-500 mb-4">Todas las categorías oficiales de tu plantilla (Mercado, Restaurante, Arriendo, Salud, Servicios, etc.) están sincronizadas en tiempo real con Supabase y caché offline, separando gastos fijos y variables.</p>
         </div>
     </div>
 
@@ -367,6 +376,7 @@
         let graficoInstancia = null;
         let categoriaPendiente = null;
         let tipoActual = 'gasto';
+        let tipoSubCatActual = 'variable'; // 'variable' o 'fijo'
         let tipoPlanActivo = '';
         
         const listaCuentas = ['Efectivo', 'Bancos', 'Tarjetas', 'Transferencia'];
@@ -478,8 +488,29 @@
         document.getElementById('btn-tipo-gasto').addEventListener('click', () => avanzarFlujo('gasto'));
         document.getElementById('btn-tipo-ingreso').addEventListener('click', () => avanzarFlujo('ingreso'));
 
+        // Manejo de pestañas de filtrado de categorías en flujo (Fijo vs Variable)
+        document.getElementById('filtro-cat-variable').addEventListener('click', () => {
+            tipoSubCatActual = 'variable';
+            document.getElementById('filtro-cat-variable').className = "py-2.5 px-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition-all";
+            document.getElementById('filtro-cat-fijo').className = "py-2.5 px-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 text-xs font-bold transition-all";
+            renderizarCategoriasFlujo();
+        });
+
+        document.getElementById('filtro-cat-fijo').addEventListener('click', () => {
+            tipoSubCatActual = 'fijo';
+            document.getElementById('filtro-cat-fijo').className = "py-2.5 px-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition-all";
+            document.getElementById('filtro-cat-variable').className = "py-2.5 px-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 text-xs font-bold transition-all";
+            renderizarCategoriasFlujo();
+        });
+
         function avanzarFlujo(tipo) {
             tipoActual = tipo;
+            const subCatContainer = document.getElementById('filtro-cat-variable').parentElement.parentElement;
+            if (tipo === 'ingreso') {
+                subCatContainer.classList.add('hidden');
+            } else {
+                subCatContainer.classList.remove('hidden');
+            }
             document.getElementById('flujo-tipo-label').textContent = tipo === 'gasto' ? '📉 Registrando Gasto' : '📈 Registrando Ingreso';
             document.getElementById('flujo-paso-1').classList.add('hidden');
             document.getElementById('flujo-paso-1').classList.remove('flex');
@@ -495,9 +526,18 @@
                 if (data) { categorias = data; localStorage.setItem('categorias_cache', JSON.stringify(data)); }
             }
             
-            const catsFiltradas = categorias.filter(c => c.tipo === tipoActual);
             const contenedor = document.getElementById('flujo-categorias-container');
             contenedor.innerHTML = '';
+            
+            const catsFiltradas = categorias.filter(c => {
+                if (c.tipo !== tipoActual) return false;
+                if (tipoActual === 'gasto') {
+                    const isFijo = c.es_fijo || ['ARRIENDO', 'SERVICIOS', 'SUSCRIPCIONES', 'MADRE'].some(k => c.nombre.toUpperCase().includes(k));
+                    if (tipoSubCatActual === 'fijo' && !isFijo) return false;
+                    if (tipoSubCatActual === 'variable' && isFijo) return false;
+                }
+                return true;
+            });
             
             catsFiltradas.forEach(cat => {
                 const btn = document.createElement('button');
@@ -577,7 +617,7 @@
         function abrirFormularioPlan(tipo) {
             cerrarModalPlanes();
             tipoPlanActivo = tipo;
-            const titulos = { limite: 'Controlar Límite / Fijo', meta: 'Nueva Meta de Ahorro', deuda: 'Registrar Deuda' };
+            const titulos = { limite: 'Controlar Límite / Fijo', meta: 'Nueva Meta de Ahorro', deuda: 'Registrar Deuda / Crédito' };
             document.getElementById('titulo-form-plan').textContent = titulos[tipo] || 'Nuevo Plan';
             document.getElementById('input-monto-plan').value = '';
             document.getElementById('input-nombre-plan').value = '';
