@@ -418,6 +418,7 @@
                 <span class="text-xs font-bold text-slate-400 tracking-wider">MIS GASTOS</span>
             </div>
             <div class="flex items-center gap-2">
+                <button id="btn-voz" class="bg-slate-900 text-emerald-400 border border-slate-800 w-9 h-9 rounded-full flex items-center justify-center text-xs active:scale-95 transition-all shadow-sm cursor-pointer" title="Dictar movimiento por voz">🎙️</button>
                 <button id="btn-ahorro-expres" class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-2 rounded-full text-xs font-bold active:scale-95 transition-all shadow-sm flex items-center gap-1 cursor-pointer" title="Ahorro exprés a fondo de emergencia">⚡ Ahorrar</button>
                 <button id="btn-privacidad" class="bg-slate-900 text-slate-300 border border-slate-800/80 w-9 h-9 rounded-full flex items-center justify-center text-xs active:scale-95 transition-all shadow-sm cursor-pointer" title="Ocultar / Mostrar Saldos">👁️</button>
                 <button id="btn-cuenta" class="bg-slate-900 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-full text-xs font-bold tracking-widest uppercase active:scale-95 transition-all shadow-md cursor-pointer">Efectivo</button>
@@ -628,8 +629,15 @@
                 <div class="flex justify-between items-center mb-3">
                     <p class="text-white text-sm font-bold">Historial de Transacciones</p>
                 </div>
-                <div class="mb-4">
+                <div class="mb-3">
                     <input type="text" id="input-buscar-historial" class="w-full bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-white placeholder-slate-500 outline-none focus:border-emerald-500" placeholder="🔍 Buscar por nota, categoría o cuenta..." autocomplete="off">
+                </div>
+                <div class="flex gap-1.5 mb-4 overflow-x-auto no-scrollbar" id="filtros-cuenta-historial">
+                    <button type="button" class="filtro-cta-btn px-3 py-1.5 rounded-full bg-emerald-500 text-slate-950 font-bold text-[11px] shrink-0 cursor-pointer" data-cuenta="todas">Todas</button>
+                    <button type="button" class="filtro-cta-btn px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-400 font-bold text-[11px] shrink-0 cursor-pointer" data-cuenta="Efectivo">Efectivo</button>
+                    <button type="button" class="filtro-cta-btn px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-400 font-bold text-[11px] shrink-0 cursor-pointer" data-cuenta="Bancos">Bancos</button>
+                    <button type="button" class="filtro-cta-btn px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-400 font-bold text-[11px] shrink-0 cursor-pointer" data-cuenta="Tarjetas">Tarjetas</button>
+                    <button type="button" class="filtro-cta-btn px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-400 font-bold text-[11px] shrink-0 cursor-pointer" data-cuenta="Transferencia">Transferencia</button>
                 </div>
                 <div id="historial-transacciones" class="space-y-3"></div>
             </div>
@@ -688,12 +696,15 @@
 
         <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg mb-4">
             <p class="text-slate-300 font-bold text-sm mb-2">Respaldo y Exportación Contable</p>
-            <p class="text-xs text-slate-500 mb-4">Descarga tus transacciones formateadas para Excel o una copia técnica JSON.</p>
-            <div class="flex flex-col sm:flex-row gap-3">
-                <button id="btn-exportar-csv" class="flex-1 py-3.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold rounded-2xl active:bg-emerald-500/20 transition-all text-xs cursor-pointer">📊 Exportar a Excel (CSV)</button>
-                <button id="btn-exportar-json" class="flex-1 py-3.5 bg-slate-800 text-slate-300 border border-slate-700 font-bold rounded-2xl active:bg-slate-700 transition-all text-xs cursor-pointer">📥 Copia JSON</button>
+            <p class="text-xs text-slate-500 mb-4">Descarga tus transacciones para Excel, JSON o genera un reporte impreso en PDF.</p>
+            <div class="grid grid-cols-3 gap-2">
+                <button id="btn-exportar-csv" class="py-3 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold rounded-xl active:bg-emerald-500/20 transition-all text-[11px] cursor-pointer">Excel</button>
+                <button id="btn-exportar-json" class="py-3 bg-slate-800 text-slate-300 border border-slate-700 font-bold rounded-xl active:bg-slate-700 transition-all text-[11px] cursor-pointer">JSON</button>
+                <button id="btn-exportar-pdf" class="py-3 bg-teal-500/10 text-teal-300 border border-teal-500/20 font-bold rounded-xl active:bg-teal-500/20 transition-all text-[11px] cursor-pointer">Imprimir PDF</button>
             </div>
         </div>
+
+        
 
         <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg">
             <p class="text-slate-300 font-bold text-sm mb-2">Conexión con Atajos de iOS</p>
@@ -1085,7 +1096,7 @@
             document.getElementById('modal-rollover').classList.remove('flex');
         }
 
-        function comprobarRolloverMes() {
+        async function comprobarRolloverMes() {
             const ahora = new Date();
             const periodoActual = `${ahora.getFullYear()}-${ahora.getMonth()}`;
             const periodoGuardado = localStorage.getItem('mes_actual_registro');
@@ -1095,6 +1106,15 @@
                     document.getElementById('texto-rollover').textContent = `Tienes un saldo restante de ${formatearMoneda(ultimoBalanceCalculado)} del mes anterior. ¿Qué deseas hacer con este dinero?`;
                     document.getElementById('modal-rollover').classList.remove('hidden');
                     document.getElementById('modal-rollover').classList.add('flex');
+                }
+
+                // Automatización de fijos: verificar planes recurrentes
+                const { data: { session } } = await db.auth.getSession();
+                if (session) {
+                    const { data: planes } = await db.from('planes').select('*').eq('user_id', session.user.id).eq('tipo', 'limite').eq('auto_renovar', true);
+                    if (planes && planes.length > 0) {
+                        mostrarToast(`📅 Nuevo mes detectado: Tienes ${planes.length} límites fijos listos para el ciclo.`);
+                    }
                 }
             }
             localStorage.setItem('mes_actual_registro', periodoActual);
@@ -1228,6 +1248,13 @@
                 a.click();
                 URL.revokeObjectURL(url);
                 mostrarToast('Archivo CSV generado para Excel');
+            });
+        }
+
+        const btnExportPdf = document.getElementById('btn-exportar-pdf');
+        if (btnExportPdf) {
+            btnExportPdf.addEventListener('click', () => {
+                window.print();
             });
         }
 
@@ -2833,22 +2860,74 @@
             });
         }
 
+        let cuentaFiltroActiva = 'todas';
+
+        document.querySelectorAll('.filtro-cta-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.filtro-cta-btn').forEach(b => {
+                    b.className = "filtro-cta-btn px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-400 font-bold text-[11px] shrink-0 cursor-pointer";
+                });
+                e.target.className = "filtro-cta-btn px-3 py-1.5 rounded-full bg-emerald-500 text-slate-950 font-bold text-[11px] shrink-0 cursor-pointer";
+                cuentaFiltroActiva = e.target.getAttribute('data-cuenta');
+                filtrarYRenderizarHistorial();
+            });
+        });
+
         const inputBuscarHistorial = document.getElementById('input-buscar-historial');
         if (inputBuscarHistorial) {
-            inputBuscarHistorial.addEventListener('input', (e) => {
-                const query = e.target.value.toLowerCase().trim();
-                let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
-                const mapaCat = {};
-                categorias.forEach(c => { mapaCat[c.id] = c; });
+            inputBuscarHistorial.addEventListener('input', () => filtrarYRenderizarHistorial());
+        }
 
-                const filtradas = transaccionesCacheActuales.filter(t => {
-                    const cat = mapaCat[t.categoria_id] || { nombre: '' };
-                    const notas = (t.notas || '').toLowerCase();
-                    const catNombre = cat.nombre.toLowerCase();
-                    const cuenta = (t.cuenta || '').toLowerCase();
-                    return notas.includes(query) || catNombre.includes(query) || cuenta.includes(query);
-                });
-                renderizarListaTransacciones(filtradas, mapaCat);
+        function filtrarYRenderizarHistorial() {
+            const query = (inputBuscarHistorial ? inputBuscarHistorial.value : '').toLowerCase().trim();
+            let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+            const mapaCat = {};
+            categorias.forEach(c => { mapaCat[c.id] = c; });
+
+            const filtradas = transaccionesCacheActuales.filter(t => {
+                const cat = mapaCat[t.categoria_id] || { nombre: '' };
+                const notas = (t.notas || '').toLowerCase();
+                const catNombre = cat.nombre.toLowerCase();
+                const cuenta = (t.cuenta || '').toLowerCase();
+                
+                const pasaCuenta = cuentaFiltroActiva === 'todas' || t.cuenta === cuentaFiltroActiva;
+                // Soporta búsqueda por hashtag o texto normal
+                const pasaTexto = !query || notas.includes(query) || catNombre.includes(query) || cuenta.includes(query) || (query.startsWith('#') && notas.includes(query));
+                
+                return pasaCuenta && pasaTexto;
+            });
+            renderizarListaTransacciones(filtradas, mapaCat);
+        }
+
+        // Reconocimiento de Voz
+        const btnVoz = document.getElementById('btn-voz');
+        if (btnVoz) {
+            btnVoz.addEventListener('click', () => {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SpeechRecognition) {
+                    mostrarToast('Tu navegador no soporta dictado por voz', 'error');
+                    return;
+                }
+                const recognition = new SpeechRecognition();
+                recognition.lang = 'es-ES';
+                recognition.start();
+                mostrarToast('🎙️ Escuchando... Di el monto o concepto');
+
+                recognition.onresult = (event) => {
+                    const textoDictado = event.results[0][0].transcript.toLowerCase();
+                    const numerosEnTexto = textoDictado.replace(/\D/g, '');
+                    if (numerosEnTexto) {
+                        monto = numerosEnTexto;
+                        actualizarPantalla();
+                        mostrarToast(`Monto detectado: ${formatearMoneda(parseInt(monto))}`);
+                    } else {
+                        mostrarToast(`Texto: "${textoDictado}". Escribe el número en el teclado.`);
+                    }
+                };
+
+                recognition.onerror = () => {
+                    mostrarToast('No se pudo reconocer el audio', 'error');
+                };
             });
         }
 
@@ -2902,15 +2981,14 @@
             const ahora = new Date();
             const mesSeleccionado = parseInt(document.getElementById('selector-mes-excel').value);
             const diasEnMes = new Date(ahora.getFullYear(), mesSeleccionado + 1, 0).getDate();
-            const diasTranscurridos = ahora.getDate();
-            const diasRestantes = (diasEnMes - diasTranscurridos + 1);
+            const diasTranscurridos = Math.max(1, ahora.getDate());
             
-            const promedio = diasTranscurridos > 0 ? (totalGastado / diasTranscurridos) : 0;
-            const seguro = balanceReal > 0 && diasRestantes > 0 ? (balanceReal / diasRestantes) : 0;
+            const promedio = totalGastado / diasTranscurridos;
+            const diasDeVidaRestantes = promedio > 0 ? Math.floor(balanceReal / promedio) : 99;
 
             document.getElementById('dash-promedio').textContent = formatearMoneda(promedio);
-            document.getElementById('dash-seguro').textContent = formatearMoneda(seguro);
-            document.getElementById('dash-dias-restantes').textContent = `${diasRestantes} días`;
+            document.getElementById('dash-seguro').textContent = formatearMoneda(promedio);
+            document.getElementById('dash-dias-restantes').textContent = balanceReal <= 0 ? '¡Sin fondos!' : `~${diasDeVidaRestantes} días de vida`;
 
             const ordenados = [...arrGastos].sort((a,b) => b.gastado - a.gastado);
             document.getElementById('dash-top-cat').textContent = ordenados.length > 0 && ordenados[0].gastado > 0 ? ordenados[0].nombre : 'N/A';
