@@ -313,8 +313,11 @@
                 </div>
 
                 <div>
-                    <span class="text-[10px] uppercase font-bold text-slate-400 block mb-2">Selecciona un Icono</span>
-                    <div id="selector-iconos-cat" class="grid grid-cols-6 gap-2 p-2 bg-slate-950 rounded-2xl border border-slate-800 max-h-36 overflow-y-auto"></div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[10px] uppercase font-bold text-slate-400">Selecciona o Escribe un Emoji</span>
+                        <input type="text" id="input-emoji-personalizado" maxlength="2" class="w-12 text-center bg-slate-950 border border-slate-700 rounded-lg py-1 text-base text-white focus:outline-none focus:border-emerald-500" value="🍿" title="Escribe tu propio emoji">
+                    </div>
+                    <div id="selector-iconos-cat" class="grid grid-cols-6 gap-2 p-2 bg-slate-950 rounded-2xl border border-slate-800 max-h-32 overflow-y-auto"></div>
                 </div>
 
                 <div id="seccion-tipo-nueva-cat">
@@ -1470,6 +1473,18 @@
             if (tipoActual === 'ingreso') seccionTipo.classList.add('hidden');
             else seccionTipo.classList.remove('hidden');
 
+            const inputEmojiCustom = document.getElementById('input-emoji-personalizado');
+            inputEmojiCustom.value = listaEmojisPopulares[0];
+            iconoNuevaCatSeleccionado = listaEmojisPopulares[0];
+
+            inputEmojiCustom.addEventListener('input', (e) => {
+                const val = e.target.value.trim();
+                if (val) {
+                    iconoNuevaCatSeleccionado = val;
+                    gridEmojis.querySelectorAll('button').forEach(btn => btn.className = 'p-2 rounded-xl text-xl flex items-center justify-center bg-slate-900 border border-slate-800');
+                }
+            });
+
             const gridEmojis = document.getElementById('selector-iconos-cat');
             gridEmojis.innerHTML = '';
             listaEmojisPopulares.forEach((emoji, i) => {
@@ -1481,10 +1496,10 @@
                     gridEmojis.querySelectorAll('button').forEach(btn => btn.className = 'p-2 rounded-xl text-xl flex items-center justify-center bg-slate-900 border border-slate-800');
                     b.className = 'p-2 rounded-xl text-xl flex items-center justify-center bg-emerald-500/20 border border-emerald-500';
                     iconoNuevaCatSeleccionado = emoji;
+                    inputEmojiCustom.value = emoji;
                 });
                 gridEmojis.appendChild(b);
             });
-            iconoNuevaCatSeleccionado = listaEmojisPopulares[0];
 
             document.getElementById('modal-nueva-cat').classList.remove('hidden');
             document.getElementById('modal-nueva-cat').classList.add('flex');
@@ -1522,6 +1537,11 @@
 
         document.getElementById('btn-guardar-nueva-cat').addEventListener('click', async () => {
             const nombre = document.getElementById('input-nueva-cat-nombre').value.trim();
+            const inputEmojiCustom = document.getElementById('input-emoji-personalizado');
+            if (inputEmojiCustom && inputEmojiCustom.value.trim()) {
+                iconoNuevaCatSeleccionado = inputEmojiCustom.value.trim();
+            }
+
             if (!nombre) {
                 mostrarToast('Escribe un nombre para la categoría', 'error');
                 return;
@@ -1535,7 +1555,7 @@
 
             const payloadCat = {
                 nombre: escapeHTML(nombre),
-                icono: iconoNuevaCatSeleccionado,
+                icono: escapeHTML(iconoNuevaCatSeleccionado),
                 tipo: tipoActual,
                 es_fijo: tipoActual === 'gasto' ? tipoNuevaCatEsFijo : false,
                 user_id: session.user.id
