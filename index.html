@@ -687,6 +687,7 @@
             const { data: { session } } = await db.auth.getSession();
             if (!session) return;
 
+            mostrarToast('🔄 Sincronizando datos pendientes con la nube...');
             let huboSincronizacion = false;
 
             // 1. Sincronizar transacciones pendientes
@@ -795,6 +796,9 @@
         });
 
         document.getElementById('btn-iniciar-sesion').addEventListener('click', async () => {
+            const btnLogin = document.getElementById('btn-iniciar-sesion');
+            if (btnLogin.disabled) return;
+
             const email = document.getElementById('auth-email').value.trim();
             const password = document.getElementById('auth-password').value.trim();
 
@@ -803,7 +807,15 @@
                 return;
             }
 
+            btnLogin.disabled = true;
+            const textoOriginal = btnLogin.textContent;
+            btnLogin.textContent = 'Verificando...';
+
             const { data, error } = await db.auth.signInWithPassword({ email, password });
+            btnLogin.disabled = false;
+            btnLogin.textContent = textoOriginal;
+
+
             if (error) {
                 mostrarToast('Error al iniciar sesión: ' + error.message, 'error');
             } else {
@@ -827,6 +839,11 @@
             const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!regexEmail.test(email)) {
                 mostrarToast('Ingresa un correo electrónico válido', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                mostrarToast('La contraseña debe tener al menos 6 caracteres', 'error');
                 return;
             }
             
@@ -1353,8 +1370,10 @@
             inputEditPres.addEventListener('input', (e) => {
                 let valor = e.target.value.replace(/\D/g, '');
                 if (!valor) { e.target.value = ''; return; }
+                let numVal = parseInt(valor);
+                if (numVal > 999999999) numVal = 999999999; // Tope máximo seguro
                 let locale = monedaActual === 'USD' ? 'en-US' : (monedaActual === 'PEN' ? 'es-PE' : 'es-CO');
-                e.target.value = new Intl.NumberFormat(locale).format(parseInt(valor));
+                e.target.value = new Intl.NumberFormat(locale).format(numVal);
             });
         }
 
@@ -1577,6 +1596,9 @@
         });
 
         function cambiarTab(pantalla) {
+            const containerToast = document.getElementById('toast-container');
+            if (containerToast) containerToast.innerHTML = ''; // Limpiar toasts activos
+
             const pantallas = ['captura', 'planes', 'dashboard', 'ajustes'];
             pantallas.forEach(p => {
                 const el = document.getElementById(`pantalla-${p}`);

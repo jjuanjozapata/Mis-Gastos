@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v20-calibrado';
+const CACHE_VERSION = 'v21-prod';
 const CACHE_NAME = `gastos-${CACHE_VERSION}`;
 const ASSETS = [
     '/',
