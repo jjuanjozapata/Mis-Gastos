@@ -32,9 +32,10 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
     
-    if (!url.origin.includes(self.location.origin) || url.protocol === 'chrome-extension:') {
-        return;
-    }
+    // Exclusión estricta de la API backend para no envenenar el caché con datos fantasma
+    if (url.origin.includes('supabase.co')) return;
+
+    if (!url.origin.includes(self.location.origin) || url.protocol === 'chrome-extension:') return;
 
     if (event.request.mode === 'navigate') {
         event.respondWith(
@@ -44,7 +45,7 @@ self.addEventListener('fetch', event => {
                     caches.open(CACHE_NAME).then(cache => cache.put(event.request, resToCache));
                     return response;
                 })
-                .catch(() => caches.match('/index.html') || new Response('Offline', { status: 503 }))
+                .catch(() => caches.match('/index.html') || new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain' } }))
         );
         return;
     }
@@ -52,21 +53,22 @@ self.addEventListener('fetch', event => {
     event.respondWith(
         caches.match(event.request).then(cachedResponse => {
             if (cachedResponse) {
-                fetch(event.request).then(networkResponse => {
-                    if (networkResponse && networkResponse.status === 200) {
-                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, networkResponse));
-                    }
-                }).catch(() => {});
+                // Implementación correcta de Stale-While-Revalidate en 2do plano sin bloquear la UI
+                event.waitUntil(
+                    fetch(event.request).then(networkResponse => {
+                        if (networkResponse && networkResponse.status === 200) {
+                            caches.open(CACHE_NAME).then(cache => cache.put(event.request, networkResponse));
+                        }
+                    }).catch(() => {})
+                );
                 return cachedResponse;
             }
             return fetch(event.request).then(networkResponse => {
-                if (!networkResponse || networkResponse.status !== 200) {
-                    return networkResponse;
-                }
+                if (!networkResponse || networkResponse.status !== 200) return networkResponse;
                 const resToCache = networkResponse.clone();
                 caches.open(CACHE_NAME).then(cache => cache.put(event.request, resToCache));
                 return networkResponse;
-            }).catch(() => new Response('', { status: 408, statusText: 'Network request failed' }));
+            }).catch(() => new Response('', { status: 408 }));
         })
     );
 });

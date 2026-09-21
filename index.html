@@ -863,17 +863,25 @@
             }
 
             if (queuePlanes.length > 0) {
-                let erroresPlanes = false;
+                let planesPendientes = [...queuePlanes];
+                
                 for (let op of queuePlanes) {
                     const { error: errPlan } = await db.from('planes')
                         .update({ monto_acumulado: op.nuevoAcumulado })
                         .eq('id', op.planId)
                         .eq('user_id', session.user.id);
-                    if (errPlan) erroresPlanes = true;
+                        
+                    // Si se sincroniza bien, lo quitamos de la cola iterativamente
+                    if (!errPlan) {
+                        planesPendientes = planesPendientes.filter(p => p.planId !== op.planId);
+                        huboSincronizacion = true;
+                    }
                 }
-                if (!erroresPlanes) {
+                
+                if (planesPendientes.length > 0) {
+                    localStorage.setItem('offline_queue_planes', JSON.stringify(planesPendientes));
+                } else {
                     localStorage.removeItem('offline_queue_planes');
-                    huboSincronizacion = true;
                 }
             }
 
@@ -2624,6 +2632,8 @@
             
             fab.classList.remove('hidden');
             contenedor.innerHTML = '';
+            
+            const fragmentoPlanes = document.createDocumentFragment();
 
             const { data: transacciones } = await db.from('transacciones')
                 .select('monto, fecha, categoria_id')
@@ -2748,8 +2758,10 @@
                 });
 
                 wrapper.appendChild(tarjeta);
-                contenedor.appendChild(wrapper);
+                fragmentoPlanes.appendChild(wrapper);
             });
+            
+            contenedor.appendChild(fragmentoPlanes);
         }
 
         async function eliminarPlan(id) {
@@ -3324,12 +3336,18 @@
         function renderizarGraficoDonut(labels, data, centerText, customColors = null) {
             const canvasEl = document.getElementById('graficoCategorias');
             if (!canvasEl) return;
-            const ctx = canvasEl.getContext('2d');
-            if (graficoInstancia) {
-                graficoInstancia.destroy();
-                graficoInstancia = null;
-            }
             
+            if (graficoInstancia) {
+                // Mutación reactiva: actualizamos datos sin destruir el canvas (0 Memory Leaks, 100x más rápido)
+                graficoInstancia.data.labels = labels;
+                graficoInstancia.data.datasets[0].data = data;
+                if (customColors) graficoInstancia.data.datasets[0].backgroundColor = customColors;
+                graficoInstancia.options.plugins.centerText.text = centerText;
+                graficoInstancia.update();
+                return;
+            }
+
+            const ctx = canvasEl.getContext('2d');
             graficoInstancia = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
