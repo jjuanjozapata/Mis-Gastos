@@ -44,7 +44,7 @@
     <div id="modal-notas" class="hidden fixed inset-0 z-[120] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-6">
         <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl">
             <h3 class="text-xl font-bold text-white mb-2">Detalle del Movimiento</h3>
-            <p class="text-slate-400 text-sm mb-5">Escribe brevemente el concepto.</p>
+            <p class="text-slate-400 text-sm mb-5">Escribe brevemente el concepto o descripción.</p>
             <input type="text" id="input-notas" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 mb-6 text-lg" placeholder="Ej. Compras, Netflix, Salario..." autocomplete="off">
             <div class="flex gap-3">
                 <button id="btn-cancelar-notas" class="flex-1 py-4 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors">Cancelar</button>
@@ -68,8 +68,8 @@
                     <button id="btn-tipo-gasto" class="w-full bg-slate-800 p-5 rounded-[2rem] border border-slate-700 active:bg-slate-700 active:scale-[0.98] transition-all flex items-center gap-5 shadow-lg">
                         <div class="w-14 h-14 bg-red-500/10 rounded-full flex items-center justify-center text-red-400 border border-red-500/20 text-2xl">📉</div>
                         <div class="text-left">
-                            <span class="block text-lg font-bold text-white">Es un Gasto / Fijo</span>
-                            <span class="block text-xs text-slate-400">Salidas, mercado, facturas, arriendo</span>
+                            <span class="block text-lg font-bold text-white">Es un Gasto / Factura</span>
+                            <span class="block text-xs text-slate-400">Mercado, arriendo, servicios, salidas</span>
                         </div>
                         <span class="ml-auto text-slate-500">›</span>
                     </button>
@@ -77,7 +77,7 @@
                         <div class="w-14 h-14 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-400 border border-emerald-500/20 text-2xl">📈</div>
                         <div class="text-left">
                             <span class="block text-lg font-bold text-white">Es un Ingreso</span>
-                            <span class="block text-xs text-slate-400">Salarios, ventas, entradas extras</span>
+                            <span class="block text-xs text-slate-400">Salario principal, extra, Etsy</span>
                         </div>
                         <span class="ml-auto text-slate-500">›</span>
                     </button>
@@ -92,11 +92,11 @@
                         </div>
                     </div>
                     
-                    <div class="mb-4 shrink-0">
+                    <div class="mb-4 shrink-0" id="seccion-filtros-cat">
                         <label class="text-[10px] uppercase font-bold text-slate-400 block mb-2 tracking-wider">Separación Contable</label>
                         <div class="grid grid-cols-2 gap-2">
                             <button id="filtro-cat-variable" class="py-2.5 px-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition-all">Gastos Variables</button>
-                            <button id="filtro-cat-fijo" class="py-2.5 px-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 text-xs font-bold transition-all">Gastos Fijos / Obligaciones</button>
+                            <button id="filtro-cat-fijo" class="py-2.5 px-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 text-xs font-bold transition-all">Gastos Fijos / Facturas</button>
                         </div>
                     </div>
 
@@ -147,7 +147,7 @@
             <h3 id="titulo-form-plan" class="text-xl font-bold text-white mb-6">Nuevo Plan</h3>
             
             <div class="flex items-center gap-2 mb-6 border-b border-slate-800 pb-4">
-                <span class="text-3xl font-bold text-emerald-400">$</span>
+                <span id="simbolo-moneda-plan" class="text-3xl font-bold text-emerald-400">$</span>
                 <input type="text" inputmode="numeric" id="input-monto-plan" class="w-full bg-transparent text-4xl font-bold text-white focus:outline-none placeholder-slate-700" placeholder="0" autocomplete="off">
             </div>
 
@@ -203,21 +203,26 @@
 
     <div id="pantalla-dashboard" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-950 min-h-0">
         <div class="p-5 pb-12">
-            <div class="flex justify-between items-center mb-6">
-                <select id="filtro-tiempo" class="bg-slate-900 text-white font-semibold text-sm rounded-xl px-4 py-2 border border-slate-800 outline-none focus:ring-1 focus:ring-emerald-500">
+            <div class="flex justify-between items-center mb-6 gap-2">
+                <select id="filtro-tiempo" class="bg-slate-900 text-white font-semibold text-sm rounded-xl px-4 py-2 border border-slate-800 outline-none focus:ring-1 focus:ring-emerald-500 flex-1">
                     <option value="dia">Hoy</option>
-                    <option value="mes" selected>Este Mes</option>
-                    <option value="anio">Este Año</option>
+                    <option value="mes" selected>Este Mes (Plantilla Excel)</option>
+                    <option value="anio">Dashboard Anual</option>
+                </select>
+                <select id="selector-mes-excel" class="bg-slate-900 text-emerald-400 font-bold text-sm rounded-xl px-4 py-2 border border-slate-800 outline-none focus:ring-1 focus:ring-emerald-500">
+                    <option value="0">Enero</option><option value="1">Febrero</option><option value="2">Marzo</option><option value="3">Abril</option>
+                    <option value="4">Mayo</option><option value="5">Junio</option><option value="6">Julio</option><option value="7">Agosto</option>
+                    <option value="8">Septiembre</option><option value="9">Octubre</option><option value="10">Noviembre</option><option value="11">Diciembre</option>
                 </select>
             </div>
             
             <div class="bg-gradient-to-br from-emerald-900/40 to-slate-900 rounded-[2rem] p-6 mb-4 border border-emerald-500/25 relative overflow-hidden shadow-xl">
-                <p class="text-emerald-100/60 text-xs font-bold tracking-wider mb-1">BALANCE DISPONIBLE</p>
+                <p class="text-emerald-100/60 text-xs font-bold tracking-wider mb-1">BALANCE DISPONIBLE / RESTANTE</p>
                 <h3 id="dash-balance" class="text-4xl font-extrabold text-white">$ 0</h3>
                 
                 <div class="mt-5">
                     <div class="flex justify-between text-[10px] font-bold text-emerald-200/50 mb-2">
-                        <span>DISPONIBLE REAL</span>
+                        <span>DISPONIBLE REAL FRENTE A INGRESOS</span>
                         <span id="dash-porcentaje">0%</span>
                     </div>
                     <div class="w-full bg-slate-950/50 rounded-full h-1.5 border border-slate-800">
@@ -227,17 +232,17 @@
 
                 <div class="grid grid-cols-2 gap-3 mt-6">
                     <div class="bg-slate-950/30 p-3 rounded-xl border border-slate-800/50">
-                        <p class="text-slate-400 text-[10px] font-bold flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> INGRESOS</p>
+                        <p class="text-slate-400 text-[10px] font-bold flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> INGRESOS REALES</p>
                         <p id="dash-ingresos" class="text-emerald-400 font-bold text-sm mt-1">+$ 0</p>
                     </div>
                     <div class="bg-slate-950/30 p-3 rounded-xl border border-slate-800/50">
-                        <p class="text-slate-400 text-[10px] font-bold flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-400"></span> GASTOS</p>
+                        <p class="text-slate-400 text-[10px] font-bold flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-400"></span> GASTOS TOTALES</p>
                         <p id="dash-gastos" class="text-white font-bold text-sm mt-1">-$ 0</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Modelo 50/30/20 del Excel -->
+            <!-- Modelo Financiero 50/30/20 -->
             <div class="bg-slate-900 rounded-3xl p-5 mb-4 border border-slate-800 shadow-lg">
                 <div class="flex justify-between items-center mb-3">
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Modelo Financiero 50/30/20</p>
@@ -259,7 +264,7 @@
                 </div>
             </div>
 
-            <!-- Simulador de Recorte de Gastos Hormiga -->
+            <!-- Simulador de Recorte de Gastos Hormiga con Frecuencia -->
             <div class="bg-slate-900 rounded-3xl p-5 mb-4 border border-slate-800 shadow-lg">
                 <div class="flex justify-between items-center mb-3">
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Simulador de Recorte de Gastos</p>
@@ -273,11 +278,11 @@
                     <input type="range" id="range-simulador" min="0" max="50000" step="5000" value="10000" class="w-full accent-emerald-500 bg-slate-950">
                     <div class="grid grid-cols-2 gap-2 text-center pt-2 border-t border-slate-800">
                         <div class="bg-slate-950 p-2 rounded-xl">
-                            <span class="text-[9px] text-slate-500 block font-bold">MENSUAL</span>
+                            <span class="text-[9px] text-slate-500 block font-bold">AHORRO MENSUAL</span>
                             <span id="sim-mensual" class="text-xs font-bold text-emerald-400">$ 300.000</span>
                         </div>
                         <div class="bg-slate-950 p-2 rounded-xl">
-                            <span class="text-[9px] text-slate-500 block font-bold">ANUAL</span>
+                            <span class="text-[9px] text-slate-500 block font-bold">AHORRO ANUAL</span>
                             <span id="sim-anual" class="text-xs font-bold text-emerald-400">$ 3.600.000</span>
                         </div>
                     </div>
@@ -311,8 +316,15 @@
                 </div>
             </div>
 
+            <!-- Matriz Presupuesto Mensual vs Gasto Real (Plantilla Excel) -->
             <div class="bg-slate-900 rounded-3xl p-6 mb-6 border border-slate-800">
-                <p class="text-white text-sm font-bold mb-4">Gastos por Categoría y Concentración</p>
+                <div class="flex justify-between items-center mb-4">
+                    <p class="text-white text-sm font-bold">Presupuesto vs Real por Categoría</p>
+                    <span class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Matriz Excel</span>
+                </div>
+                <div id="matriz-presupuesto-excel" class="space-y-3 mb-6"></div>
+
+                <p class="text-white text-sm font-bold mb-4 pt-4 border-t border-slate-800">Gastos por Categoría y Concentración</p>
                 <div class="relative flex justify-center h-56">
                     <canvas id="graficoCategorias"></canvas>
                 </div>
@@ -321,7 +333,7 @@
 
             <div class="mt-8">
                 <div class="flex justify-between items-center mb-4">
-                    <p class="text-white text-sm font-bold">Ver historial completo</p>
+                    <p class="text-white text-sm font-bold">Ver historial completo (Libro Diario)</p>
                 </div>
                 <div id="historial-transacciones" class="space-y-3"></div>
             </div>
@@ -330,6 +342,17 @@
 
     <div id="pantalla-ajustes" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-950 min-h-0 p-5">
         <h2 class="text-2xl font-bold text-white mb-6">Ajustes</h2>
+        
+        <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg mb-4">
+            <p class="text-slate-300 font-bold text-sm mb-2">Selector de Moneda</p>
+            <p class="text-xs text-slate-500 mb-4">Elige la divisa con la que operan tus finanzas:</p>
+            <select id="selector-moneda" class="w-full bg-slate-950 text-white font-semibold text-sm rounded-xl px-4 py-3 border border-slate-800 outline-none focus:ring-1 focus:ring-emerald-500">
+                <option value="COP">Pesos Colombianos (COP - $)</option>
+                <option value="USD">Dólares Estadounidenses (USD - $)</option>
+                <option value="PEN">Soles Peruanos (PEN - S/.)</option>
+            </select>
+        </div>
+
         <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg mb-4">
             <p class="text-slate-300 font-bold text-sm mb-2">Conexión con Atajos de iOS</p>
             <p class="text-xs text-slate-500 mb-4 leading-relaxed">Configura tu iPhone para registrar gastos con doble toque. Copia la URL e insértala en tu Atajo:</p>
@@ -338,9 +361,10 @@
                 <span id="btn-copiar-texto">Copiar Enlace para iOS</span>
             </button>
         </div>
+        
         <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg">
             <p class="text-slate-300 font-bold text-sm mb-2">Sincronización con Excel</p>
-            <p class="text-xs text-slate-500 mb-4">Todas las categorías oficiales de tu plantilla (Mercado, Restaurante, Arriendo, Salud, Servicios, etc.) están sincronizadas en tiempo real con Supabase y caché offline, separando gastos fijos y variables.</p>
+            <p class="text-xs text-slate-500 mb-4">Plantilla de 13 categorías oficiales sincronizadas (Mercado, Restaurante, Arriendo, Salud, Servicios, etc.) con cálculo automático de desviación y modelos 50/30/20.</p>
         </div>
     </div>
 
@@ -370,13 +394,40 @@
         );
 
         const escapeHTML = str => str ? DOMPurify.sanitize(String(str), { ALLOWED_TAGS: [], ALLOWED_ATTR: [] }) : '';
-        const formateador = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
         
+        let monedaActual = localStorage.getItem('moneda_mis_gastos') || 'COP';
+        let formateador = new Intl.NumberFormat('es-CO', { style: 'currency', currency: monedaActual, maximumFractionDigits: 0 });
+
+        function actualizarFormatoMoneda(nuevaMoneda) {
+            monedaActual = nuevaMoneda;
+            localStorage.setItem('moneda_mis_gastos', nuevaMoneda);
+            let locale = 'es-CO';
+            if (nuevaMoneda === 'USD') locale = 'en-US';
+            if (nuevaMoneda === 'PEN') locale = 'es-PE';
+            formateador = new Intl.NumberFormat(locale, { style: 'currency', currency: nuevaMoneda, maximumFractionDigits: 0 });
+            document.getElementById('simbolo-moneda-plan').textContent = nuevaMoneda === 'USD' ? '$' : (nuevaMoneda === 'PEN' ? 'S/.' : '$');
+            actualizarPantalla();
+            if (!document.getElementById('pantalla-dashboard').classList.contains('hidden')) {
+                cargarEstadisticas();
+            }
+        }
+
+        document.getElementById('selector-moneda').value = monedaActual;
+        document.getElementById('selector-moneda').addEventListener('change', (e) => {
+            actualizarFormatoMoneda(e.target.value);
+            mostrarToast('Moneda actualizada con éxito');
+        });
+
+        // Configurar mes por defecto en el selector según fecha actual
+        const mesActualIndex = new Date().getMonth();
+        document.getElementById('selector-mes-excel').value = mesActualIndex;
+        document.getElementById('selector-mes-excel').addEventListener('change', cargarEstadisticas);
+
         let monto = '0';
         let graficoInstancia = null;
         let categoriaPendiente = null;
         let tipoActual = 'gasto';
-        let tipoSubCatActual = 'variable'; // 'variable' o 'fijo'
+        let tipoSubCatActual = 'variable';
         let tipoPlanActivo = '';
         
         const listaCuentas = ['Efectivo', 'Bancos', 'Tarjetas', 'Transferencia'];
@@ -488,7 +539,6 @@
         document.getElementById('btn-tipo-gasto').addEventListener('click', () => avanzarFlujo('gasto'));
         document.getElementById('btn-tipo-ingreso').addEventListener('click', () => avanzarFlujo('ingreso'));
 
-        // Manejo de pestañas de filtrado de categorías en flujo (Fijo vs Variable)
         document.getElementById('filtro-cat-variable').addEventListener('click', () => {
             tipoSubCatActual = 'variable';
             document.getElementById('filtro-cat-variable').className = "py-2.5 px-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition-all";
@@ -505,16 +555,17 @@
 
         function avanzarFlujo(tipo) {
             tipoActual = tipo;
-            const subCatContainer = document.getElementById('filtro-cat-variable').parentElement.parentElement;
+            const seccionFiltros = document.getElementById('seccion-filtros-cat');
             if (tipo === 'ingreso') {
-                subCatContainer.classList.add('hidden');
+                seccionFiltros.classList.add('hidden');
             } else {
-                subCatContainer.classList.remove('hidden');
+                seccionFiltros.classList.remove('hidden');
             }
-            document.getElementById('flujo-tipo-label').textContent = tipo === 'gasto' ? '📉 Registrando Gasto' : '📈 Registrando Ingreso';
+            document.getElementById('flujo-tipo-label').textContent = tipo === 'gasto' ? '📉 Registrando Gasto / Factura' : '📈 Registrando Ingreso';
             document.getElementById('flujo-paso-1').classList.add('hidden');
             document.getElementById('flujo-paso-1').classList.remove('flex');
             document.getElementById('flujo-paso-2').classList.remove('hidden');
+            document.getElementById('flujo-paso-2').classList.remove('flex'); // bugfix display block/flex
             document.getElementById('flujo-paso-2').classList.add('flex');
             renderizarCategoriasFlujo();
         }
@@ -532,7 +583,7 @@
             const catsFiltradas = categorias.filter(c => {
                 if (c.tipo !== tipoActual) return false;
                 if (tipoActual === 'gasto') {
-                    const isFijo = c.es_fijo || ['ARRIENDO', 'SERVICIOS', 'SUSCRIPCIONES', 'MADRE'].some(k => c.nombre.toUpperCase().includes(k));
+                    const isFijo = c.es_fijo || ['ARRIENDO', 'SERVICIOS', 'SUSCRIPCIONES', 'MADRE', 'FACTURAS'].some(k => c.nombre.toUpperCase().includes(k));
                     if (tipoSubCatActual === 'fijo' && !isFijo) return false;
                     if (tipoSubCatActual === 'variable' && isFijo) return false;
                 }
@@ -575,7 +626,15 @@
         document.getElementById('tab-planes').addEventListener('click', () => cambiarTab('planes'));
         document.getElementById('tab-dashboard').addEventListener('click', () => cambiarTab('dashboard'));
         document.getElementById('tab-ajustes').addEventListener('click', () => cambiarTab('ajustes'));
-        document.getElementById('filtro-tiempo').addEventListener('change', cargarEstadisticas);
+        document.getElementById('filtro-tiempo').addEventListener('change', (e) => {
+            const selectorMes = document.getElementById('selector-mes-excel');
+            if (e.target.value === 'anio') {
+                selectorMes.classList.add('hidden');
+            } else {
+                selectorMes.classList.remove('hidden');
+            }
+            cargarEstadisticas();
+        });
 
         function abrirModal(catId) {
             categoriaPendiente = catId;
@@ -635,7 +694,8 @@
         document.getElementById('input-monto-plan').addEventListener('input', (e) => {
             let valor = e.target.value.replace(/\D/g, '');
             if (!valor) { e.target.value = ''; return; }
-            e.target.value = new Intl.NumberFormat('es-CO').format(parseInt(valor));
+            let locale = monedaActual === 'USD' ? 'en-US' : (monedaActual === 'PEN' ? 'es-PE' : 'es-CO');
+            e.target.value = new Intl.NumberFormat(locale).format(parseInt(valor));
         });
 
         document.getElementById('btn-guardar-plan').addEventListener('click', async () => {
@@ -806,7 +866,7 @@
             }
         }
 
-        // Simulador de recorte de gastos hormiga interactivo
+        // Simulador de recorte de gastos hormiga interactivo con frecuencia
         const rangeSimulador = document.getElementById('range-simulador');
         rangeSimulador.addEventListener('input', (e) => {
             const val = parseInt(e.target.value) || 0;
@@ -817,6 +877,7 @@
 
         async function cargarEstadisticas() {
             const filtro = document.getElementById('filtro-tiempo').value;
+            const mesSeleccionado = parseInt(document.getElementById('selector-mes-excel').value);
             const ahora = new Date();
             let inicioISO, finISO;
             
@@ -827,8 +888,9 @@
                 inicioISO = new Date(ahora.getFullYear(), 0, 1).toISOString();
                 finISO = new Date(ahora.getFullYear() + 1, 0, 1).toISOString();
             } else {
-                inicioISO = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString();
-                finISO = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 1).toISOString();
+                // Filtrar por el mes elegido en el selector estilo Excel
+                inicioISO = new Date(ahora.getFullYear(), mesSeleccionado, 1).toISOString();
+                finISO = new Date(ahora.getFullYear(), mesSeleccionado + 1, 1).toISOString();
             }
 
             let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
@@ -933,7 +995,7 @@
             document.getElementById('dash-porcentaje').textContent = `${pDisp}%`;
             document.getElementById('dash-bar').style.width = `${pDisp}%`;
 
-            // Aplicación exacta del modelo 50/30/20 de tu Excel
+            // Modelo Financiero 50/30/20
             if (totalIngresado > 0) {
                 const necPct = Math.min(100, Math.round((totalGastado * 0.5 / totalIngresado) * 100));
                 const desPct = Math.min(100, Math.round((totalGastado * 0.3 / totalIngresado) * 100));
@@ -943,7 +1005,7 @@
                 document.getElementById('stat-20').textContent = `${ahoPct}%`;
             }
 
-            const diasEnMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0).getDate();
+            const diasEnMes = new Date(ahora.getFullYear(), mesSeleccionado + 1, 0).getDate();
             const diasTranscurridos = filtro === 'mes' ? ahora.getDate() : (filtro === 'dia' ? 1 : 365);
             const diasRestantes = filtro === 'mes' ? (diasEnMes - diasTranscurridos + 1) : 0;
             
@@ -957,13 +1019,31 @@
             const arrGastos = Object.values(reporteGastos).sort((a,b) => b.gastado - a.gastado);
             document.getElementById('dash-top-cat').textContent = arrGastos.length > 0 && arrGastos[0].gastado > 0 ? arrGastos[0].nombre : 'N/A';
 
+            // Renderizar Matriz Presupuesto vs Real (Estilo Excel)
+            const matrizContainer = document.getElementById('matriz-presupuesto-excel');
+            matrizContainer.innerHTML = '';
+            arrGastos.forEach(item => {
+                const row = document.createElement('div');
+                row.className = "flex justify-between items-center bg-slate-950/40 p-3 rounded-xl border border-slate-800/80 text-xs";
+                row.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span>${escapeHTML(item.icono)}</span>
+                        <span class="font-bold text-white">${escapeHTML(item.nombre)}</span>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span class="text-slate-400">Real: <strong class="text-white">${formateador.format(item.gastado)}</strong></span>
+                    </div>
+                `;
+                matrizContainer.appendChild(row);
+            });
+
             const labelsGrafico = [];
             const dataGrafico = [];
             const contenedorLista = document.getElementById('lista-presupuestos');
             contenedorLista.innerHTML = '';
 
             if (totalGastado === 0) {
-                renderizarGraficoDonut(['Sin datos'], [1], "$ 0");
+                renderizarGraficoDonut(['Sin datos'], [1], formateador.format(0));
                 return;
             }
 
