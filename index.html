@@ -305,6 +305,19 @@
         </div>
     </div>
 
+    <!-- Modal para Administrar Categorías -->
+    <div id="modal-gestionar-categorias" class="hidden fixed inset-0 z-[130] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-5">
+        <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-xl font-bold text-white">Administrar Categorías</h3>
+                <button type="button" id="btn-cerrar-gestionar-cat" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-sm cursor-pointer">✕</button>
+            </div>
+            <p class="text-slate-400 text-xs mb-4">Edita o elimina tus categorías personalizadas fácilmente.</p>
+            <div id="lista-categorias-admin" class="flex-1 overflow-y-auto space-y-2.5 pr-1 no-scrollbar mb-4"></div>
+            <button type="button" id="btn-nueva-desde-admin" class="w-full py-3.5 rounded-xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 text-sm cursor-pointer">+ Crear Nueva Categoría</button>
+        </div>
+    </div>
+
     <!-- Modal para Nueva Categoría -->
     <div id="modal-nueva-cat" class="hidden fixed inset-0 z-[130] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-5">
         <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl">
@@ -645,6 +658,12 @@
         </div>
 
         <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg mb-4">
+            <p class="text-slate-300 font-bold text-sm mb-2">Gestión de Categorías</p>
+            <p class="text-xs text-slate-500 mb-4">Personaliza, edita o elimina tus categorías de gastos e ingresos.</p>
+            <button type="button" id="btn-abrir-gestionar-cat" class="w-full py-3.5 bg-slate-800 text-emerald-400 border border-slate-700 font-bold rounded-2xl active:bg-slate-700 transition-all text-xs cursor-pointer">⚙️ Administrar Categorías</button>
+        </div>
+
+        <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg mb-4">
             <p class="text-slate-300 font-bold text-sm mb-2">Selector de Moneda</p>
             <p class="text-xs text-slate-500 mb-4">Elige la divisa con la que operan tus finanzas:</p>
             <select id="selector-moneda" class="w-full bg-slate-950 text-white font-semibold text-sm rounded-xl px-4 py-3 border border-slate-800 outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer">
@@ -953,13 +972,83 @@
             actualizarUIIngreso(session);
         });
 
-        function verificarSeguridadBiometrica() {
+        function verificarSeguridadBiometrico() {
             const biomHabilitado = localStorage.getItem('biometrico_activo');
             if (biomHabilitado === 'true') {
-                document.getElementById('modal-biometrico').classList.remove('hidden');
-                document.getElementById('modal-biometrico').classList.add('flex');
+                const modalBiometrico = document.getElementById('modal-biometrico');
+                if (modalBiometrico) {
+                    modalBiometrico.classList.remove('hidden');
+                    modalBiometrico.classList.add('flex');
+                }
             }
         }
+
+        function abrirModalGestionarCategorias() {
+            const contenedor = document.getElementById('lista-categorias-admin');
+            contenedor.innerHTML = '';
+            let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+            
+            if (categorias.length === 0) {
+                contenedor.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">No hay categorías cargadas.</p>';
+            } else {
+                categorias.forEach(cat => {
+                    const esEditable = Boolean(cat.user_id) && !['MERCADO', 'ARRIENDO', 'SERVICIOS'].includes(cat.nombre.toUpperCase());
+                    const item = document.createElement('div');
+                    item.className = "flex items-center justify-between p-3 bg-slate-950 rounded-2xl border border-slate-800";
+                    item.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <span class="text-xl">${escapeHTML(cat.icono)}</span>
+                            <div>
+                                <span class="text-xs font-bold text-white block">${escapeHTML(cat.nombre)}</span>
+                                <span class="text-[10px] text-slate-400 uppercase">${cat.tipo} ${cat.es_fijo ? '• Fijo' : ''}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            ${esEditable ? `
+                                <button type="button" class="btn-edit-admin px-2.5 py-1.5 rounded-xl bg-slate-800 text-emerald-400 text-xs font-bold active:scale-95 cursor-pointer">✏️</button>
+                                <button type="button" class="btn-del-admin px-2.5 py-1.5 rounded-xl bg-red-500/10 text-red-400 text-xs font-bold active:scale-95 cursor-pointer">🗑️</button>
+                            ` : '<span class="text-[10px] text-slate-600 px-2">Sistema</span>'}
+                        </div>
+                    `;
+
+                    if (esEditable) {
+                        item.querySelector('.btn-edit-admin').addEventListener('click', () => {
+                            document.getElementById('modal-gestionar-categorias').classList.add('hidden');
+                            document.getElementById('modal-gestionar-categorias').classList.remove('flex');
+                            abrirModalEditarCategoria(cat);
+                        });
+                        item.querySelector('.btn-del-admin').addEventListener('click', async () => {
+                            if (!confirm(`¿Deseas eliminar la categoría "${cat.nombre}"?`)) return;
+                            const { error } = await db.from('categorias').delete().eq('id', cat.id);
+                            if (!error) {
+                                let cats = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+                                cats = cats.filter(c => c.id !== cat.id);
+                                localStorage.setItem('categorias_cache', JSON.stringify(cats));
+                                mostrarToast(`Categoría "${cat.nombre}" eliminada`);
+                                abrirModalGestionarCategorias();
+                            } else {
+                                mostrarToast('No se puede eliminar: tiene transacciones asociadas.', 'error');
+                            }
+                        });
+                    }
+                    contenedor.appendChild(item);
+                });
+            }
+
+            document.getElementById('modal-gestionar-categorias').classList.remove('hidden');
+            document.getElementById('modal-gestionar-categorias').classList.add('flex');
+        }
+
+        document.getElementById('btn-abrir-gestionar-cat').addEventListener('click', abrirModalGestionarCategorias);
+        document.getElementById('btn-cerrar-gestionar-cat').addEventListener('click', () => {
+            document.getElementById('modal-gestionar-categorias').classList.add('hidden');
+            document.getElementById('modal-gestionar-categorias').classList.remove('flex');
+        });
+        document.getElementById('btn-nueva-desde-admin').addEventListener('click', () => {
+            document.getElementById('modal-gestionar-categorias').classList.add('hidden');
+            document.getElementById('modal-gestionar-categorias').classList.remove('flex');
+            abrirModalNuevaCategoria();
+        });
 
         document.getElementById('btn-desbloquear').addEventListener('click', async () => {
             document.getElementById('modal-biometrico').classList.add('hidden');
@@ -1401,46 +1490,6 @@
                 });
                 wrapper.appendChild(btn);
 
-                if (cat.user_id && !['MERCADO', 'ARRIENDO', 'SERVICIOS'].includes(cat.nombre.toUpperCase())) {
-                    const btnActions = document.createElement('div');
-                    btnActions.className = "absolute -top-1.5 -right-1.5 flex gap-1 z-10";
-
-                    const btnEditCat = document.createElement('button');
-                    btnEditCat.type = "button";
-                    btnEditCat.className = "w-6 h-6 rounded-full bg-slate-900 text-slate-400 hover:text-emerald-400 border border-slate-700 flex items-center justify-center text-[10px] shadow-md active:scale-90 transition-colors cursor-pointer";
-                    btnEditCat.innerHTML = "✏️";
-                    btnEditCat.title = "Editar categoría";
-                    btnEditCat.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        abrirModalEditarCategoria(cat);
-                    });
-                    btnActions.appendChild(btnEditCat);
-
-                    const btnDeleteCat = document.createElement('button');
-                    btnDeleteCat.type = "button";
-                    btnDeleteCat.className = "w-6 h-6 rounded-full bg-slate-900 text-slate-400 hover:text-red-400 border border-slate-700 flex items-center justify-center text-[10px] shadow-md active:scale-90 transition-colors cursor-pointer";
-                    btnDeleteCat.innerHTML = "✕";
-                    btnDeleteCat.title = "Eliminar categoría";
-                    btnDeleteCat.addEventListener('click', async (e) => {
-                        e.stopPropagation();
-                        if (!confirm(`¿Deseas eliminar la categoría "${cat.nombre}"?`)) return;
-                        
-                        const { error } = await db.from('categorias').delete().eq('id', cat.id);
-                        if (!error) {
-                            let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
-                            categorias = categorias.filter(c => c.id !== cat.id);
-                            localStorage.setItem('categorias_cache', JSON.stringify(categorias));
-                            mostrarToast(`Categoría "${cat.nombre}" eliminada`);
-                            renderizarCategoriasFlujo();
-                        } else {
-                            mostrarToast('No se puede eliminar: tiene transacciones asociadas.', 'error');
-                        }
-                    });
-                    btnActions.appendChild(btnDeleteCat);
-
-                    wrapper.appendChild(btnActions);
-                }
-
                 contenedor.appendChild(wrapper);
             });
 
@@ -1670,7 +1719,7 @@
             listaEmojisPopulares.forEach((emoji) => {
                 const b = document.createElement('button');
                 b.type = 'button';
-                b.className = `p-2 rounded-xl text-xl flex items-center justify-center transition-all ${emoji === iconoEditarCatSeleccionado ? 'bg-emerald-500/20 border border-emerald-500' : 'bg-slate-900 border border-slate-800'}`;
+                b.className = `p-2 rounded-xl text-xl flex items-center justify-center transition-all ${emoji === iconoEditarCatSeleccionado ? 'bg-emerald-500/20 border border-emerald-500' : 'bg-slate-900 border border-slate-800'} cursor-pointer`;
                 b.textContent = emoji;
                 b.addEventListener('click', () => {
                     gridEmojis.querySelectorAll('button').forEach(btn => btn.className = 'p-2 rounded-xl text-xl flex items-center justify-center bg-slate-900 border border-slate-800');
