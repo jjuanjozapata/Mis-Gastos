@@ -333,6 +333,26 @@
         </div>
     </div>
 
+    <!-- Modal para Editar Presupuesto de Categoría -->
+    <div id="modal-editar-presupuesto" class="hidden fixed inset-0 z-[135] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-5">
+        <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl">
+            <h3 class="text-xl font-bold text-white mb-1">Ajustar Presupuesto</h3>
+            <p id="label-cat-editar-presupuesto" class="text-emerald-400 text-xs font-bold mb-4">Categoría</p>
+
+            <div class="space-y-4 mb-6">
+                <div class="bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
+                    <label for="input-nuevo-presupuesto-cat" class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Nuevo Tope / Presupuesto</label>
+                    <input type="text" inputmode="numeric" id="input-nuevo-presupuesto-cat" class="w-full bg-transparent text-xl font-bold text-white focus:outline-none" placeholder="0" autocomplete="off">
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button type="button" id="btn-cancelar-edit-presupuesto" class="flex-1 py-3.5 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors text-sm">Cancelar</button>
+                <button type="button" id="btn-guardar-edit-presupuesto" class="flex-1 py-3.5 rounded-xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-colors text-sm">Actualizar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Pantalla 1: Captura Rápida -->
     <div id="pantalla-captura" class="flex-1 flex flex-col min-h-0 relative">
         <header class="shrink-0 p-5 flex justify-between items-center">
@@ -1300,6 +1320,98 @@
             limpiar();
             cargarPlanes();
             cargarEstadisticas();
+        }
+
+        let categoriaEdicionId = null;
+
+        function abrirModalEditarPresupuesto(catId, catNombre, presupuestoActual) {
+            categoriaEdicionId = catId;
+            document.getElementById('label-cat-editar-presupuesto').textContent = `Categoría: ${catNombre}`;
+            let locale = monedaActual === 'USD' ? 'en-US' : (monedaActual === 'PEN' ? 'es-PE' : 'es-CO');
+            document.getElementById('input-nuevo-presupuesto-cat').value = new Intl.NumberFormat(locale).format(parseInt(presupuestoActual || 0));
+            
+            const modal = document.getElementById('modal-editar-presupuesto');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.getElementById('input-nuevo-presupuesto-cat').focus();
+        }
+
+        function cerrarModalEditarPresupuesto() {
+            document.getElementById('modal-editar-presupuesto').classList.add('hidden');
+            document.getElementById('modal-editar-presupuesto').classList.remove('flex');
+            categoriaEdicionId = null;
+        }
+
+        const btnCancelEditPres = document.getElementById('btn-cancelar-edit-presupuesto');
+        if (btnCancelEditPres) btnCancelEditPres.addEventListener('click', cerrarModalEditarPresupuesto);
+
+        const inputEditPres = document.getElementById('input-nuevo-presupuesto-cat');
+        if (inputEditPres) {
+            inputEditPres.addEventListener('input', (e) => {
+                let valor = e.target.value.replace(/\D/g, '');
+                if (!valor) { e.target.value = ''; return; }
+                let locale = monedaActual === 'USD' ? 'en-US' : (monedaActual === 'PEN' ? 'es-PE' : 'es-CO');
+                e.target.value = new Intl.NumberFormat(locale).format(parseInt(valor));
+            });
+        }
+
+        const btnGuardarEditPres = document.getElementById('btn-guardar-edit-presupuesto');
+        if (btnGuardarEditPres) {
+            btnGuardarEditPres.addEventListener('click', async () => {
+                if (!categoriaEdicionId) return;
+                const rawVal = document.getElementById('input-nuevo-presupuesto-cat').value.replace(/\D/g, '');
+                const nuevoMonto = parseInt(rawVal);
+                if (isNaN(nuevoMonto) || nuevoMonto < 0) {
+                    mostrarToast('Ingresa un monto válido', 'error');
+                    return;
+                }
+
+                const { data: { session } } = await db.auth.getSession();
+                if (!session) {
+                    mostrarToast('Inicia sesión para guardar cambios', 'error');
+                    return;
+                }
+
+                // Verificar si ya existe un plan tipo 'limite' para esta categoría
+                const { data: planExistente } = await db.from('planes')
+                    .select('id')
+                    .eq('tipo', 'limite')
+                    .eq('categoria_id', categoriaEdicionId)
+                    .eq('user_id', session.user.id)
+                    .maybeSingle();
+
+                if (planExistente) {
+                    // Actualizar el plan existente
+                    const { error } = await db.from('planes').update({ monto: nuevoMonto }).eq('id', planExistente.id);
+                    if (error) {
+                        mostrarToast('Error al actualizar presupuesto: ' + error.message, 'error');
+                        return;
+                    }
+                } else {
+                    // Crear un nuevo plan tipo 'limite' automático para esta categoría
+                    let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+                    const catObj = categorias.find(c => c.id === categoriaEdicionId);
+                    const tituloPlan = catObj ? `Presupuesto ${catObj.nombre}` : 'Presupuesto Categoría';
+
+                    const { error } = await db.from('planes').insert([{
+                        tipo: 'limite',
+                        monto: nuevoMonto,
+                        titulo: tituloPlan,
+                        categoria_id: categoriaEdicionId,
+                        periodo: 'mensual',
+                        auto_renovar: true,
+                        user_id: session.user.id
+                    }]);
+                    if (error) {
+                        mostrarToast('Error al crear límite: ' + error.message, 'error');
+                        return;
+                    }
+                }
+
+                cerrarModalEditarPresupuesto();
+                mostrarToast('Presupuesto de categoría actualizado');
+                cargarEstadisticas();
+            });
         }
 
         async function aplicarAbonoDeuda(plan) {
@@ -2301,6 +2413,7 @@
                             </div>
                             <div class="flex items-center gap-2">
                                 <span class="text-slate-400">Real: <strong class="text-white tabular-nums">${formatearMoneda(item.gastado)}</strong></span>
+                                <button type="button" class="btn-editar-presupuesto w-6 h-6 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xs transition-colors border border-slate-800" data-catid="${item.id}" data-catnombre="${escapeHTML(item.nombre)}" data-presupuesto="${presupuestoBase}" title="Cambiar presupuesto">⚙️</button>
                                 <span class="text-[9px] font-bold px-2 py-0.5 rounded-full border ${alertaColor}">${textoEstado}</span>
                             </div>
                         </div>
@@ -2313,6 +2426,16 @@
                         </div>
                     `;
                     matrizContainer.appendChild(row);
+                });
+
+                // Vincular eventos de clic a los botones de engranaje ⚙️
+                matrizContainer.querySelectorAll('.btn-editar-presupuesto').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const catId = e.currentTarget.getAttribute('data-catid');
+                        const catNombre = e.currentTarget.getAttribute('data-catnombre');
+                        const presActual = e.currentTarget.getAttribute('data-presupuesto');
+                        abrirModalEditarPresupuesto(catId, catNombre, presActual);
+                    });
                 });
             });
 
