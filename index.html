@@ -107,8 +107,14 @@
     <div id="modal-notas" class="hidden fixed inset-0 z-[120] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-6">
         <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl">
             <h3 class="text-xl font-bold text-white mb-2">Detalle del Movimiento</h3>
-            <p class="text-slate-400 text-sm mb-5">Escribe brevemente el concepto o descripción.</p>
-            <input type="text" id="input-notas" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 mb-6 text-lg" placeholder="Ej. Compras, Netflix, Salario..." autocomplete="off">
+            <p class="text-slate-400 text-sm mb-4">Escribe brevemente el concepto o descripción.</p>
+            <input type="text" id="input-notas" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 mb-3 text-lg" placeholder="Ej. Compras, Netflix, Salario..." autocomplete="off">
+            <div class="flex gap-1.5 mb-5 overflow-x-auto no-scrollbar" id="sugerencias-notas-container">
+                <button type="button" class="sug-nota-chip px-3 py-1 bg-slate-950 border border-slate-800 rounded-full text-xs text-slate-300 shrink-0 cursor-pointer">Almuerzo</button>
+                <button type="button" class="sug-nota-chip px-3 py-1 bg-slate-950 border border-slate-800 rounded-full text-xs text-slate-300 shrink-0 cursor-pointer">Transporte</button>
+                <button type="button" class="sug-nota-chip px-3 py-1 bg-slate-950 border border-slate-800 rounded-full text-xs text-slate-300 shrink-0 cursor-pointer">Café</button>
+                <button type="button" class="sug-nota-chip px-3 py-1 bg-slate-950 border border-slate-800 rounded-full text-xs text-slate-300 shrink-0 cursor-pointer">Supermercado</button>
+            </div>
             <div class="flex gap-3">
                 <button id="btn-cancelar-notas" class="flex-1 py-4 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors cursor-pointer">Cancelar</button>
                 <button id="btn-guardar-notas" class="flex-1 py-4 rounded-xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-colors cursor-pointer">Guardar</button>
@@ -685,13 +691,19 @@
         </div>
 
         <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg mb-4">
-            <p class="text-slate-300 font-bold text-sm mb-2">Selector de Moneda</p>
-            <p class="text-xs text-slate-500 mb-4">Elige la divisa con la que operan tus finanzas:</p>
-            <select id="selector-moneda" class="w-full bg-slate-950 text-white font-semibold text-sm rounded-xl px-4 py-3 border border-slate-800 outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer">
+            <p class="text-slate-300 font-bold text-sm mb-2">Selector de Moneda y Tema</p>
+            <p class="text-xs text-slate-500 mb-3">Elige la divisa con la que operan tus finanzas:</p>
+            <select id="selector-moneda" class="w-full bg-slate-950 text-white font-semibold text-sm rounded-xl px-4 py-3 border border-slate-800 outline-none focus:ring-1 focus:ring-emerald-500 mb-4 cursor-pointer">
                 <option value="COP">Pesos Colombianos (COP - $)</option>
                 <option value="USD">Dólares Estadounidenses (USD - $)</option>
                 <option value="PEN">Soles Peruanos (PEN - S/.)</option>
             </select>
+            <p class="text-xs text-slate-500 mb-2">Color de acento visual de la app:</p>
+            <div class="grid grid-cols-3 gap-2">
+                <button type="button" class="btn-tema py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs cursor-pointer">Esmeralda</button>
+                <button type="button" class="btn-tema py-2.5 rounded-xl bg-blue-500 text-slate-950 font-bold text-xs cursor-pointer" data-tema="blue">Azul Océano</button>
+                <button type="button" class="btn-tema py-2.5 rounded-xl bg-purple-500 text-slate-950 font-bold text-xs cursor-pointer" data-tema="purple">Púrpura</button>
+            </div>
         </div>
 
         <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg mb-4">
@@ -3147,6 +3159,20 @@
                 contenedor.appendChild(b);
             });
         }
+
+        document.querySelectorAll('.sug-nota-chip').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.getElementById('input-notas').value = e.target.textContent;
+            });
+        });
+
+        document.querySelectorAll('.btn-tema').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tema = e.target.getAttribute('data-tema') || 'emerald';
+                localStorage.setItem('tema_color_app', tema);
+                mostrarToast('Tema de color guardado');
+            });
+        });
 
         async function sincronizarCategoriasCache() {
             if (navigator.onLine) {
