@@ -39,9 +39,14 @@
 </head>
 <body class="bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden relative">
     
-    <div id="toast-container" class="fixed top-6 left-1/2 -translate-x-1/2 z-[150] flex flex-col gap-2 pointer-events-none w-11/12 max-w-sm"></div>
+    <!-- Banner de Estado de Red -->
+    <div id="network-banner" class="hidden fixed top-0 left-0 right-0 z-[200] bg-red-500 text-slate-950 text-center text-xs font-bold py-1.5 transition-all">
+        📡 Sin conexión a internet. Los datos se guardarán de forma local.
+    </div>
+
+    <div id="toast-container" class="fixed top-12 left-1/2 -translate-x-1/2 z-[150] flex flex-col gap-2 pointer-events-none w-11/12 max-w-sm"></div>
     
-<!-- Pantalla de Bienvenida / Onboarding -->
+    <!-- Pantalla de Bienvenida / Onboarding -->
     <div id="modal-bienvenida" class="hidden fixed inset-0 z-[300] bg-slate-950 flex-col justify-center items-center p-6 text-center">
         <div class="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-400 border border-emerald-500/20 text-5xl mb-6 shadow-[0_0_30px_rgba(16,185,129,0.2)]">📊</div>
         <h2 class="text-3xl font-extrabold text-white mb-3">Mis Gastos</h2>
@@ -400,11 +405,10 @@
         </div>
     </div>
 
-    <!-- Pantalla 4: Ajustes (Con Formulario Oficial y Sin Errores de Consola) -->
+    <!-- Pantalla 4: Ajustes -->
     <div id="pantalla-ajustes" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-950 min-h-0 p-5 pb-24">
         <h2 class="text-2xl font-bold text-white mb-6">Ajustes</h2>
         
-        <!-- Sección de Autenticación / Cuenta envuelta en <form> -->
         <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg mb-4">
             <h3 class="text-slate-300 font-bold text-sm mb-2">Cuenta de Usuario</h3>
             <p id="info-sesion-texto" class="text-xs text-slate-500 mb-4">Inicia sesión o crea una cuenta para sincronizar tus datos de forma privada.</p>
@@ -524,6 +528,35 @@
             mostrarToast('Moneda actualizada con éxito');
         });
 
+        // Estado de Red Offline / Online
+        function actualizarEstadoRed() {
+            const banner = document.getElementById('network-banner');
+            if (!navigator.onLine) {
+                banner.classList.remove('hidden');
+            } else {
+                banner.classList.add('hidden');
+                sincronizarColaOffline();
+            }
+        }
+        window.addEventListener('online', actualizarEstadoRed);
+        window.addEventListener('offline', actualizarEstadoRed);
+        actualizarEstadoRed();
+
+        async function sincronizarColaOffline() {
+            let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+            if (queue.length === 0) return;
+            const { data: { session } } = await db.auth.getSession();
+            if (!session) return;
+
+            for (let item of queue) {
+                item.user_id = session.user.id;
+                await db.from('transacciones').insert([item]);
+            }
+            localStorage.removeItem('offline_queue');
+            mostrarToast('Sincronizados registros pendientes offline');
+            cargarEstadisticas();
+        }
+
         // GESTIÓN DE AUTENTICACIÓN SUPABASE
         async function verificarEstadoSesion() {
             const { data: { session } } = await db.auth.getSession();
@@ -566,7 +599,6 @@
                 document.getElementById('btn-registrar').textContent = "Crear Cuenta";
                 document.getElementById('btn-iniciar-sesion').classList.remove('hidden');
                 
-                // Forzar pantalla de bienvenida si no hay sesión
                 if (modalBienvenida) {
                     modalBienvenida.classList.remove('hidden');
                     modalBienvenida.classList.add('flex');
@@ -628,7 +660,6 @@
                 return;
             }
 
-            // Bloqueo de dominio exclusivo
             if (!email.endsWith('@misgastos.com')) {
                 mostrarToast('Solo se permiten cuentas corporativas @misgastos.com', 'error');
                 return;
@@ -636,7 +667,6 @@
             
             const { data: { session } } = await db.auth.getSession();
             
-            // Si el usuario es anónimo, lo convertimos a permanente
             if (session && session.user && session.user.is_anonymous) {
                 const { data, error } = await db.auth.updateUser({ email, password });
                 if (error) {
@@ -644,10 +674,9 @@
                 } else {
                     mostrarToast('¡Progreso guardado! Tu cuenta oficial está lista.');
                     document.getElementById('auth-password').value = '';
-                    verificarEstadoSesion(); // Refrescar la UI
+                    verificarEstadoSesion();
                 }
             } else {
-                // Registro normal (usuario nuevo desde cero)
                 const { data, error } = await db.auth.signUp({ email, password });
                 if (error) {
                     mostrarToast('Error al registrarse: ' + error.message, 'error');
@@ -657,6 +686,7 @@
                 }
             }
         });
+
         document.getElementById('btn-cerrar-sesion').addEventListener('click', async () => {
             const { error } = await db.auth.signOut();
             if (!error) {
@@ -673,7 +703,6 @@
             actualizarUIIngreso(session);
         });
 
-        // 1. SEGURIDAD BIOMÉTRICA LOCAL
         function verificarSeguridadBiometrica() {
             const biomHabilitado = localStorage.getItem('biometrico_activo');
             if (biomHabilitado === 'true') {
@@ -688,7 +717,6 @@
             mostrarToast('Acceso autorizado');
         });
 
-        // 2. CIERRE DE MES INTELIGENTE (ROLLOVER)
         function comprobarRolloverMes() {
             const mesGuardado = localStorage.getItem('mes_actual_registro');
             const mesActual = new Date().getMonth().toString();
@@ -701,7 +729,10 @@
         }
 
         document.getElementById('btn-rollover-ahorro').addEventListener('click', async () => {
-            await db.from('planes').insert([{ tipo: 'meta', monto: Math.abs(ultimoBalanceCalculado), titulo: 'Rollover Fondo de Emergencia' }]);
+            const { data: { session } } = await db.auth.getSession();
+            if (session) {
+                await db.from('planes').insert([{ tipo: 'meta', monto: Math.abs(ultimoBalanceCalculado), titulo: 'Rollover Fondo de Emergencia', user_id: session.user.id }]);
+            }
             document.getElementById('modal-rollover').classList.add('hidden');
             document.getElementById('modal-rollover').classList.remove('flex');
             mostrarToast('Saldo trasladado a Ahorro');
@@ -713,10 +744,14 @@
             mostrarToast('Saldo mantenido como colchón');
         });
 
-        // 3. RESPALDO LOCAL JSON
         document.getElementById('btn-exportar-json').addEventListener('click', async () => {
-            const { data: trans } = await db.from('transacciones').select('*');
-            const { data: plans } = await db.from('planes').select('*');
+            const { data: { session } } = await db.auth.getSession();
+            if (!session) {
+                mostrarToast('Inicia sesión para exportar tus datos', 'error');
+                return;
+            }
+            const { data: trans } = await db.from('transacciones').select('*').eq('user_id', session.user.id);
+            const { data: plans } = await db.from('planes').select('*').eq('user_id', session.user.id);
             const backup = { transacciones: trans || [], planes: plans || [], fechaExportacion: new Date().toISOString() };
             
             const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -727,6 +762,15 @@
             a.click();
             URL.revokeObjectURL(url);
             mostrarToast('Respaldo descargado con éxito');
+        });
+
+        document.getElementById('btn-copiar-atajo').addEventListener('click', () => {
+            navigator.clipboard.writeText(window.location.href);
+            document.getElementById('btn-copiar-texto').textContent = '¡Enlace copiado al portapapeles!';
+            setTimeout(() => {
+                document.getElementById('btn-copiar-texto').textContent = 'Copiar Enlace para iOS';
+            }, 2500);
+            mostrarToast('Enlace listo para tu atajo');
         });
 
         document.getElementById('btn-privacidad').addEventListener('click', () => {
@@ -1018,108 +1062,105 @@
             e.target.value = new Intl.NumberFormat(locale).format(parseInt(valor));
         });
 
-        // Al guardar un plan, aseguramos incluir el user_id de la sesión activa
-document.getElementById('btn-guardar-plan').addEventListener('click', async () => {
-    const rawMonto = document.getElementById('input-monto-plan').value.replace(/\D/g, '');
-    const montoVal = parseInt(rawMonto);
-    const tituloVal = document.getElementById('input-nombre-plan').value.trim();
-    
-    if(!montoVal || montoVal <= 0 || !tituloVal) {
-        mostrarToast('Datos inválidos en el plan', 'error');
-        return;
-    }
-
-    // Obtenemos el usuario autenticado actual
-    const { data: { session } } = await db.auth.getSession();
-    if (!session) {
-        mostrarToast('Debes iniciar sesión para guardar planes', 'error');
-        return;
-    }
-
-    const payload = { 
-        tipo: tipoPlanActivo, 
-        monto: montoVal, 
-        titulo: escapeHTML(tituloVal),
-        user_id: session.user.id // <-- Asociamos directamente al usuario activo
-    };
-
-    const { error } = await db.from('planes').insert([payload]);
-    
-    if(!error) {
-        cerrarFormularioPlan();
-        cargarPlanes();
-        mostrarToast('Plan guardado con éxito');
-    } else {
-        mostrarToast('Error al guardar plan: ' + error.message, 'error');
-    }
-});
-
-// Al guardar una transacción, aseguramos incluir el user_id de la sesión activa
-async function guardarTransaccion(categoriaId, notaGasto) {
-    const valorGasto = parseInt(monto);
-    if (valorGasto === 0) return;
-
-    const { data: { session } } = await db.auth.getSession();
-    if (!session) {
-        mostrarToast('Debes iniciar sesión para registrar gastos', 'error');
-        return;
-    }
-
-    let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
-    const catObj = categorias.find(c => c.id === categoriaId);
-    
-    if (catObj && catObj.tipo === 'ingreso') {
-        await generarRecomendacionSueldo(valorGasto);
-    }
-
-    if (catObj && catObj.tipo === 'gasto' && notaGasto) {
-        const { data: planes } = await db.from('planes').select('*').eq('tipo', 'deuda').eq('user_id', session.user.id);
-        if (planes) {
-            const deudaEncontrada = planes.find(p => p.titulo.toLowerCase().includes(notaGasto.toLowerCase()));
-            if (deudaEncontrada) {
-                const nuevoMontoDeuda = Math.max(0, deudaEncontrada.monto - valorGasto);
-                await db.from('planes').update({ monto: nuevoMontoDeuda }).eq('id', deudaEncontrada.id);
-                mostrarToast(`💳 Abono aplicado a deuda "${deudaEncontrada.titulo}"`);
+        document.getElementById('btn-guardar-plan').addEventListener('click', async () => {
+            const rawMonto = document.getElementById('input-monto-plan').value.replace(/\D/g, '');
+            const montoVal = parseInt(rawMonto);
+            const tituloVal = document.getElementById('input-nombre-plan').value.trim();
+            
+            if(!montoVal || montoVal <= 0 || !tituloVal) {
+                mostrarToast('Datos inválidos en el plan', 'error');
+                return;
             }
-        }
-    }
 
-    const payload = { 
-        monto: valorGasto, 
-        categoria_id: categoriaId, 
-        cuenta: cuentaActual, 
-        fecha: new Date().toISOString(),
-        notas: notaGasto ? escapeHTML(notaGasto) : null,
-        user_id: session.user.id
-    };
-    
-    const display = document.getElementById('flujo-monto-display');
+            const { data: { session } } = await db.auth.getSession();
+            if (!session) {
+                mostrarToast('Debes iniciar sesión para guardar planes', 'error');
+                return;
+            }
 
-    if (navigator.onLine) {
-        const { error } = await db.from('transacciones').insert([payload]);
-        if (error) {
-            display.style.color = '#ef4444'; 
-            setTimeout(() => display.style.color = 'white', 1000);
-            mostrarToast('Error al sincronizar con Supabase: ' + error.message, 'error');
-            return;
+            const payload = { 
+                tipo: tipoPlanActivo, 
+                monto: montoVal, 
+                titulo: escapeHTML(tituloVal),
+                user_id: session.user.id 
+            };
+
+            const { error } = await db.from('planes').insert([payload]);
+            
+            if(!error) {
+                cerrarFormularioPlan();
+                cargarPlanes();
+                mostrarToast('Plan guardado con éxito');
+            } else {
+                mostrarToast('Error al guardar plan: ' + error.message, 'error');
+            }
+        });
+
+        async function guardarTransaccion(categoriaId, notaGasto) {
+            const valorGasto = parseInt(monto);
+            if (valorGasto === 0) return;
+
+            const { data: { session } } = await db.auth.getSession();
+            if (!session) {
+                mostrarToast('Debes iniciar sesión para registrar gastos', 'error');
+                return;
+            }
+
+            let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+            const catObj = categorias.find(c => c.id === categoriaId);
+            
+            if (catObj && catObj.tipo === 'ingreso') {
+                await generarRecomendacionSueldo(valorGasto);
+            }
+
+            if (catObj && catObj.tipo === 'gasto' && notaGasto) {
+                const { data: planes } = await db.from('planes').select('*').eq('tipo', 'deuda').eq('user_id', session.user.id);
+                if (planes) {
+                    const deudaEncontrada = planes.find(p => p.titulo.toLowerCase().includes(notaGasto.toLowerCase()));
+                    if (deudaEncontrada) {
+                        const nuevoMontoDeuda = Math.max(0, deudaEncontrada.monto - valorGasto);
+                        await db.from('planes').update({ monto: nuevoMontoDeuda }).eq('id', deudaEncontrada.id);
+                        mostrarToast(`💳 Abono aplicado a deuda "${deudaEncontrada.titulo}"`);
+                    }
+                }
+            }
+
+            const payload = { 
+                monto: valorGasto, 
+                categoria_id: categoriaId, 
+                cuenta: cuentaActual, 
+                fecha: new Date().toISOString(),
+                notas: notaGasto ? escapeHTML(notaGasto) : null,
+                user_id: session.user.id
+            };
+            
+            const display = document.getElementById('flujo-monto-display');
+
+            if (navigator.onLine) {
+                const { error } = await db.from('transacciones').insert([payload]);
+                if (error) {
+                    display.style.color = '#ef4444'; 
+                    setTimeout(() => display.style.color = 'white', 1000);
+                    mostrarToast('Error al sincronizar con Supabase: ' + error.message, 'error');
+                    return;
+                }
+            } else {
+                let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+                queue.push(payload);
+                localStorage.setItem('offline_queue', JSON.stringify(queue));
+                mostrarToast('Guardado offline. Se sincronizará al conectar.', 'error');
+            }
+            
+            if (navigator.vibrate) navigator.vibrate(50);
+            
+            display.style.color = '#34d399'; 
+            setTimeout(() => {
+                display.style.color = 'white';
+                cerrarFlujo();
+                limpiar();
+                mostrarToast('Transacción registrada con éxito');
+            }, 300);
         }
-    } else {
-        let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
-        queue.push(payload);
-        localStorage.setItem('offline_queue', JSON.stringify(queue));
-        mostrarToast('Guardado offline. Se sincronizará al conectar.', 'error');
-    }
-    
-    if (navigator.vibrate) navigator.vibrate(50);
-    
-    display.style.color = '#34d399'; 
-    setTimeout(() => {
-        display.style.color = 'white';
-        cerrarFlujo();
-        limpiar();
-        mostrarToast('Transacción registrada con éxito');
-    }, 300);
-}
 
         async function cargarPlanes() {
             const { data: { session } } = await db.auth.getSession();
@@ -1246,14 +1287,9 @@ async function guardarTransaccion(categoriaId, notaGasto) {
                 return;
             }
 
-            const necesidades = baseDisponible * 0.50;
-            const deseos = baseDisponible * 0.30;
             const ahorroDeuda = baseDisponible * 0.20;
-
             mostrarToast(`🎯 ¡Sueldo procesado! Sugerido Ahorro: ${formatearMoneda(ahorroDeuda)}`);
         }
-
-        
 
         function limpiar() { 
             monto = '0'; 
@@ -1550,7 +1586,6 @@ async function guardarTransaccion(categoriaId, notaGasto) {
             }
         }
 
-        // Inicialización general
         sincronizarCategoriasCache();
         verificarEstadoSesion();
         verificarSeguridadBiometrica();
