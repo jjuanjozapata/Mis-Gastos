@@ -3236,7 +3236,6 @@
 
         async function sincronizarCategoriasCache() {
             let categoriasLocales = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
-            // Si no hay nada en caché local y hay internet, cargamos de la nube por primera vez
             if (categoriasLocales.length === 0 && navigator.onLine) {
                 const { data } = await db.from('categorias').select('*').order('nombre');
                 if (data && data.length > 0) {
@@ -3245,7 +3244,10 @@
             }
         }
 
-        sincronizarCategoriasCache();
+        // Solo inicializamos el caché local si está totalmente vacío al cargar la página por primera vez
+        if (!localStorage.getItem('categorias_cache') && navigator.onLine) {
+            sincronizarCategoriasCache();
+        }
         verificarEstadoSesion();
         verificarSeguridadBiometrico();
         comprobarRolloverMes();
