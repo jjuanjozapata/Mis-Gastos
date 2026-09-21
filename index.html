@@ -376,57 +376,57 @@
         </div>
     </div>
 
-    <!-- Modifica o reemplaza la sección de Ajustes en tu index.html -->
-<div id="pantalla-ajustes" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-950 min-h-0 p-5 pb-24">
-    <h2 class="text-2xl font-bold text-white mb-6">Ajustes</h2>
-    
-    <!-- Sección de Cuenta / Autenticación -->
-    <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg mb-4">
-        <p class="text-slate-300 font-bold text-sm mb-2">Cuenta de Usuario</p>
-        <p id="info-sesion-texto" class="text-xs text-slate-500 mb-4">Inicia sesión o crea una cuenta para sincronizar tus datos en la nube de forma privada.</p>
+    <!-- Pantalla 4: Ajustes (Con Autenticación Multiusuario Corregida) -->
+    <div id="pantalla-ajustes" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-950 min-h-0 p-5 pb-24">
+        <h2 class="text-2xl font-bold text-white mb-6">Ajustes</h2>
         
-        <div id-="contenedor-no-autenticado" class="space-y-3">
-            <input type="email" id="auth-email" class="w-full bg-slate-950 text-white text-sm rounded-xl px-4 py-3 border border-slate-800 outline-none focus:border-emerald-500" placeholder="correo@tuamigo.com" autocomplete="email">
-            <input type="password" id="auth-password" class="w-full bg-slate-950 text-white text-sm rounded-xl px-4 py-3 border border-slate-800 outline-none focus:border-emerald-500" placeholder="Contraseña segura" autocomplete="current-password">
-            <div class="flex gap-2 pt-1">
-                <button id="btn-iniciar-sesion" class="flex-1 py-3 bg-emerald-500 text-slate-950 font-bold rounded-xl text-xs active:scale-95 transition-all">Iniciar Sesión</button>
-                <button id="btn-registrar" class="flex-1 py-3 bg-slate-800 text-white font-bold rounded-xl text-xs active:scale-95 transition-all border border-slate-700">Crear Cuenta</button>
+        <!-- Sección de Autenticación / Cuenta -->
+        <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg mb-4">
+            <p class="text-slate-300 font-bold text-sm mb-2">Cuenta de Usuario</p>
+            <p id="info-sesion-texto" class="text-xs text-slate-500 mb-4">Inicia sesión o crea una cuenta para sincronizar tus datos de forma privada.</p>
+            
+            <div id="contenedor-no-autenticado" class="space-y-3">
+                <input type="email" id="auth-email" class="w-full bg-slate-950 text-white text-sm rounded-xl px-4 py-3 border border-slate-800 outline-none focus:border-emerald-500" placeholder="correo@amigo.com" autocomplete="email">
+                <input type="password" id="auth-password" class="w-full bg-slate-950 text-white text-sm rounded-xl px-4 py-3 border border-slate-800 outline-none focus:border-emerald-500" placeholder="Contraseña segura" autocomplete="current-password">
+                <div class="flex gap-2 pt-1">
+                    <button id="btn-iniciar-sesion" class="flex-1 py-3 bg-emerald-500 text-slate-950 font-bold rounded-xl text-xs active:scale-95 transition-all">Iniciar Sesión</button>
+                    <button id="btn-registrar" class="flex-1 py-3 bg-slate-800 text-white font-bold rounded-xl text-xs active:scale-95 transition-all border border-slate-700">Crear Cuenta</button>
+                </div>
+            </div>
+
+            <div id="contenedor-autenticado" class="hidden space-y-3">
+                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
+                    <span id="user-email-display" class="text-xs text-emerald-400 font-bold truncate"></span>
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                </div>
+                <button id="btn-cerrar-sesion" class="w-full py-3 bg-red-500/10 text-red-400 border border-red-500/20 font-bold rounded-xl text-xs active:scale-95 transition-all">Cerrar Sesión</button>
             </div>
         </div>
 
-        <div id="contenedor-autenticado" class="hidden space-y-3">
-            <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
-                <span id="user-email-display" class="text-xs text-emerald-400 font-bold truncate"></span>
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            </div>
-            <button id="btn-cerrar-sesion" class="w-full py-3 bg-red-500/10 text-red-400 border border-red-500/20 font-bold rounded-xl text-xs active:scale-95 transition-all">Cerrar Sesión</button>
+        <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg mb-4">
+            <p class="text-slate-300 font-bold text-sm mb-2">Selector de Moneda</p>
+            <p class="text-xs text-slate-500 mb-4">Elige la divisa con la que operan tus finanzas:</p>
+            <select id="selector-moneda" class="w-full bg-slate-950 text-white font-semibold text-sm rounded-xl px-4 py-3 border border-slate-800 outline-none focus:ring-1 focus:ring-emerald-500">
+                <option value="COP">Pesos Colombianos (COP - $)</option>
+                <option value="USD">Dólares Estadounidenses (USD - $)</option>
+                <option value="PEN">Soles Peruanos (PEN - S/.)</option>
+            </select>
+        </div>
+
+        <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg mb-4">
+            <p class="text-slate-300 font-bold text-sm mb-2">Respaldo Local de Datos</p>
+            <p class="text-xs text-slate-500 mb-4">Exporta todo tu historial en un archivo JSON seguro.</p>
+            <button id="btn-exportar-json" class="w-full py-4 bg-slate-800 text-emerald-400 font-bold rounded-2xl active:bg-slate-700 border border-emerald-500/20 transition-all text-sm">📥 Descargar Respaldo JSON</button>
+        </div>
+
+        <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg">
+            <p class="text-slate-300 font-bold text-sm mb-2">Conexión con Atajos de iOS</p>
+            <p class="text-xs text-slate-500 mb-4 leading-relaxed">Registra gastos con doble toque en tu iPhone:</p>
+            <button id="btn-copiar-atajo" class="w-full flex items-center justify-center gap-2 py-4 bg-slate-800 text-emerald-400 font-bold rounded-2xl active:bg-slate-700 border border-emerald-500/20 transition-all">
+                <span id="btn-copiar-texto">Copiar Enlace para iOS</span>
+            </button>
         </div>
     </div>
-
-    <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg mb-4">
-        <p class="text-slate-300 font-bold text-sm mb-2">Selector de Moneda</p>
-        <p class="text-xs text-slate-500 mb-4">Elige la divisa con la que operan tus finanzas:</p>
-        <select id="selector-moneda" class="w-full bg-slate-950 text-white font-semibold text-sm rounded-xl px-4 py-3 border border-slate-800 outline-none focus:ring-1 focus:ring-emerald-500">
-            <option value="COP">Pesos Colombianos (COP - $)</option>
-            <option value="USD">Dólares Estadounidenses (USD - $)</option>
-            <option value="PEN">Soles Peruanos (PEN - S/.)</option>
-        </select>
-    </div>
-
-    <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg mb-4">
-        <p class="text-slate-300 font-bold text-sm mb-2">Respaldo Local de Datos</p>
-        <p class="text-xs text-slate-500 mb-4">Exporta todo tu historial en un archivo JSON seguro.</p>
-        <button id="btn-exportar-json" class="w-full py-4 bg-slate-800 text-emerald-400 font-bold rounded-2xl active:bg-slate-700 border border-emerald-500/20 transition-all text-sm">📥 Descargar Respaldo JSON</button>
-    </div>
-
-    <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg">
-        <p class="text-slate-300 font-bold text-sm mb-2">Conexión con Atajos de iOS</p>
-        <p class="text-xs text-slate-500 mb-4 leading-relaxed">Registra gastos con doble toque en tu iPhone:</p>
-        <button id="btn-copiar-atajo" class="w-full flex items-center justify-center gap-2 py-4 bg-slate-800 text-emerald-400 font-bold rounded-2xl active:bg-slate-700 border border-emerald-500/20 transition-all">
-            <span id="btn-copiar-texto">Copiar Enlace para iOS</span>
-        </button>
-    </div>
-</div>
 
     <!-- Barra de Navegación Inferior -->
     <nav class="shrink-0 w-full bg-slate-950 border-t border-slate-900 flex justify-around items-center h-[70px] pb-safe relative z-[90]">
@@ -448,7 +448,7 @@
         </button>
     </nav>
 
-    <!-- Lógica de Negocio y Control Staff -->
+    <!-- Lógica de Negocio y Control -->
     <script>
         const db = supabase.createClient(
             'https://znszebnjcgjfzxvnexxd.supabase.co', 
@@ -492,6 +492,87 @@
             mostrarToast('Moneda actualizada con éxito');
         });
 
+        // GESTIÓN DE AUTENTICACIÓN SUPABASE
+        async function verificarEstadoSesion() {
+            const { data: { session } } = await db.auth.getSession();
+            actualizarUIIngreso(session);
+        }
+
+        function actualizarUIIngreso(session) {
+            const divNoAuth = document.getElementById('contenedor-no-autenticado');
+            const divAuth = document.getElementById('contenedor-autenticado');
+            const emailDisplay = document.getElementById('user-email-display');
+            const infoTexto = document.getElementById('info-sesion-texto');
+
+            if (!divNoAuth || !divAuth) return;
+
+            if (session && session.user) {
+                divNoAuth.classList.add('hidden');
+                divAuth.classList.remove('hidden');
+                emailDisplay.textContent = session.user.email;
+                infoTexto.textContent = "Sesión activa. Tus registros están sincronizados con tu cuenta personal.";
+            } else {
+                divNoAuth.classList.remove('hidden');
+                divAuth.classList.add('hidden');
+                infoTexto.textContent = "Inicia sesión o crea una cuenta para separar tus gastos de los de tus amigos.";
+            }
+        }
+
+        document.getElementById('btn-iniciar-sesion').addEventListener('click', async () => {
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value.trim();
+
+            if (!email || !password) {
+                mostrarToast('Ingresa correo y contraseña', 'error');
+                return;
+            }
+
+            const { data, error } = await db.auth.signInWithPassword({ email, password });
+            if (error) {
+                mostrarToast('Error al iniciar sesión: ' + error.message, 'error');
+            } else {
+                mostrarToast('¡Bienvenido de vuelta!');
+                document.getElementById('auth-password').value = '';
+                actualizarUIIngreso(data.session);
+                cargarEstadisticas();
+                cargarPlanes();
+            }
+        });
+
+        document.getElementById('btn-registrar').addEventListener('click', async () => {
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value.trim();
+
+            if (!email || !password) {
+                mostrarToast('Ingresa correo y contraseña', 'error');
+                return;
+            }
+
+            const { data, error } = await db.auth.signUp({ email, password });
+            if (error) {
+                mostrarToast('Error al registrarse: ' + error.message, 'error');
+            } else {
+                mostrarToast('¡Cuenta creada con éxito! Ya puedes iniciar sesión.');
+                document.getElementById('auth-password').value = '';
+            }
+        });
+
+        document.getElementById('btn-cerrar-sesion').addEventListener('click', async () => {
+            const { error } = await db.auth.signOut();
+            if (!error) {
+                mostrarToast('Sesión cerrada correctamente');
+                actualizarUIIngreso(null);
+                cargarEstadisticas();
+                cargarPlanes();
+            } else {
+                mostrarToast('Error al cerrar sesión', 'error');
+            }
+        });
+
+        db.auth.onAuthStateChange((event, session) => {
+            actualizarUIIngreso(session);
+        });
+
         // 1. SEGURIDAD BIOMÉTRICA LOCAL
         function verificarSeguridadBiometrica() {
             const biomHabilitado = localStorage.getItem('biometrico_activo');
@@ -502,18 +583,9 @@
         }
 
         document.getElementById('btn-desbloquear').addEventListener('click', async () => {
-            if (window.PublicKeyCredential) {
-                try {
-                    document.getElementById('modal-biometrico').classList.add('hidden');
-                    document.getElementById('modal-biometrico').classList.remove('flex');
-                    mostrarToast('Acceso autorizado');
-                } catch (e) {
-                    mostrarToast('Autenticación fallida', 'error');
-                }
-            } else {
-                document.getElementById('modal-biometrico').classList.add('hidden');
-                document.getElementById('modal-biometrico').classList.remove('flex');
-            }
+            document.getElementById('modal-biometrico').classList.add('hidden');
+            document.getElementById('modal-biometrico').classList.remove('flex');
+            mostrarToast('Acceso autorizado');
         });
 
         // 2. CIERRE DE MES INTELIGENTE (ROLLOVER)
@@ -753,91 +825,6 @@
             });
         }
 
-        // --- GESTIÓN DE AUTENTICACIÓN SUPABASE (MULTIUSUARIO) ---
-
-async function verificarEstadoSesion() {
-    const { data: { session } } = await db.auth.getSession();
-    actualizarUIIngreso(session);
-}
-
-function actualizarUIIngreso(session) {
-    const divNoAuth = document.getElementById('contenedor-no-autenticado');
-    const divAuth = document.getElementById('contenedor-autenticado');
-    const emailDisplay = document.getElementById('user-email-display');
-    const infoTexto = document.getElementById('info-sesion-texto');
-
-    if (session && session.user) {
-        divNoAuth.classList.add('hidden');
-        divAuth.classList.remove('hidden');
-        emailDisplay.textContent = session.user.email;
-        infoTexto.textContent = "Sesión activa. Tus registros están sincronizados con tu cuenta personal.";
-    } else {
-        divNoAuth.classList.remove('hidden');
-        divAuth.classList.add('hidden');
-        infoTexto.textContent = "Inicia sesión o crea una cuenta para separar tus gastos de los de tus amigos.";
-    }
-}
-
-document.getElementById('btn-iniciar-sesion').addEventListener('click', async () => {
-    const email = document.getElementById('auth-email').value.trim();
-    const password = document.getElementById('auth-password').value.trim();
-
-    if (!email || !password) {
-        mostrarToast('Ingresa correo y contraseña', 'error');
-        return;
-    }
-
-    const { data, error } = await db.auth.signInWithPassword({ email, password });
-    if (error) {
-        mostrarToast('Error al iniciar sesión: ' + error.message, 'error');
-    } else {
-        mostrarToast('¡Bienvenido de vuelta!');
-        document.getElementById('auth-password').value = '';
-        actualizarUIIngreso(data.session);
-        cargarEstadisticas();
-        cargarPlanes();
-    }
-});
-
-document.getElementById('btn-registrar').addEventListener('click', async () => {
-    const email = document.getElementById('auth-email').value.trim();
-    const password = document.getElementById('auth-password').value.trim();
-
-    if (!email || !password) {
-        mostrarToast('Ingresa correo y contraseña', 'error');
-        return;
-    }
-
-    const { data, error } = await db.auth.signUp({ email, password });
-    if (error) {
-        mostrarToast('Error al registrarse: ' + error.message, 'error');
-    } else {
-        mostrarToast('¡Cuenta creada con éxito! Ya puedes iniciar sesión.');
-        document.getElementById('auth-password').value = '';
-    }
-});
-
-document.getElementById('btn-cerrar-sesion').addEventListener('click', async () => {
-    const { error } = await db.auth.signOut();
-    if (!error) {
-        mostrarToast('Sesión cerrada correctamente');
-        actualizarUIIngreso(null);
-        // Limpiamos vistas de datos al salir
-        cargarEstadisticas();
-        cargarPlanes();
-    } else {
-        mostrarToast('Error al cerrar sesión', 'error');
-    }
-});
-
-// Escuchar cambios de sesión en tiempo real
-db.auth.onAuthStateChange((event, session) => {
-    actualizarUIIngreso(session);
-});
-
-// Ejecutar verificación al cargar la app
-verificarEstadoSesion();
-
         function cambiarTab(pantalla) {
             const pantallas = ['captura', 'planes', 'dashboard', 'ajustes'];
             pantallas.forEach(p => {
@@ -1060,7 +1047,7 @@ verificarEstadoSesion();
             const baseDisponible = sueldoIngresado - totalCompromisosFijos;
             
             if (baseDisponible <= 0) {
-                mostrarToast("⚠️ Tus deudas o fijos superan tu sueldo. Margen de deseos en 0.", "error");
+                mostrarToast("⚠️ Tus deudas o fijos superan tu sueldo.", "error");
                 return;
             }
 
@@ -1068,20 +1055,7 @@ verificarEstadoSesion();
             const deseos = baseDisponible * 0.30;
             const ahorroDeuda = baseDisponible * 0.20;
 
-            const topeMekatos = deseos * 0.25;
-            const topeRestaurantes = deseos * 0.35;
-            const topeRegalos = deseos * 0.20;
-
-            localStorage.setItem('topes_mes_actual', JSON.stringify({
-                necesidades,
-                deseos,
-                ahorroDeuda,
-                mekatos: topeMekatos,
-                restaurantes: topeRestaurantes,
-                regalos: topeRegalos
-            }));
-
-            mostrarToast(`🎯 ¡Sueldo procesado! Sugerido Ahorro/Emergencia: ${formatearMoneda(ahorroDeuda)}`);
+            mostrarToast(`🎯 ¡Sueldo procesado! Sugerido Ahorro: ${formatearMoneda(ahorroDeuda)}`);
         }
 
         async function guardarTransaccion(categoriaId, notaGasto) {
@@ -1095,7 +1069,6 @@ verificarEstadoSesion();
                 await generarRecomendacionSueldo(valorGasto);
             }
 
-            // Abonos directos a deudas si el concepto coincide
             if (catObj && catObj.tipo === 'gasto' && notaGasto) {
                 const { data: planes } = await db.from('planes').select('*').eq('tipo', 'deuda');
                 if (planes) {
@@ -1211,7 +1184,7 @@ verificarEstadoSesion();
             contenedorHistorial.innerHTML = '';
 
             if(!transacciones || transacciones.length === 0) {
-                contenedorHistorial.innerHTML = '<p class="text-slate-500 text-xs text-center py-4">Aquí verás tus transacciones apenas registres la primera del periodo</p>';
+                contenedorHistorial.innerHTML = '<p class="text-slate-500 text-xs text-center py-4">Aquí verás tus transacciones del periodo</p>';
             }
 
             transacciones.forEach((t, index) => {
@@ -1431,87 +1404,9 @@ verificarEstadoSesion();
             }
         }
 
-        document.getElementById('btn-copiar-atajo').addEventListener('click', () => {
-            const urlAtajo = window.location.origin + "/?atajo=1&monto=50000&tipo=gasto&categoria=comida";
-            navigator.clipboard.writeText(urlAtajo).then(() => {
-                const btn = document.getElementById('btn-copiar-texto');
-                btn.textContent = "¡Enlace Copiado!";
-                mostrarToast('Enlace para Atajos de iOS copiado');
-                setTimeout(() => btn.textContent = "Copiar Enlace para iOS", 2500);
-            });
-        });
-
-        async function procesarAtajo() {
-            const params = new URLSearchParams(window.location.search);
-            if(!params.has('atajo')) return;
-
-            const montoStr = params.get('monto');
-            const tipoStr = params.get('tipo'); 
-            const catNombre = params.get('categoria');
-
-            if(montoStr && tipoStr && catNombre) {
-                let cat = null;
-                const localCats = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
-                
-                if (navigator.onLine) {
-                    const { data } = await db.from('categorias').select('*').eq('tipo', tipoStr);
-                    if (data) {
-                        localStorage.setItem('categorias_cache', JSON.stringify(data));
-                        cat = data.find(c => c.nombre.toLowerCase().includes(catNombre.toLowerCase()));
-                    }
-                } else {
-                    cat = localCats.find(c => c.tipo === tipoStr && c.nombre.toLowerCase().includes(catNombre.toLowerCase()));
-                }
-                
-                if(cat) {
-                    const payload = { 
-                        monto: parseInt(montoStr), 
-                        categoria_id: cat.id, 
-                        cuenta: 'Efectivo', 
-                        fecha: new Date().toISOString(),
-                        notas: 'Desde Atajo iOS'
-                    };
-
-                    if (navigator.onLine) {
-                        await db.from('transacciones').insert([payload]);
-                    } else {
-                        let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
-                        queue.push(payload);
-                        localStorage.setItem('offline_queue', JSON.stringify(queue));
-                    }
-                    mostrarToast(`✅ ${tipoStr.toUpperCase()} de ${formatearMoneda(parseInt(montoStr))} registrado.`);
-                } else {
-                    mostrarToast(`❌ Categoría "${catNombre}" no encontrada.`, 'error');
-                }
-            }
-            window.history.replaceState({}, document.title, window.location.pathname);
-            cargarEstadisticas();
-        }
-
-        async function procesarColaOffline() {
-            let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
-            if (queue.length === 0) return;
-
-            while (queue.length > 0) {
-                const chunk = queue.splice(0, 50);
-                const { error } = await db.from('transacciones').insert(chunk);
-                if (error) {
-                    queue.unshift(...chunk);
-                    break;
-                }
-            }
-            localStorage.setItem('offline_queue', JSON.stringify(queue));
-            if (queue.length === 0 && !document.getElementById('pantalla-dashboard').classList.contains('hidden')) {
-                cargarEstadisticas();
-            }
-        }
-
-        window.addEventListener('online', procesarColaOffline);
-        if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
-        if (navigator.onLine) procesarColaOffline();
-        
+        // Inicialización general
         sincronizarCategoriasCache();
-        procesarAtajo();
+        verificarEstadoSesion();
         verificarSeguridadBiometrica();
         comprobarRolloverMes();
     </script>
