@@ -845,9 +845,19 @@
 
             if (queue.length > 0) {
                 const itemsConUsuario = queue.map(item => ({ ...item, user_id: session.user.id }));
+                const idsProcesados = itemsConUsuario.map(i => i.id);
                 const { error: errTrans } = await db.from('transacciones').insert(itemsConUsuario);
+                
                 if (!errTrans) {
-                    localStorage.removeItem('offline_queue');
+                    let colaActual = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+                    // Solo borramos los que ya se subieron, por si entró uno nuevo justo en ese milisegundo
+                    let colaRestante = colaActual.filter(item => !idsProcesados.includes(item.id));
+                    
+                    if (colaRestante.length > 0) {
+                        localStorage.setItem('offline_queue', JSON.stringify(colaRestante));
+                    } else {
+                        localStorage.removeItem('offline_queue');
+                    }
                     huboSincronizacion = true;
                 }
             }
@@ -1145,9 +1155,27 @@
         });
 
         document.getElementById('btn-desbloquear').addEventListener('click', async () => {
-            document.getElementById('modal-biometrico').classList.add('hidden');
-            document.getElementById('modal-biometrico').classList.remove('flex');
-            mostrarToast('Acceso autorizado');
+            try {
+                // Forzamos al navegador a pedir verificación local (huella, pin, face id) si está disponible
+                if (window.PublicKeyCredential) {
+                    const challenge = new Uint8Array(32);
+                    window.crypto.getRandomValues(challenge);
+                    
+                    await navigator.credentials.get({
+                        publicKey: {
+                            challenge: challenge,
+                            rpId: window.location.hostname !== 'localhost' ? window.location.hostname : undefined,
+                            userVerification: "required"
+                        }
+                    });
+                }
+                
+                document.getElementById('modal-biometrico').classList.add('hidden');
+                document.getElementById('modal-biometrico').classList.remove('flex');
+                mostrarToast('Identidad confirmada');
+            } catch (err) {
+                mostrarToast('Autenticación fallida o cancelada. Acceso denegado.', 'error');
+            }
         });
 
         function cerrarModalRollover() {
@@ -1362,16 +1390,23 @@
                 const tokens = expr.trim().split(/\s+/);
                 if (tokens.length === 0) return 0;
                 let acumulado = parseFloat(tokens[0]);
+                
+                if (isNaN(acumulado)) return 0;
+
                 for (let i = 1; i < tokens.length; i += 2) {
                     const operador = tokens[i];
                     const siguienteNum = parseFloat(tokens[i + 1]);
-                    if (isNaN(siguienteNum)) break;
+                    
+                    if (isNaN(siguienteNum)) continue; 
+                    
                     if (operador === '+') acumulado += siguienteNum;
                     else if (operador === '-') acumulado -= siguienteNum;
                 }
-                return isFinite(acumulado) ? acumulado : 0;
+                
+                // Evitamos estados NaN o Infinity que corrompan el balance general
+                return (isFinite(acumulado) && !isNaN(acumulado)) ? Math.max(0, acumulado) : 0;
             } catch (err) {
-                return NaN;
+                return 0; // Cero absoluto, nunca NaN
             }
         }
 
@@ -2471,13 +2506,14 @@
             }
 
             const payload = { 
-                id: 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-                    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+                id: window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+                    const r = (window.crypto.getRandomValues(new Uint8Array(1))[0] % 16) | 0;
+                    const v = c === 'x' ? r : (r & 0x3 | 0x8);
                     return v.toString(16);
                 }),
                 monto: valorGasto, 
                 categoria_id: categoriaId, 
-                cuenta: cuentaActual, 
+                cuenta: escapeHTML(cuentaActual), 
                 fecha: new Date().toISOString(),
                 notas: notaGasto ? escapeHTML(notaGasto.trim().slice(0, 150)) : null,
                 user_id: session.user.id
@@ -2500,11 +2536,15 @@
                 try {
                     localStorage.setItem('offline_queue', JSON.stringify(queue));
                 } catch (e) {
-                    // Si se llena el almacenamiento local, eliminamos los registros más antiguos (FIFO)
-                    queue.shift();
-                    localStorage.setItem('offline_queue', JSON.stringify(queue));
+                    if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+                        // Rescate quirúrgico: quitamos el 20% más viejo para liberar espacio real, no solo 1 item inútilmente
+                        const itemsAQuitar = Math.max(1, Math.floor(queue.length * 0.2));
+                        queue.splice(0, itemsAQuitar); 
+                        localStorage.setItem('offline_queue', JSON.stringify(queue));
+                        mostrarToast('Almacenamiento casi lleno. Conéctate a internet para vaciar la cola.', 'error');
+                    }
                 }
-                mostrarToast('Guardado offline. Se sincronizará al conectar.', 'error');
+                mostrarToast('Guardado offline. Se sincronizará al conectar.');
             }
 
             if (catObj && catObj.tipo === 'gasto') {
