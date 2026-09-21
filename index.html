@@ -1184,7 +1184,21 @@
         }
 
         async function comprobarRolloverMes() {
-            const ahora = new Date();
+            let ahora = new Date();
+            
+            // Mitigación Zero-Trust: Validar tiempo contra servidor para evitar manipulación de reloj local
+            if (navigator.onLine) {
+                try {
+                    const res = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC', { cache: 'no-store' });
+                    if (res.ok) {
+                        const data = await res.json();
+                        ahora = new Date(data.datetime);
+                    }
+                } catch (e) {
+                    // Fallback silencioso si la API de tiempo falla
+                }
+            }
+
             const periodoActual = `${ahora.getFullYear()}-${ahora.getMonth()}`;
             const periodoGuardado = localStorage.getItem('mes_actual_registro');
             
@@ -1689,6 +1703,8 @@
                 return true;
             });
             
+            const fragmentoCategorias = document.createDocumentFragment();
+
             catsFiltradas.forEach(cat => {
                 const wrapper = document.createElement('div');
                 wrapper.className = "relative flex flex-col";
@@ -1706,7 +1722,7 @@
                 });
                 wrapper.appendChild(btn);
 
-                contenedor.appendChild(wrapper);
+                fragmentoCategorias.appendChild(wrapper);
             });
 
             const btnNuevaCat = document.createElement('button');
@@ -1714,7 +1730,9 @@
             btnNuevaCat.className = "flex flex-col items-center justify-center p-3 bg-slate-800/40 rounded-2xl active:bg-slate-700 border border-dashed border-emerald-500/40 shadow-sm min-h-[85px] cursor-pointer";
             btnNuevaCat.innerHTML = `<span class="text-2xl mb-1 text-emerald-400 font-light">+</span><span class="text-[9px] font-bold text-emerald-400 uppercase tracking-wider text-center">Nueva</span>`;
             btnNuevaCat.addEventListener('click', abrirModalNuevaCategoria);
-            contenedor.appendChild(btnNuevaCat);
+            fragmentoCategorias.appendChild(btnNuevaCat);
+            
+            contenedor.appendChild(fragmentoCategorias);
         }
 
         async function aplicarAporteMeta(plan) {
@@ -3013,6 +3031,9 @@
                 return;
             }
 
+            // Usamos DocumentFragment para evitar colapsar el hilo de renderizado del navegador
+            const fragmentoDOM = document.createDocumentFragment();
+
             transacciones.forEach((t, index) => {
                 const cat = mapaCat[t.categoria_id];
                 if (!cat) return;
@@ -3064,9 +3085,11 @@
                     valDiv.appendChild(btnBorrar);
                     fila.appendChild(infoDiv);
                     fila.appendChild(valDiv);
-                    contenedorHistorial.appendChild(fila);
+                    fragmentoDOM.appendChild(fila);
                 }
             });
+            
+            contenedorHistorial.appendChild(fragmentoDOM);
         }
 
         let cuentaFiltroActiva = 'todas';
