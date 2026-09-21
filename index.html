@@ -111,25 +111,41 @@
             <button id="btn-cerrar-flujo" class="absolute top-6 right-6 w-8 h-8 flex items-center justify-center rounded-full bg-slate-800 text-slate-400 hover:text-white shrink-0 active:scale-90 transition-transform">✕</button>
             
             <div class="flex-1 min-h-0 overflow-y-auto no-scrollbar pb-safe">
-                <div id="flujo-paso-1" class="flex flex-col h-full justify-center space-y-6">
-                    <div class="text-center mb-4">
-                        <p class="text-slate-500 text-xs tracking-widest uppercase font-bold mb-2">Registrando</p>
-                        <span class="text-white font-bold text-5xl tracking-tighter" id="flujo-monto-display">$ 0</span>
+                <div id="flujo-paso-1" class="flex flex-col h-full justify-center space-y-3">
+                    <div class="text-center mb-2">
+                        <p class="text-slate-500 text-xs tracking-widest uppercase font-bold mb-1">Registrando</p>
+                        <span class="text-white font-bold text-4xl sm:text-5xl tracking-tighter" id="flujo-monto-display">$ 0</span>
                     </div>
-                    <h3 class="text-lg font-bold text-slate-300 text-center mb-2">¿Qué tipo de movimiento es?</h3>
-                    <button id="btn-tipo-gasto" class="w-full bg-slate-800 p-5 rounded-[2rem] border border-slate-700 active:bg-slate-700 active:scale-[0.98] transition-all flex items-center gap-5 shadow-lg">
-                        <div class="w-14 h-14 bg-red-500/10 rounded-full flex items-center justify-center text-red-400 border border-red-500/20 text-2xl">📉</div>
+                    <h3 class="text-sm font-bold text-slate-400 text-center mb-1">¿Qué tipo de movimiento es?</h3>
+                    <button id="btn-tipo-gasto" class="w-full bg-slate-800 p-4 rounded-2xl border border-slate-700 active:bg-slate-700 active:scale-[0.98] transition-all flex items-center gap-4 shadow-md">
+                        <div class="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center text-red-400 border border-red-500/20 text-xl">📉</div>
                         <div class="text-left">
-                            <span class="block text-lg font-bold text-white">Es un Gasto / Factura</span>
-                            <span class="block text-xs text-slate-400">Mercado, arriendo, servicios, salidas</span>
+                            <span class="block text-base font-bold text-white">Es un Gasto / Factura</span>
+                            <span class="block text-xs text-slate-400">Mercado, arriendo, salidas, servicios</span>
                         </div>
                         <span class="ml-auto text-slate-500">›</span>
                     </button>
-                    <button id="btn-tipo-ingreso" class="w-full bg-slate-800 p-5 rounded-[2rem] border border-slate-700 active:bg-slate-700 active:scale-[0.98] transition-all flex items-center gap-5 shadow-lg">
-                        <div class="w-14 h-14 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-400 border border-emerald-500/20 text-2xl">📈</div>
+                    <button id="btn-tipo-ingreso" class="w-full bg-slate-800 p-4 rounded-2xl border border-slate-700 active:bg-slate-700 active:scale-[0.98] transition-all flex items-center gap-4 shadow-md">
+                        <div class="w-12 h-12 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-400 border border-emerald-500/20 text-xl">📈</div>
                         <div class="text-left">
-                            <span class="block text-lg font-bold text-white">Es un Ingreso</span>
-                            <span class="block text-xs text-slate-400">Salario principal, extra, Etsy</span>
+                            <span class="block text-base font-bold text-white">Es un Ingreso</span>
+                            <span class="block text-xs text-slate-400">Salario principal, bonos, extras</span>
+                        </div>
+                        <span class="ml-auto text-slate-500">›</span>
+                    </button>
+                    <button id="btn-tipo-meta" class="w-full bg-slate-800 p-4 rounded-2xl border border-slate-700 active:bg-slate-700 active:scale-[0.98] transition-all flex items-center gap-4 shadow-md">
+                        <div class="w-12 h-12 bg-teal-500/10 rounded-full flex items-center justify-center text-teal-400 border border-teal-500/20 text-xl">🎯</div>
+                        <div class="text-left">
+                            <span class="block text-base font-bold text-white">Aportar a Meta</span>
+                            <span class="block text-xs text-slate-400">Fondo de emergencia, ahorro moto, viaje</span>
+                        </div>
+                        <span class="ml-auto text-slate-500">›</span>
+                    </button>
+                    <button id="btn-tipo-deuda" class="w-full bg-slate-800 p-4 rounded-2xl border border-slate-700 active:bg-slate-700 active:scale-[0.98] transition-all flex items-center gap-4 shadow-md">
+                        <div class="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-400 border border-blue-500/20 text-xl">💳</div>
+                        <div class="text-left">
+                            <span class="block text-base font-bold text-white">Abonar a Deuda</span>
+                            <span class="block text-xs text-slate-400">Tarjeta Nu, créditos, saldos pendientes</span>
                         </div>
                         <span class="ml-auto text-slate-500">›</span>
                     </button>
@@ -195,26 +211,117 @@
         </div>
     </div>
 
-    <!-- Modal Formulario Plan -->
-    <div id="modal-form-plan" class="hidden fixed inset-0 z-[110] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-6">
-        <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl">
-            <h3 id="titulo-form-plan" class="text-xl font-bold text-white mb-6">Nuevo Plan</h3>
+    <!-- Modal Formulario Plan Ampliado -->
+    <div id="modal-form-plan" class="hidden fixed inset-0 z-[110] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-4">
+        <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl max-h-[90vh] overflow-y-auto no-scrollbar">
+            <h3 id="titulo-form-plan" class="text-xl font-bold text-white mb-4">Nuevo Plan</h3>
             
-            <div class="flex items-center gap-2 mb-6 border-b border-slate-800 pb-4">
+            <div class="flex items-center gap-2 mb-4 border-b border-slate-800 pb-3">
                 <span id="simbolo-moneda-plan" class="text-3xl font-bold text-emerald-400">$</span>
-                <input type="text" inputmode="numeric" id="input-monto-plan" class="w-full bg-transparent text-4xl font-bold text-white focus:outline-none placeholder-slate-700" placeholder="0" autocomplete="off">
+                <input type="text" inputmode="numeric" id="input-monto-plan" class="w-full bg-transparent text-3xl font-bold text-white focus:outline-none placeholder-slate-700" placeholder="0" autocomplete="off">
             </div>
 
-            <div class="space-y-4 mb-8">
-                <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800">
-                   <label for="input-nombre-plan" class="text-xs font-bold text-slate-500 block mb-2">Nombre o Concepto</label>
-                    <input type="text" id="input-nombre-plan" class="w-full bg-transparent text-sm text-white focus:outline-none" placeholder="Ej. Arriendo, Tarjeta..." autocomplete="off">
+            <div class="space-y-3 mb-6 text-left">
+                <div class="bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
+                    <label for="input-nombre-plan" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Nombre o Concepto</label>
+                    <input type="text" id="input-nombre-plan" class="w-full bg-transparent text-sm text-white focus:outline-none" placeholder="Ej. Mercado mensual, Tarjeta Nu..." autocomplete="off">
+                </div>
+
+                <div id="campo-categoria-plan" class="hidden bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
+                    <label for="select-categoria-plan" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Categoría Amarrada</label>
+                    <select id="select-categoria-plan" class="w-full bg-transparent text-sm text-white focus:outline-none"></select>
+                </div>
+
+                <div id="campo-periodo-plan" class="hidden bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
+                    <label for="select-periodo-plan" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Periodo de Evaluación</label>
+                    <select id="select-periodo-plan" class="w-full bg-transparent text-sm text-white focus:outline-none">
+                        <option value="semanal">Semanal (Lun - Dom)</option>
+                        <option value="quincenal">Quincenal (1-15 o 16-Fin)</option>
+                        <option value="mensual" selected>Mensual (Mes en curso)</option>
+                        <option value="trimestral">Trimestral</option>
+                        <option value="semestral">Semestral</option>
+                        <option value="anual">Anual</option>
+                        <option value="personalizado">Personalizado</option>
+                    </select>
+                </div>
+
+                <div id="campo-fechas-plan" class="hidden grid grid-cols-2 gap-2 bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Inicio</label>
+                        <input type="date" id="input-fecha-inicio-plan" class="w-full bg-slate-900 text-xs text-white p-2 rounded-xl border border-slate-800">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Fin</label>
+                        <input type="date" id="input-fecha-fin-plan" class="w-full bg-slate-900 text-xs text-white p-2 rounded-xl border border-slate-800">
+                    </div>
+                </div>
+
+                <div id="campo-auto-renovar" class="hidden flex items-center justify-between bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
+                    <div>
+                        <span class="text-xs font-bold text-white block">Auto-renovación</span>
+                        <span class="text-[10px] text-slate-400 block">Avanza al siguiente ciclo automáticamente</span>
+                    </div>
+                    <input type="checkbox" id="check-auto-renovar" checked class="w-5 h-5 accent-emerald-500 rounded cursor-pointer">
+                </div>
+
+                <div id="campo-fondo-emergencia" class="hidden flex items-center justify-between bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
+                    <div>
+                        <span class="text-xs font-bold text-white block">¿Fondo de Emergencia?</span>
+                        <span class="text-[10px] text-slate-400 block">Obligatorio al recibir sueldos</span>
+                    </div>
+                    <input type="checkbox" id="check-fondo-emergencia" class="w-5 h-5 accent-emerald-500 rounded cursor-pointer">
+                </div>
+
+                <div id="campo-mostrar-inicio" class="hidden flex items-center justify-between bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
+                    <div>
+                        <span class="text-xs font-bold text-white block">Ver en Pantalla de Inicio</span>
+                        <span class="text-[10px] text-slate-400 block">Botón de abono directo en teclado</span>
+                    </div>
+                    <input type="checkbox" id="check-mostrar-inicio" checked class="w-5 h-5 accent-emerald-500 rounded cursor-pointer">
+                </div>
+
+                <div id="campo-monto-acumulado-inicial" class="hidden bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
+                    <label for="input-acumulado-inicial" id="label-acumulado-inicial" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Ya Ahorrado / Pagado (Opcional)</label>
+                    <input type="text" inputmode="numeric" id="input-acumulado-inicial" class="w-full bg-transparent text-sm text-white focus:outline-none" placeholder="0" autocomplete="off">
                 </div>
             </div>
 
             <div class="flex gap-3">
-                <button id="btn-cancelar-form-plan" class="flex-1 py-4 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors">Cancelar</button>
-                <button id="btn-guardar-plan" class="flex-1 py-4 rounded-xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-colors">Guardar</button>
+                <button id="btn-cancelar-form-plan" class="flex-1 py-3.5 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors text-sm">Cancelar</button>
+                <button id="btn-guardar-plan" class="flex-1 py-3.5 rounded-xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-colors text-sm">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Crear Nueva Categoría Personalizada -->
+    <div id="modal-nueva-cat" class="hidden fixed inset-0 z-[130] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-5">
+        <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl">
+            <h3 class="text-xl font-bold text-white mb-1">Nueva Categoría</h3>
+            <p class="text-slate-400 text-xs mb-4">Crea una categoría propia para tus gastos o ingresos.</p>
+
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Nombre</label>
+                    <input type="text" id="input-nueva-cat-nombre" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500" placeholder="Ej. Mekatos, Cine, Cursos..." autocomplete="off">
+                </div>
+
+                <div>
+                    <label class="text-[10px] uppercase font-bold text-slate-400 block mb-2">Selecciona un Icono</label>
+                    <div id="selector-iconos-cat" class="grid grid-cols-6 gap-2 p-2 bg-slate-950 rounded-2xl border border-slate-800 max-h-36 overflow-y-auto"></div>
+                </div>
+
+                <div id="seccion-tipo-nueva-cat">
+                    <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Tipo de Gasto</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" id="btn-nueva-cat-var" class="py-2.5 rounded-xl text-xs font-bold border border-emerald-500/40 bg-emerald-500/20 text-emerald-300">Variable</button>
+                        <button type="button" id="btn-nueva-cat-fijo" class="py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800 text-slate-400">Fijo / Factura</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button type="button" id="btn-cancelar-nueva-cat" class="flex-1 py-3.5 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors text-sm">Cancelar</button>
+                <button type="button" id="btn-guardar-nueva-cat" class="flex-1 py-3.5 rounded-xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-colors text-sm">Guardar</button>
             </div>
         </div>
     </div>
@@ -871,6 +978,10 @@
             if (navigator.vibrate) navigator.vibrate(15);
         });
 
+       let iconoNuevaCatSeleccionado = '🍿';
+        let tipoNuevaCatEsFijo = false;
+        const listaEmojisPopulares = ['🍿','🛒','🍔','🚗','💊','💡','🎮','👕','✈️','🐾','💈','📚','☕','🏋️','🍻','🎁','🍕','🏠','🐶','💻','📱','🔧','🥗','🥖','🚴','🎧'];
+
         function iniciarCaptura() {
             if(parseInt(monto) === 0) {
                 mostrarToast('Digita un valor mayor a cero.', 'error');
@@ -902,6 +1013,8 @@
 
         document.getElementById('btn-tipo-gasto').addEventListener('click', () => avanzarFlujo('gasto'));
         document.getElementById('btn-tipo-ingreso').addEventListener('click', () => avanzarFlujo('ingreso'));
+        document.getElementById('btn-tipo-meta').addEventListener('click', () => avanzarFlujo('meta'));
+        document.getElementById('btn-tipo-deuda').addEventListener('click', () => avanzarFlujo('deuda'));
 
         document.getElementById('filtro-cat-variable').addEventListener('click', () => {
             tipoSubCatActual = 'variable';
@@ -920,12 +1033,22 @@
         function avanzarFlujo(tipo) {
             tipoActual = tipo;
             const seccionFiltros = document.getElementById('seccion-filtros-cat');
-            if (tipo === 'ingreso') {
-                seccionFiltros.classList.add('hidden');
-            } else {
+            const label = document.getElementById('flujo-tipo-label');
+
+            if (tipo === 'gasto') {
                 seccionFiltros.classList.remove('hidden');
+                label.textContent = '📉 Registrando Gasto / Factura';
+            } else if (tipo === 'ingreso') {
+                seccionFiltros.classList.add('hidden');
+                label.textContent = '📈 Registrando Ingreso';
+            } else if (tipo === 'meta') {
+                seccionFiltros.classList.add('hidden');
+                label.textContent = '🎯 Aportar a Meta de Ahorro';
+            } else if (tipo === 'deuda') {
+                seccionFiltros.classList.add('hidden');
+                label.textContent = '💳 Abonar a Crédito / Deuda';
             }
-            document.getElementById('flujo-tipo-label').textContent = tipo === 'gasto' ? '📉 Registrando Gasto / Factura' : '📈 Registrando Ingreso';
+
             document.getElementById('flujo-paso-1').classList.add('hidden');
             document.getElementById('flujo-paso-1').classList.remove('flex');
             document.getElementById('flujo-paso-2').classList.remove('hidden');
@@ -935,14 +1058,67 @@
         }
 
         async function renderizarCategoriasFlujo() {
+            const contenedor = document.getElementById('flujo-categorias-container');
+            contenedor.innerHTML = '';
+            const { data: { session } } = await db.auth.getSession();
+
+            if (tipoActual === 'meta' || tipoActual === 'deuda') {
+                if (!session) {
+                    contenedor.innerHTML = '<p class="col-span-3 text-center text-xs text-slate-500 py-6">Inicia sesión para gestionar metas y deudas.</p>';
+                    return;
+                }
+                const { data: planes } = await db.from('planes')
+                    .select('*')
+                    .eq('tipo', tipoActual)
+                    .eq('user_id', session.user.id)
+                    .eq('mostrar_en_inicio', true);
+
+                if (!planes || planes.length === 0) {
+                    contenedor.innerHTML = `<p class="col-span-3 text-center text-xs text-slate-500 py-6">No tienes ${tipoActual === 'meta' ? 'metas' : 'deudas'} marcadas para inicio. Actívalas en la pestaña Planes.</p>`;
+                    return;
+                }
+
+                planes.forEach(plan => {
+                    const btn = document.createElement('button');
+                    btn.className = "col-span-3 flex items-center justify-between p-4 bg-slate-800 rounded-2xl active:bg-slate-700 active:scale-[0.98] border border-slate-700 shadow-md text-left transition-all";
+                    const icono = tipoActual === 'meta' ? '🎯' : '💳';
+                    let infoSubtexto = '';
+                    if (tipoActual === 'meta') {
+                        const acum = parseFloat(plan.monto_acumulado || 0);
+                        const obj = parseFloat(plan.monto);
+                        const pct = obj > 0 ? Math.round((acum / obj) * 100) : 0;
+                        infoSubtexto = `${formatearMoneda(acum)} / ${formatearMoneda(obj)} (${pct}%)`;
+                    } else {
+                        const total = parseFloat(plan.monto);
+                        const pagado = parseFloat(plan.monto_acumulado || 0);
+                        const resta = Math.max(0, total - pagado);
+                        infoSubtexto = `Resta: ${formatearMoneda(resta)}`;
+                    }
+
+                    btn.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">${icono}</span>
+                            <div>
+                                <span class="text-sm font-bold text-white block">${escapeHTML(plan.titulo)}</span>
+                                <span class="text-xs text-slate-400 block">${infoSubtexto}</span>
+                            </div>
+                        </div>
+                        <span class="text-xs font-bold text-emerald-400">Abonar +</span>
+                    `;
+                    btn.addEventListener('click', () => {
+                        if (tipoActual === 'meta') aplicarAporteMeta(plan);
+                        else aplicarAbonoDeuda(plan);
+                    });
+                    contenedor.appendChild(btn);
+                });
+                return;
+            }
+
             let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
             if (navigator.onLine && categorias.length === 0) {
                 const { data } = await db.from('categorias').select('*').order('nombre');
                 if (data) { categorias = data; localStorage.setItem('categorias_cache', JSON.stringify(data)); }
             }
-            
-            const contenedor = document.getElementById('flujo-categorias-container');
-            contenedor.innerHTML = '';
             
             const catsFiltradas = categorias.filter(c => {
                 if (c.tipo !== tipoActual) return false;
@@ -967,7 +1143,154 @@
                 });
                 contenedor.appendChild(btn);
             });
+
+            // Botón para crear nueva categoría en pantalla
+            const btnNuevaCat = document.createElement('button');
+            btnNuevaCat.className = "flex flex-col items-center justify-center p-3 bg-slate-800/40 rounded-2xl active:bg-slate-700 border border-dashed border-emerald-500/40 shadow-sm min-h-[85px]";
+            btnNuevaCat.innerHTML = `<span class="text-2xl mb-1 text-emerald-400 font-light">+</span><span class="text-[9px] font-bold text-emerald-400 uppercase tracking-wider text-center">Nueva</span>`;
+            btnNuevaCat.addEventListener('click', abrirModalNuevaCategoria);
+            contenedor.appendChild(btnNuevaCat);
         }
+
+        async function aplicarAporteMeta(plan) {
+            const valorAporte = parseInt(monto);
+            const nuevoAcumulado = parseFloat(plan.monto_acumulado || 0) + valorAporte;
+            const { error } = await db.from('planes').update({ monto_acumulado: nuevoAcumulado }).eq('id', plan.id);
+            if (!error) {
+                mostrarToast(`🎯 ¡Aporte de ${formatearMoneda(valorAporte)} sumado a "${plan.titulo}"!`);
+                cerrarFlujo();
+                limpiar();
+                cargarPlanes();
+            } else {
+                mostrarToast('Error al registrar aporte: ' + error.message, 'error');
+            }
+        }
+
+        async function aplicarAbonoDeuda(plan) {
+            const valorAbono = parseInt(monto);
+            const { data: { session } } = await db.auth.getSession();
+            const nuevoAcumulado = parseFloat(plan.monto_acumulado || 0) + valorAbono;
+            
+            const { error: errPlan } = await db.from('planes').update({ monto_acumulado: nuevoAcumulado }).eq('id', plan.id);
+            if (!errPlan) {
+                let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+                const catDeuda = categorias.find(c => c.nombre.toLowerCase().includes('deuda') || c.nombre.toLowerCase().includes('credito') || c.nombre.toLowerCase().includes('financiero')) || categorias[0];
+
+                if (session && catDeuda) {
+                    await db.from('transacciones').insert([{
+                        monto: valorAbono,
+                        categoria_id: catDeuda.id,
+                        cuenta: cuentaActual,
+                        fecha: new Date().toISOString(),
+                        notas: `Abono a deuda: ${plan.titulo}`,
+                        user_id: session.user.id
+                    }]);
+                }
+
+                mostrarToast(`💳 Abono de ${formatearMoneda(valorAbono)} aplicado a "${plan.titulo}"`);
+                cerrarFlujo();
+                limpiar();
+                cargarPlanes();
+                cargarEstadisticas();
+            } else {
+                mostrarToast('Error al aplicar abono: ' + errPlan.message, 'error');
+            }
+        }
+
+        function abrirModalNuevaCategoria() {
+            document.getElementById('input-nueva-cat-nombre').value = '';
+            tipoNuevaCatEsFijo = (tipoSubCatActual === 'fijo');
+            actualizarBotonesTipoNuevaCat();
+            
+            const seccionTipo = document.getElementById('seccion-tipo-nueva-cat');
+            if (tipoActual === 'ingreso') seccionTipo.classList.add('hidden');
+            else seccionTipo.classList.remove('hidden');
+
+            const gridEmojis = document.getElementById('selector-iconos-cat');
+            gridEmojis.innerHTML = '';
+            listaEmojisPopulares.forEach((emoji, i) => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = `p-2 rounded-xl text-xl flex items-center justify-center transition-all ${i === 0 ? 'bg-emerald-500/20 border border-emerald-500' : 'bg-slate-900 border border-slate-800'}`;
+                b.textContent = emoji;
+                b.addEventListener('click', () => {
+                    gridEmojis.querySelectorAll('button').forEach(btn => btn.className = 'p-2 rounded-xl text-xl flex items-center justify-center bg-slate-900 border border-slate-800');
+                    b.className = 'p-2 rounded-xl text-xl flex items-center justify-center bg-emerald-500/20 border border-emerald-500';
+                    iconoNuevaCatSeleccionado = emoji;
+                });
+                gridEmojis.appendChild(b);
+            });
+            iconoNuevaCatSeleccionado = listaEmojisPopulares[0];
+
+            document.getElementById('modal-nueva-cat').classList.remove('hidden');
+            document.getElementById('modal-nueva-cat').classList.add('flex');
+            document.getElementById('input-nueva-cat-nombre').focus();
+        }
+
+        function cerrarModalNuevaCategoria() {
+            document.getElementById('modal-nueva-cat').classList.add('hidden');
+            document.getElementById('modal-nueva-cat').classList.remove('flex');
+        }
+
+        document.getElementById('btn-cancelar-nueva-cat').addEventListener('click', cerrarModalNuevaCategoria);
+
+        document.getElementById('btn-nueva-cat-var').addEventListener('click', () => {
+            tipoNuevaCatEsFijo = false;
+            actualizarBotonesTipoNuevaCat();
+        });
+
+        document.getElementById('btn-nueva-cat-fijo').addEventListener('click', () => {
+            tipoNuevaCatEsFijo = true;
+            actualizarBotonesTipoNuevaCat();
+        });
+
+        function actualizarBotonesTipoNuevaCat() {
+            const btnVar = document.getElementById('btn-nueva-cat-var');
+            const btnFij = document.getElementById('btn-nueva-cat-fijo');
+            if (tipoNuevaCatEsFijo) {
+                btnFij.className = "py-2.5 rounded-xl text-xs font-bold border border-emerald-500/40 bg-emerald-500/20 text-emerald-300";
+                btnVar.className = "py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800 text-slate-400";
+            } else {
+                btnVar.className = "py-2.5 rounded-xl text-xs font-bold border border-emerald-500/40 bg-emerald-500/20 text-emerald-300";
+                btnFij.className = "py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800 text-slate-400";
+            }
+        }
+
+        document.getElementById('btn-guardar-nueva-cat').addEventListener('click', async () => {
+            const nombre = document.getElementById('input-nueva-cat-nombre').value.trim();
+            if (!nombre) {
+                mostrarToast('Escribe un nombre para la categoría', 'error');
+                return;
+            }
+
+            const { data: { session } } = await db.auth.getSession();
+            if (!session) {
+                mostrarToast('Inicia sesión para guardar categorías propias', 'error');
+                return;
+            }
+
+            const payloadCat = {
+                nombre: escapeHTML(nombre),
+                icono: iconoNuevaCatSeleccionado,
+                tipo: tipoActual,
+                es_fijo: tipoActual === 'gasto' ? tipoNuevaCatEsFijo : false,
+                user_id: session.user.id
+            };
+
+            const { data, error } = await db.from('categorias').insert([payloadCat]).select();
+            if (error) {
+                mostrarToast('Error al crear categoría: ' + error.message, 'error');
+                return;
+            }
+
+            let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+            if (data && data[0]) categorias.push(data[0]);
+            localStorage.setItem('categorias_cache', JSON.stringify(categorias));
+
+            cerrarModalNuevaCategoria();
+            renderizarCategoriasFlujo();
+            mostrarToast(`Categoría "${nombre}" creada con éxito`);
+        });
 
         function cambiarTab(pantalla) {
             const pantallas = ['captura', 'planes', 'dashboard', 'ajustes'];
@@ -1037,17 +1360,70 @@
         document.getElementById('btn-crear-meta').addEventListener('click', () => abrirFormularioPlan('meta'));
         document.getElementById('btn-crear-deuda').addEventListener('click', () => abrirFormularioPlan('deuda'));
 
-        function abrirFormularioPlan(tipo) {
+        async function abrirFormularioPlan(tipo) {
             cerrarModalPlanes();
             tipoPlanActivo = tipo;
             const titulos = { limite: 'Controlar Límite / Fijo', meta: 'Nueva Meta de Ahorro', deuda: 'Registrar Deuda / Crédito' };
             document.getElementById('titulo-form-plan').textContent = titulos[tipo] || 'Nuevo Plan';
             document.getElementById('input-monto-plan').value = '';
             document.getElementById('input-nombre-plan').value = '';
+            document.getElementById('input-acumulado-inicial').value = '';
+
+            const campoCat = document.getElementById('campo-categoria-plan');
+            const campoPeriodo = document.getElementById('campo-periodo-plan');
+            const campoFechas = document.getElementById('campo-fechas-plan');
+            const campoAuto = document.getElementById('campo-auto-renovar');
+            const campoEmergencia = document.getElementById('campo-fondo-emergencia');
+            const campoInicio = document.getElementById('campo-mostrar-inicio');
+            const campoAcumulado = document.getElementById('campo-monto-acumulado-inicial');
+
+            campoCat.classList.add('hidden');
+            campoPeriodo.classList.add('hidden');
+            campoFechas.classList.add('hidden');
+            campoAuto.classList.add('hidden');
+            campoEmergencia.classList.add('hidden');
+            campoInicio.classList.add('hidden');
+            campoAcumulado.classList.add('hidden');
+
+            if (tipo === 'limite') {
+                campoCat.classList.remove('hidden');
+                campoPeriodo.classList.remove('hidden');
+                campoAuto.classList.remove('hidden');
+
+                let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+                if (categorias.length === 0) {
+                    const { data } = await db.from('categorias').select('*').order('nombre');
+                    if (data) categorias = data;
+                }
+                const selectCat = document.getElementById('select-categoria-plan');
+                selectCat.innerHTML = '<option value="">-- Elige la categoría --</option>';
+                categorias.filter(c => c.tipo === 'gasto').forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = `${c.icono} ${c.nombre}`;
+                    selectCat.appendChild(opt);
+                });
+            } else if (tipo === 'meta') {
+                campoEmergencia.classList.remove('hidden');
+                campoInicio.classList.remove('hidden');
+                campoAcumulado.classList.remove('hidden');
+                document.getElementById('label-acumulado-inicial').textContent = 'Ya Ahorrado Inicialmente (Opcional)';
+            } else if (tipo === 'deuda') {
+                campoInicio.classList.remove('hidden');
+                campoAcumulado.classList.remove('hidden');
+                document.getElementById('label-acumulado-inicial').textContent = 'Ya Pagado / Amortizado (Opcional)';
+            }
+
             document.getElementById('modal-form-plan').classList.remove('hidden');
             document.getElementById('modal-form-plan').classList.add('flex');
             document.getElementById('input-monto-plan').focus();
         }
+
+        document.getElementById('select-periodo-plan').addEventListener('change', (e) => {
+            const campoFechas = document.getElementById('campo-fechas-plan');
+            if (e.target.value === 'personalizado') campoFechas.classList.remove('hidden');
+            else campoFechas.classList.add('hidden');
+        });
 
         function cerrarFormularioPlan() {
             document.getElementById('modal-form-plan').classList.add('hidden');
@@ -1055,7 +1431,15 @@
         }
 
         document.getElementById('btn-cancelar-form-plan').addEventListener('click', cerrarFormularioPlan);
+        
         document.getElementById('input-monto-plan').addEventListener('input', (e) => {
+            let valor = e.target.value.replace(/\D/g, '');
+            if (!valor) { e.target.value = ''; return; }
+            let locale = monedaActual === 'USD' ? 'en-US' : (monedaActual === 'PEN' ? 'es-PE' : 'es-CO');
+            e.target.value = new Intl.NumberFormat(locale).format(parseInt(valor));
+        });
+
+        document.getElementById('input-acumulado-inicial').addEventListener('input', (e) => {
             let valor = e.target.value.replace(/\D/g, '');
             if (!valor) { e.target.value = ''; return; }
             let locale = monedaActual === 'USD' ? 'en-US' : (monedaActual === 'PEN' ? 'es-PE' : 'es-CO');
@@ -1066,9 +1450,11 @@
             const rawMonto = document.getElementById('input-monto-plan').value.replace(/\D/g, '');
             const montoVal = parseInt(rawMonto);
             const tituloVal = document.getElementById('input-nombre-plan').value.trim();
+            const rawAcum = document.getElementById('input-acumulado-inicial').value.replace(/\D/g, '');
+            const acumVal = rawAcum ? parseInt(rawAcum) : 0;
             
             if(!montoVal || montoVal <= 0 || !tituloVal) {
-                mostrarToast('Datos inválidos en el plan', 'error');
+                mostrarToast('Ingresa un monto y un nombre válidos', 'error');
                 return;
             }
 
@@ -1082,8 +1468,30 @@
                 tipo: tipoPlanActivo, 
                 monto: montoVal, 
                 titulo: escapeHTML(tituloVal),
-                user_id: session.user.id 
+                user_id: session.user.id,
+                monto_acumulado: acumVal
             };
+
+            if (tipoPlanActivo === 'limite') {
+                const catId = document.getElementById('select-categoria-plan').value;
+                if (!catId) {
+                    mostrarToast('Selecciona la categoría a controlar', 'error');
+                    return;
+                }
+                payload.categoria_id = catId;
+                payload.periodo = document.getElementById('select-periodo-plan').value;
+                payload.auto_renovar = document.getElementById('check-auto-renovar').checked;
+                
+                if (payload.periodo === 'personalizado') {
+                    payload.fecha_inicio = document.getElementById('input-fecha-inicio-plan').value || new Date().toISOString().slice(0,10);
+                    payload.fecha_fin = document.getElementById('input-fecha-fin-plan').value || null;
+                }
+            } else if (tipoPlanActivo === 'meta') {
+                payload.es_fondo_emergencia = document.getElementById('check-fondo-emergencia').checked;
+                payload.mostrar_en_inicio = document.getElementById('check-mostrar-inicio').checked;
+            } else if (tipoPlanActivo === 'deuda') {
+                payload.mostrar_en_inicio = document.getElementById('check-mostrar-inicio').checked;
+            }
 
             const { error } = await db.from('planes').insert([payload]);
             
@@ -1096,13 +1504,92 @@
             }
         });
 
+        function calcularVentanaPeriodo(periodo, fechaInicioGuardada, fechaFinGuardada, autoRenovar) {
+            const ahora = new Date();
+            let inicio = new Date();
+            let fin = new Date();
+
+            if (periodo === 'semanal') {
+                const diaSemana = (ahora.getDay() + 6) % 7;
+                inicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - diaSemana, 0, 0, 0);
+                fin = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate() + 6, 23, 59, 59, 999);
+            } else if (periodo === 'quincenal') {
+                if (ahora.getDate() <= 15) {
+                    inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1, 0, 0, 0);
+                    fin = new Date(ahora.getFullYear(), ahora.getMonth(), 15, 23, 59, 59, 999);
+                } else {
+                    inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 16, 0, 0, 0);
+                    fin = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59, 999);
+                }
+            } else if (periodo === 'trimestral') {
+                const q = Math.floor(ahora.getMonth() / 3);
+                inicio = new Date(ahora.getFullYear(), q * 3, 1, 0, 0, 0);
+                fin = new Date(ahora.getFullYear(), q * 3 + 3, 0, 23, 59, 59, 999);
+            } else if (periodo === 'semestral') {
+                const sem = ahora.getMonth() < 6 ? 0 : 6;
+                inicio = new Date(ahora.getFullYear(), sem, 1, 0, 0, 0);
+                fin = new Date(ahora.getFullYear(), sem + 6, 0, 23, 59, 59, 999);
+            } else if (periodo === 'anual') {
+                inicio = new Date(ahora.getFullYear(), 0, 1, 0, 0, 0);
+                fin = new Date(ahora.getFullYear(), 11, 31, 23, 59, 59, 999);
+            } else if (periodo === 'personalizado' && fechaInicioGuardada && fechaFinGuardada) {
+                inicio = new Date(fechaInicioGuardada);
+                fin = new Date(fechaFinGuardada);
+                if (autoRenovar && ahora > fin) {
+                    const duracionMs = fin.getTime() - inicio.getTime();
+                    while (ahora > fin) {
+                        inicio = new Date(inicio.getTime() + duracionMs);
+                        fin = new Date(fin.getTime() + duracionMs);
+                    }
+                }
+            } else { // mensual por defecto
+                inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1, 0, 0, 0);
+                fin = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59, 999);
+            }
+            return { inicio: inicio.toISOString(), fin: fin.toISOString() };
+        }
+
+        async function verificarAlertaLimite(categoriaId, nuevoGasto) {
+            const { data: { session } } = await db.auth.getSession();
+            if (!session) return;
+
+            const { data: limites } = await db.from('planes')
+                .select('*')
+                .eq('tipo', 'limite')
+                .eq('categoria_id', categoriaId)
+                .eq('user_id', session.user.id);
+
+            if (!limites || limites.length === 0) return;
+
+            for (let lim of limites) {
+                const rango = calcularVentanaPeriodo(lim.periodo || 'mensual', lim.fecha_inicio, lim.fecha_fin, lim.auto_renovar);
+                const { data: trans } = await db.from('transacciones')
+                    .select('monto')
+                    .eq('categoria_id', categoriaId)
+                    .eq('user_id', session.user.id)
+                    .gte('fecha', rango.inicio)
+                    .lte('fecha', rango.fin);
+
+                const gastadoAnterior = (trans || []).reduce((acc, t) => acc + parseFloat(t.monto), 0);
+                const gastadoTotal = gastadoAnterior + nuevoGasto;
+                const tope = parseFloat(lim.monto);
+                const porcentaje = tope > 0 ? Math.round((gastadoTotal / tope) * 100) : 0;
+
+                if (gastadoTotal >= tope) {
+                    mostrarToast(`🚨 ¡Sobregiro! Superaste el límite en "${lim.titulo}" (${formatearMoneda(gastadoTotal)} de ${formatearMoneda(tope)})`, 'error');
+                } else if (porcentaje >= 80) {
+                    mostrarToast(`⚠️ ¡Alerta! Consumiste el ${porcentaje}% del límite en "${lim.titulo}"`, 'error');
+                }
+            }
+        }
+
         async function guardarTransaccion(categoriaId, notaGasto) {
             const valorGasto = parseInt(monto);
             if (valorGasto === 0) return;
 
             const { data: { session } } = await db.auth.getSession();
             if (!session) {
-                mostrarToast('Debes iniciar sesión para registrar gastos', 'error');
+                mostrarToast('Debes iniciar sesión para registrar movimientos', 'error');
                 return;
             }
 
@@ -1113,16 +1600,8 @@
                 await generarRecomendacionSueldo(valorGasto);
             }
 
-            if (catObj && catObj.tipo === 'gasto' && notaGasto) {
-                const { data: planes } = await db.from('planes').select('*').eq('tipo', 'deuda').eq('user_id', session.user.id);
-                if (planes) {
-                    const deudaEncontrada = planes.find(p => p.titulo.toLowerCase().includes(notaGasto.toLowerCase()));
-                    if (deudaEncontrada) {
-                        const nuevoMontoDeuda = Math.max(0, deudaEncontrada.monto - valorGasto);
-                        await db.from('planes').update({ monto: nuevoMontoDeuda }).eq('id', deudaEncontrada.id);
-                        mostrarToast(`💳 Abono aplicado a deuda "${deudaEncontrada.titulo}"`);
-                    }
-                }
+            if (catObj && catObj.tipo === 'gasto') {
+                await verificarAlertaLimite(categoriaId, valorGasto);
             }
 
             const payload = { 
@@ -1173,14 +1652,14 @@
                 return;
             }
 
-            const { data, error } = await db.from('planes')
+            const { data: planes, error } = await db.from('planes')
                 .select('*')
                 .eq('user_id', session.user.id)
                 .order('creado_en', { ascending: false });
                 
             if(error) return;
 
-            if(data.length === 0) {
+            if(planes.length === 0) {
                 fab.classList.add('hidden');
                 contenedor.innerHTML = `
                 <div class="flex flex-col items-center justify-center h-full text-center mt-12">
@@ -1188,7 +1667,7 @@
                         <span class="text-3xl text-emerald-500 font-light">+</span>
                     </div>
                     <h3 class="text-lg font-bold text-white mb-2">No tienes ningún plan o meta</h3>
-                    <p class="text-sm text-slate-500 mb-8 max-w-xs">Organiza tus gastos fijos, metas de ahorro y deudas</p>
+                    <p class="text-sm text-slate-500 mb-8 max-w-xs">Organiza tus límites por categoría, metas con fondo de emergencia y deudas</p>
                     <button id="btn-primer-plan" class="text-emerald-400 font-bold text-sm tracking-widest uppercase">CREAR MI PRIMER PLAN</button>
                 </div>`;
                 document.getElementById('btn-primer-plan').addEventListener('click', abrirModalPlanes);
@@ -1197,14 +1676,70 @@
             
             fab.classList.remove('hidden');
             contenedor.innerHTML = '';
+
+            const { data: transacciones } = await db.from('transacciones')
+                .select('monto, fecha, categoria_id')
+                .eq('user_id', session.user.id);
             
-            data.forEach(p => {
+            planes.forEach(p => {
                 const tipo = p.tipo;
-                const configTipo = {
-                    limite: { color: 'red', icon: '🛡️', label: 'Gasto Fijo / Límite' },
-                    meta: { color: 'emerald', icon: '🎯', label: 'Meta de Ahorro' },
-                    deuda: { color: 'blue', icon: '💳', label: 'Crédito / Deuda' }
-                }[tipo] || { color: 'slate', icon: '📌', label: 'Plan' };
+                let colorBase = 'emerald';
+                let iconoTipo = '🎯';
+                let etiquetaTipo = 'Meta de Ahorro';
+                let barraColor = 'bg-emerald-500';
+                let porcentaje = 0;
+                let textoMetricaPrincipal = '';
+                let textoMetricaSecundaria = '';
+
+                if (tipo === 'limite') {
+                    colorBase = 'red';
+                    iconoTipo = '🛡️';
+                    etiquetaTipo = `Límite (${(p.periodo || 'mensual').toUpperCase()})`;
+                    
+                    const rango = calcularVentanaPeriodo(p.periodo || 'mensual', p.fecha_inicio, p.fecha_fin, p.auto_renovar);
+                    const gastadoPeriodo = (transacciones || [])
+                        .filter(t => t.categoria_id === p.categoria_id && t.fecha >= rango.inicio && t.fecha <= rango.fin)
+                        .reduce((acc, t) => acc + parseFloat(t.monto), 0);
+
+                    const tope = parseFloat(p.monto);
+                    porcentaje = tope > 0 ? Math.round((gastadoPeriodo / tope) * 100) : 0;
+                    textoMetricaPrincipal = `${formatearMoneda(gastadoPeriodo)} / ${formatearMoneda(tope)}`;
+                    textoMetricaSecundaria = `${porcentaje}% consumido`;
+
+                    if (porcentaje >= 100) {
+                        barraColor = 'bg-red-500';
+                        colorBase = 'red';
+                        textoMetricaSecundaria += ' • ¡SOBREGIRO!';
+                    } else if (porcentaje >= 80) {
+                        barraColor = 'bg-amber-500';
+                        colorBase = 'amber';
+                        textoMetricaSecundaria += ' • ALERTA';
+                    } else {
+                        barraColor = 'bg-emerald-500';
+                        colorBase = 'emerald';
+                    }
+                } else if (tipo === 'meta') {
+                    colorBase = 'emerald';
+                    iconoTipo = p.es_fondo_emergencia ? '🚨' : '🎯';
+                    etiquetaTipo = p.es_fondo_emergencia ? 'Fondo de Emergencia' : 'Meta de Ahorro';
+                    const acum = parseFloat(p.monto_acumulado || 0);
+                    const obj = parseFloat(p.monto);
+                    porcentaje = obj > 0 ? Math.min(100, Math.round((acum / obj) * 100)) : 0;
+                    textoMetricaPrincipal = `${formatearMoneda(acum)} / ${formatearMoneda(obj)}`;
+                    textoMetricaSecundaria = `${porcentaje}% acumulado`;
+                    barraColor = 'bg-emerald-500';
+                } else if (tipo === 'deuda') {
+                    colorBase = 'blue';
+                    iconoTipo = '💳';
+                    etiquetaTipo = 'Crédito / Deuda';
+                    const totalDeuda = parseFloat(p.monto);
+                    const pagado = parseFloat(p.monto_acumulado || 0);
+                    const restante = Math.max(0, totalDeuda - pagado);
+                    porcentaje = totalDeuda > 0 ? Math.min(100, Math.round((pagado / totalDeuda) * 100)) : 0;
+                    textoMetricaPrincipal = `Saldo restante: ${formatearMoneda(restante)}`;
+                    textoMetricaSecundaria = `${porcentaje}% pagado (${formatearMoneda(pagado)} de ${formatearMoneda(totalDeuda)})`;
+                    barraColor = 'bg-blue-500';
+                }
 
                 const wrapper = document.createElement('div');
                 wrapper.className = "relative overflow-hidden rounded-3xl mb-4 bg-red-500 flex justify-end";
@@ -1218,16 +1753,24 @@
                 const tarjeta = document.createElement('div');
                 tarjeta.className = "bg-slate-900 p-5 rounded-3xl border border-slate-800 shadow-md relative z-10 w-full transition-transform duration-200 touch-pan-y";
                 tarjeta.innerHTML = `
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center border bg-${configTipo.color}-500/10 text-${configTipo.color}-400 border-${configTipo.color}-500/20">${configTipo.icon}</div>
-                        <div>
-                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">${configTipo.label}</p>
-                            <p class="text-sm font-bold text-white">${escapeHTML(p.titulo)}</p>
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center border bg-${colorBase}-500/10 text-${colorBase}-400 border-${colorBase}-500/20 text-lg">${iconoTipo}</div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">${etiquetaTipo}</p>
+                                <p class="text-sm font-bold text-white">${escapeHTML(p.titulo)}</p>
+                            </div>
                         </div>
+                        ${p.mostrar_en_inicio ? '<span class="text-[9px] bg-slate-800 border border-slate-700 text-slate-400 font-bold px-2 py-0.5 rounded-full">⚡ En Inicio</span>' : ''}
                     </div>
-                    <div class="flex justify-between items-end">
-                        <h4 class="text-2xl font-bold text-white">${formatearMoneda(p.monto)}</h4>
-                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Objetivo</span>
+
+                    <div class="flex justify-between items-baseline mb-2">
+                        <h4 class="text-lg font-extrabold text-white">${textoMetricaPrincipal}</h4>
+                        <span class="text-[10px] font-bold text-slate-400">${textoMetricaSecundaria}</span>
+                    </div>
+
+                    <div class="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+                        <div class="${barraColor} h-2 rounded-full transition-all duration-500" style="width: ${Math.min(100, porcentaje)}%"></div>
                     </div>
                 `;
                 
@@ -1270,25 +1813,36 @@
             if (!session) return;
             
             const { data: planes } = await db.from('planes').select('*').eq('user_id', session.user.id);
-            let totalCompromisosFijos = 0;
+            let totalFijosYDeudas = 0;
+            let tieneFondoEmergencia = false;
             
             if (planes) {
                 planes.forEach(p => {
-                    if (p.tipo === 'limite' || p.tipo === 'deuda') {
-                        totalCompromisosFijos += parseFloat(p.monto);
+                    if (p.tipo === 'limite') {
+                        totalFijosYDeudas += parseFloat(p.monto);
+                    } else if (p.tipo === 'deuda') {
+                        const pendiente = Math.max(0, parseFloat(p.monto) - parseFloat(p.monto_acumulado || 0));
+                        totalFijosYDeudas += Math.min(pendiente, parseFloat(p.monto) * 0.10); // Cuota o valor representativo
+                    }
+                    if (p.tipo === 'meta' && p.es_fondo_emergencia) {
+                        tieneFondoEmergencia = true;
                     }
                 });
             }
 
-            const baseDisponible = sueldoIngresado - totalCompromisosFijos;
+            const margenLimpio = sueldoIngresado - totalFijosYDeudas;
             
-            if (baseDisponible <= 0) {
-                mostrarToast("⚠️ Tus deudas o fijos superan tu sueldo.", "error");
+            if (margenLimpio <= 0) {
+                mostrarToast("⚠️ Tus compromisos fijos y deudas igualan o superan tu salario registrado.", "error");
                 return;
             }
 
-            const ahorroDeuda = baseDisponible * 0.20;
-            mostrarToast(`🎯 ¡Sueldo procesado! Sugerido Ahorro: ${formatearMoneda(ahorroDeuda)}`);
+            if (tieneFondoEmergencia) {
+                const sugeridoFondo = Math.round(margenLimpio * 0.20);
+                mostrarToast(`🚨 De tu sueldo de ${formatearMoneda(sueldoIngresado)}, fijos y deudas suman ${formatearMoneda(totalFijosYDeudas)}. Aparta ${formatearMoneda(sugeridoFondo)} (20% del restante) para tu fondo de emergencia.`);
+            } else {
+                mostrarToast(`💰 Sueldo recibido. Margen limpio disponible: ${formatearMoneda(margenLimpio)} tras compromisos.`);
+            }
         }
 
         function limpiar() { 
