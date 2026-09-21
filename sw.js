@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v16-staff';
+const CACHE_VERSION = 'v17-staff';
 const CACHE_NAME = `gastos-${CACHE_VERSION}`;
 const ASSETS = ['/', '/index.html', '/manifest.json'];
 
@@ -36,15 +36,25 @@ self.addEventListener('fetch', event => {
                     );
                     return response;
                 })
-                .catch(() => caches.match('/index.html'))
+                .catch(() => caches.match('/index.html') || new Response('Offline', { status: 503 }))
         );
         return;
     }
 
     event.respondWith(
         caches.match(event.request).then(cachedResponse => {
-            const fetchPromise = fetch(event.request).then(networkResponse => {
-                if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+            if (cachedResponse) {
+                event.waitUntil(
+                    fetch(event.request).then(networkResponse => {
+                        if (networkResponse && networkResponse.status === 200) {
+                            caches.open(CACHE_NAME).then(cache => cache.put(event.request, networkResponse));
+                        }
+                    }).catch(() => {})
+                );
+                return cachedResponse;
+            }
+            return fetch(event.request).then(networkResponse => {
+                if (!networkResponse || networkResponse.status !== 200) {
                     return networkResponse;
                 }
                 const resToCache = networkResponse.clone();
@@ -52,9 +62,7 @@ self.addEventListener('fetch', event => {
                     caches.open(CACHE_NAME).then(cache => cache.put(event.request, resToCache))
                 );
                 return networkResponse;
-            }).catch(() => cachedResponse);
-            
-            return cachedResponse || fetchPromise;
+            }).catch(() => new Response('', { status: 408, statusText: 'Network request failed' }));
         })
     );
 });

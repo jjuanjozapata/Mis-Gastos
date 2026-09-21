@@ -14,7 +14,7 @@
     <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2933/2933116.png">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2933/2933116.png">
 
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self' https://znszebnjcgjfzxvnexxd.supabase.co https://cdn.jsdelivr.net https://cdn-icons-png.flaticon.com; img-src 'self' data: https://cdn-icons-png.flaticon.com; worker-src 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self' https://znszebnjcgjfzxvnexxd.supabase.co https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://cdn-icons-png.flaticon.com; img-src 'self' data: https://cdn-icons-png.flaticon.com; worker-src 'self';">
     
     <script>
         const originalWarn = console.warn;
@@ -30,7 +30,7 @@
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
     <style>
         body { padding-bottom: env(safe-area-inset-bottom); height: 100dvh; overscroll-behavior-y: none; -webkit-user-select: none; user-select: none; }
-        button, input { touch-action: manipulation; -webkit-tap-highlight-color: transparent; min-height: 48px; min-width: 48px; }
+        button, input { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
         .tab-activa { color: #10b981; }
         .tab-inactiva { color: #64748b; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -56,7 +56,7 @@
     <div id="modal-flujo" class="hidden fixed inset-0 z-[110] bg-slate-950/95 backdrop-blur-xl justify-center items-end sm:items-center p-0 pb-0 sm:p-6">
         <div class="bg-slate-900 w-full h-[80vh] sm:h-auto sm:max-h-[85vh] rounded-t-[2.5rem] sm:rounded-3xl p-6 border-t sm:border border-slate-800 shadow-[0_-20px_40px_rgba(0,0,0,0.5)] flex flex-col relative transition-transform">
             <div class="w-12 h-1.5 bg-slate-800 rounded-full mx-auto mb-6 shrink-0 sm:hidden"></div>
-            <button id="btn-cerrar-flujo" class="absolute top-6 right-6 w-10 h-10 flex items-center justify-center rounded-full bg-slate-800 text-slate-400 hover:text-white shrink-0 active:scale-90 transition-transform">✕</button>
+            <button id="btn-cerrar-flujo" class="absolute top-6 right-6 w-8 h-8 flex items-center justify-center rounded-full bg-slate-800 text-slate-400 hover:text-white shrink-0 active:scale-90 transition-transform">✕</button>
             
             <div class="flex-1 min-h-0 overflow-y-auto no-scrollbar pb-safe">
                 <div id="flujo-paso-1" class="flex flex-col h-full justify-center space-y-6">
@@ -71,7 +71,7 @@
                             <span class="block text-lg font-bold text-white">Es un Gasto</span>
                             <span class="block text-xs text-slate-400">Salida de dinero, compras, pagos</span>
                         </div>
-                        <span class="ml-auto text-slate-500 text-xl">›</span>
+                        <span class="ml-auto text-slate-500">›</span>
                     </button>
                     <button id="btn-tipo-ingreso" class="w-full bg-slate-800 p-5 rounded-[2rem] border border-slate-700 active:bg-slate-700 active:scale-[0.98] transition-all flex items-center gap-5 shadow-lg">
                         <div class="w-14 h-14 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-400 border border-emerald-500/20 text-2xl">📈</div>
@@ -79,7 +79,7 @@
                             <span class="block text-lg font-bold text-white">Es un Ingreso</span>
                             <span class="block text-xs text-slate-400">Entrada de dinero, salarios, ventas</span>
                         </div>
-                        <span class="ml-auto text-slate-500 text-xl">›</span>
+                        <span class="ml-auto text-slate-500">›</span>
                     </button>
                 </div>
 
@@ -108,7 +108,7 @@
                     <p class="text-sm font-bold text-white">Controlar un gasto</p>
                     <p class="text-xs text-slate-400">Tope máximo para una categoría</p>
                 </div>
-                <span class="ml-auto text-slate-500 text-xl">›</span>
+                <span class="ml-auto text-slate-500">›</span>
             </button>
             
             <button id="btn-crear-meta" class="w-full flex items-center gap-4 bg-slate-800/50 hover:bg-slate-800 p-4 rounded-2xl border border-slate-700/50 mb-6 transition-colors text-left">
@@ -117,7 +117,7 @@
                     <p class="text-sm font-bold text-white">Ahorrar para una meta</p>
                     <p class="text-xs text-slate-400">Registra aportes a un objetivo</p>
                 </div>
-                <span class="ml-auto text-slate-500 text-xl">›</span>
+                <span class="ml-auto text-slate-500">›</span>
             </button>
 
             <button id="btn-cancelar-planes" class="w-full py-4 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors mb-safe">Cancelar</button>
@@ -149,12 +149,12 @@
 
     <div id="pantalla-captura" class="flex-1 flex flex-col min-h-0 relative">
         <header class="shrink-0 p-5 flex justify-end items-center">
-            <button id="btn-cuenta" class="bg-slate-900 text-emerald-400 border border-emerald-500/20 px-5 py-2.5 rounded-full text-xs font-bold tracking-widest uppercase active:scale-95 transition-all shadow-md">Efectivo</button>
+            <button id="btn-cuenta" class="bg-slate-900 text-emerald-400 border border-emerald-500/20 px-5 py-2 rounded-full text-xs font-bold tracking-widest uppercase active:scale-95 transition-all shadow-md">Efectivo</button>
         </header>
 
         <div class="flex-1 flex flex-col justify-center items-center px-6">
             <span id="fecha-actual" class="text-slate-500 text-[10px] tracking-widest uppercase font-bold mb-4 border border-slate-800 px-3 py-1 rounded-full bg-slate-900/50"></span>
-            <div id="monto-display" class="text-[64px] sm:text-[90px] font-extrabold tracking-tighter text-white transition-colors drop-shadow-lg">$ 0</div>
+            <div id="monto-display" class="text-[72px] sm:text-[90px] font-extrabold tracking-tighter text-white transition-colors drop-shadow-lg">$ 0</div>
         </div>
 
         <div class="shrink-0 grid grid-cols-3 gap-3 p-5 bg-slate-900 rounded-t-[2.5rem] border-t border-slate-800 shadow-[0_-20px_40px_rgba(0,0,0,0.4)]">
@@ -220,20 +220,20 @@
 
             <div class="bg-slate-900 rounded-3xl p-5 mb-4 border border-slate-800 shadow-lg">
                 <div class="flex justify-between items-center mb-3">
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Modelo Financiero 50/30/20 (Excel)</p>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Modelo Financiero 50/30/20</p>
                     <span class="text-[10px] text-emerald-400 font-semibold">Óptimo</span>
                 </div>
                 <div class="grid grid-cols-3 gap-2 text-center">
                     <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                        <span class="text-[10px] text-slate-500 font-bold block mb-1">Necesidades (50%)</span>
+                        <span class="text-[10px] text-slate-500 font-bold block mb-1">Necesidades</span>
                         <span id="stat-50" class="text-xs font-bold text-white">50%</span>
                     </div>
                     <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                        <span class="text-[10px] text-slate-500 font-bold block mb-1">Deseos (30%)</span>
+                        <span class="text-[10px] text-slate-500 font-bold block mb-1">Deseos</span>
                         <span id="stat-30" class="text-xs font-bold text-white">30%</span>
                     </div>
                     <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                        <span class="text-[10px] text-slate-500 font-bold block mb-1">Ahorro/Deuda (20%)</span>
+                        <span class="text-[10px] text-slate-500 font-bold block mb-1">Ahorro/Deuda</span>
                         <span id="stat-20" class="text-xs font-bold text-emerald-400">20%</span>
                     </div>
                 </div>
@@ -444,7 +444,6 @@
             document.getElementById('flujo-paso-1').classList.add('hidden');
             document.getElementById('flujo-paso-1').classList.remove('flex');
             document.getElementById('flujo-paso-2').classList.remove('hidden');
-            document.getElementById('flujo-paso-2').classList.remove('flex'); // Fixed display logic
             document.getElementById('flujo-paso-2').classList.add('flex');
             renderizarCategoriasFlujo();
         }
@@ -815,7 +814,7 @@
                     montoSpan.textContent = `${isIngreso ? '+' : '-'}${formateador.format(valor)}`;
                     
                     const btnBorrar = document.createElement('button');
-                    btnBorrar.className = "w-8 h-8 rounded-full flex items-center justify-center bg-slate-800 text-slate-500 hover:text-red-400 hover:bg-slate-700 transition-colors";
+                    btnBorrar.className = "w-6 h-6 rounded-full flex items-center justify-center bg-slate-800 text-slate-500 hover:text-red-400 hover:bg-slate-700 transition-colors";
                     btnBorrar.textContent = "✕";
                     btnBorrar.addEventListener('click', () => eliminarTransaccion(t.id));
                     
@@ -837,7 +836,6 @@
             document.getElementById('dash-porcentaje').textContent = `${pDisp}%`;
             document.getElementById('dash-bar').style.width = `${pDisp}%`;
 
-            // Modelo Financiero 50/30/20 exacto del Excel
             if (totalIngresado > 0) {
                 const necPct = Math.min(100, Math.round((totalGastado * 0.5 / totalIngresado) * 100));
                 const desPct = Math.min(100, Math.round((totalGastado * 0.3 / totalIngresado) * 100));
