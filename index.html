@@ -1227,64 +1227,7 @@ async function guardarTransaccion(categoriaId, notaGasto) {
             mostrarToast(`🎯 ¡Sueldo procesado! Sugerido Ahorro: ${formatearMoneda(ahorroDeuda)}`);
         }
 
-        async function guardarTransaccion(categoriaId, notaGasto) {
-            const valorGasto = parseInt(monto);
-            if (valorGasto === 0) return;
-
-            let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
-            const catObj = categorias.find(c => c.id === categoriaId);
-            
-            if (catObj && catObj.tipo === 'ingreso') {
-                await generarRecomendacionSueldo(valorGasto);
-            }
-
-            if (catObj && catObj.tipo === 'gasto' && notaGasto) {
-                const { data: planes } = await db.from('planes').select('*').eq('tipo', 'deuda');
-                if (planes) {
-                    const deudaEncontrada = planes.find(p => p.titulo.toLowerCase().includes(notaGasto.toLowerCase()));
-                    if (deudaEncontrada) {
-                        const nuevoMontoDeuda = Math.max(0, deudaEncontrada.monto - valorGasto);
-                        await db.from('planes').update({ monto: nuevoMontoDeuda }).eq('id', deudaEncontrada.id);
-                        mostrarToast(`💳 Abono aplicado a deuda "${deudaEncontrada.titulo}"`);
-                    }
-                }
-            }
-
-            const payload = { 
-                monto: valorGasto, 
-                categoria_id: categoriaId, 
-                cuenta: cuentaActual, 
-                fecha: new Date().toISOString(),
-                notas: notaGasto ? escapeHTML(notaGasto) : null 
-            };
-            
-            const display = document.getElementById('flujo-monto-display');
-
-            if (navigator.onLine) {
-                const { error } = await db.from('transacciones').insert([payload]);
-                if (error) {
-                    display.style.color = '#ef4444'; 
-                    setTimeout(() => display.style.color = 'white', 1000);
-                    mostrarToast('Error al sincronizar con Supabase', 'error');
-                    return;
-                }
-            } else {
-                let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
-                queue.push(payload);
-                localStorage.setItem('offline_queue', JSON.stringify(queue));
-                mostrarToast('Guardado offline. Se sincronizará al conectar.', 'error');
-            }
-            
-            if (navigator.vibrate) navigator.vibrate(50);
-            
-            display.style.color = '#34d399'; 
-            setTimeout(() => {
-                display.style.color = 'white';
-                cerrarFlujo();
-                limpiar();
-                mostrarToast('Transacción registrada con éxito');
-            }, 300);
-        }
+        
 
         function limpiar() { 
             monto = '0'; 
