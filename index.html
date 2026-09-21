@@ -523,14 +523,41 @@
             if (!divNoAuth || !divAuth) return;
 
             if (session && session.user) {
-                divNoAuth.classList.add('hidden');
-                divAuth.classList.remove('hidden');
-                emailDisplay.textContent = session.user.email;
-                infoTexto.textContent = "Sesión activa. Tus registros están sincronizados con tu cuenta personal.";
+                // Verificar si es un usuario anónimo (fantasma)
+                const isAnonymous = session.user.is_anonymous;
+
+                if (isAnonymous) {
+                    // Es un fantasma: Mostramos el formulario pero cambiamos los textos
+                    divNoAuth.classList.remove('hidden');
+                    divAuth.classList.add('hidden');
+                    document.getElementById('btn-anonimo').classList.add('hidden'); // Ocultar el botón verde gigante
+                    document.querySelector('#contenedor-no-autenticado > div.relative').classList.add('hidden'); // Ocultar separador
+                    
+                    infoTexto.textContent = "Estás usando una cuenta temporal. Conecta un correo y contraseña para no perder tus datos.";
+                    document.getElementById('btn-registrar').textContent = "Guardar mi progreso";
+                    document.getElementById('btn-registrar').classList.replace('bg-slate-900', 'bg-emerald-500');
+                    document.getElementById('btn-registrar').classList.replace('text-slate-400', 'text-slate-950');
+                    document.getElementById('btn-iniciar-sesion').classList.add('hidden'); // No tiene sentido iniciar sesión si ya estás como anónimo
+                    
+                } else {
+                    // Es un usuario real con correo
+                    divNoAuth.classList.add('hidden');
+                    divAuth.classList.remove('hidden');
+                    emailDisplay.textContent = session.user.email;
+                    infoTexto.textContent = "Sesión activa. Tus registros están sincronizados con tu cuenta personal.";
+                }
             } else {
+                // No hay sesión (Estado inicial por defecto)
                 divNoAuth.classList.remove('hidden');
                 divAuth.classList.add('hidden');
-                infoTexto.textContent = "Inicia sesión o crea una cuenta para separar tus gastos de los de tus amigos.";
+                
+                // Restaurar la interfaz original por si venían de cerrar sesión
+                document.getElementById('btn-anonimo').classList.remove('hidden');
+                document.querySelector('#contenedor-no-autenticado > div.relative').classList.remove('hidden');
+                infoTexto.textContent = "Inicia sesión, crea una cuenta o entra rápido para probar la app.";
+                document.getElementById('btn-registrar').textContent = "Crear Cuenta";
+                document.getElementById('btn-registrar').className = "flex-1 py-3 bg-slate-900 text-slate-400 font-bold rounded-xl text-xs active:scale-95 transition-all border border-slate-800";
+                document.getElementById('btn-iniciar-sesion').classList.remove('hidden');
             }
         }
 
@@ -575,16 +602,30 @@
                 mostrarToast('Ingresa correo y contraseña', 'error');
                 return;
             }
-
-            const { data, error } = await db.auth.signUp({ email, password });
-            if (error) {
-                mostrarToast('Error al registrarse: ' + error.message, 'error');
+            
+            const { data: { session } } = await db.auth.getSession();
+            
+            // Si el usuario es anónimo, lo convertimos a permanente
+            if (session && session.user && session.user.is_anonymous) {
+                const { data, error } = await db.auth.updateUser({ email, password });
+                if (error) {
+                    mostrarToast('Error al vincular cuenta: ' + error.message, 'error');
+                } else {
+                    mostrarToast('¡Progreso guardado! Tu cuenta oficial está lista.');
+                    document.getElementById('auth-password').value = '';
+                    verificarEstadoSesion(); // Refrescar la UI
+                }
             } else {
-                mostrarToast('¡Cuenta creada con éxito! Ya puedes iniciar sesión.');
-                document.getElementById('auth-password').value = '';
+                // Registro normal (usuario nuevo desde cero)
+                const { data, error } = await db.auth.signUp({ email, password });
+                if (error) {
+                    mostrarToast('Error al registrarse: ' + error.message, 'error');
+                } else {
+                    mostrarToast('¡Cuenta creada con éxito! Entrando...');
+                    document.getElementById('auth-password').value = '';
+                }
             }
         });
-
         document.getElementById('btn-cerrar-sesion').addEventListener('click', async () => {
             const { error } = await db.auth.signOut();
             if (!error) {
