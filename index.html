@@ -18,6 +18,15 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self' https://znszebnjcgjfzxvnexxd.supabase.co https://cdn.jsdelivr.net https://cdn-icons-png.flaticon.com https://cdn.tailwindcss.com; img-src 'self' data: https://cdn-icons-png.flaticon.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
     
     <script>
+        // QA Standard: Proxy Interceptor para suprimir ruido específico de terceros (Tailwind CDN)
+        // Mantiene intacta la consola nativa y otras advertencias críticas del sistema.
+        console.warn = new Proxy(console.warn, {
+            apply(target, thisArg, args) {
+                if (typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) return;
+                return Reflect.apply(target, thisArg, args);
+            }
+        });
+
         // Monitoreo global de excepciones no capturadas para prevenir crashes silenciosos
         window.addEventListener('error', (event) => {
             console.error('Fallo global atrapado:', event.message);
