@@ -32,10 +32,11 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
     
-    // Exclusión estricta de la API backend para no envenenar el caché con datos fantasma
+    // Ignorar POST/PUT/DELETE y extensiones
+    if (event.request.method !== 'GET' || url.protocol === 'chrome-extension:') return;
+    
+    // Ignorar Supabase para evitar datos fantasma
     if (url.origin.includes('supabase.co')) return;
-
-    if (!url.origin.includes(self.location.origin) || url.protocol === 'chrome-extension:') return;
 
     if (event.request.mode === 'navigate') {
         event.respondWith(

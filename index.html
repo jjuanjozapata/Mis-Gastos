@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -18,11 +18,10 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self' https://znszebnjcgjfzxvnexxd.supabase.co https://cdn.jsdelivr.net https://cdn-icons-png.flaticon.com https://cdn.tailwindcss.com; img-src 'self' data: https://cdn-icons-png.flaticon.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
     
     <script>
-        const originalWarn = console.warn;
-        console.warn = (...args) => {
-            if (typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) return;
-            originalWarn.apply(console, args);
-        };
+        // Monitoreo global de excepciones no capturadas para prevenir crashes silenciosos
+        window.addEventListener('error', (event) => {
+            console.error('Fallo global atrapado:', event.message);
+        });
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -31,10 +30,14 @@
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
     <style>
         :root { color-scheme: dark; }
+        html {
+            height: -webkit-fill-available;
+        }
         body { 
             padding-top: env(safe-area-inset-top);
             padding-bottom: env(safe-area-inset-bottom); 
             height: 100dvh; 
+            min-height: -webkit-fill-available;
             overscroll-behavior-y: none; 
             -webkit-user-select: none; 
             user-select: none; 
@@ -179,7 +182,8 @@
                     </div>
 
                     <div class="mb-3 shrink-0">
-                        <input type="text" id="input-buscar-categoria" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-emerald-500" placeholder="🔍 Buscar categoría..." autocomplete="off">
+                        <label for="input-buscar-categoria" class="sr-only">Buscar categoría</label>
+                        <input type="text" id="input-buscar-categoria" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-emerald-500" placeholder="🔍 Buscar categoría..." autocomplete="off" aria-label="Buscar categoría">
                     </div>
                     
                     <div class="mb-3 shrink-0" id="seccion-filtros-cat">
@@ -833,8 +837,8 @@
         actualizarEstadoRed();
 
         async function sincronizarColaOffline() {
-            let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
-            let queuePlanes = JSON.parse(localStorage.getItem('offline_queue_planes') || '[]');
+            let queue = leerStorageSeguro('offline_queue', []);
+            let queuePlanes = leerStorageSeguro('offline_queue_planes', []);
             
             if (queue.length === 0 && queuePlanes.length === 0) return;
             const { data: { session } } = await db.auth.getSession();
@@ -843,58 +847,61 @@
             mostrarToast('🔄 Sincronizando datos pendientes con la nube...');
             let huboSincronizacion = false;
 
-            if (queue.length > 0) {
-                const itemsConUsuario = queue.map(item => ({ ...item, user_id: session.user.id }));
-                const idsProcesados = itemsConUsuario.map(i => i.id);
-                const { error: errTrans } = await db.from('transacciones').insert(itemsConUsuario);
-                
-                if (!errTrans) {
-                    let colaActual = JSON.parse(localStorage.getItem('offline_queue') || '[]');
-                    // Solo borramos los que ya se subieron, por si entró uno nuevo justo en ese milisegundo
-                    let colaRestante = colaActual.filter(item => !idsProcesados.includes(item.id));
+            try {
+                if (queue.length > 0) {
+                    const itemsConUsuario = queue.map(item => ({ ...item, user_id: session.user.id }));
+                    const idsProcesados = itemsConUsuario.map(i => i.id);
+                    const { error: errTrans } = await db.from('transacciones').insert(itemsConUsuario);
                     
-                    if (colaRestante.length > 0) {
-                        localStorage.setItem('offline_queue', JSON.stringify(colaRestante));
-                    } else {
-                        localStorage.removeItem('offline_queue');
-                    }
-                    huboSincronizacion = true;
-                }
-            }
-
-            if (queuePlanes.length > 0) {
-                let planesPendientes = [...queuePlanes];
-                
-                for (let op of queuePlanes) {
-                    const { error: errPlan } = await db.from('planes')
-                        .update({ monto_acumulado: op.nuevoAcumulado })
-                        .eq('id', op.planId)
-                        .eq('user_id', session.user.id);
+                    if (!errTrans) {
+                        let colaActual = leerStorageSeguro('offline_queue', []);
+                        let colaRestante = colaActual.filter(item => !idsProcesados.includes(item.id));
                         
-                    // Si se sincroniza bien, lo quitamos de la cola iterativamente
-                    if (!errPlan) {
-                        planesPendientes = planesPendientes.filter(p => p.planId !== op.planId);
+                        if (colaRestante.length > 0) {
+                            localStorage.setItem('offline_queue', JSON.stringify(colaRestante));
+                        } else {
+                            localStorage.removeItem('offline_queue');
+                        }
                         huboSincronizacion = true;
                     }
                 }
-                
-                if (planesPendientes.length > 0) {
-                    localStorage.setItem('offline_queue_planes', JSON.stringify(planesPendientes));
-                } else {
-                    localStorage.removeItem('offline_queue_planes');
-                }
-            }
 
-            if (huboSincronizacion) {
-                mostrarToast('⚡ Sincronizados registros pendientes offline');
-                cargarEstadisticas();
-                cargarPlanes();
+                if (queuePlanes.length > 0) {
+                    let planesPendientes = [...queuePlanes];
+                    
+                    for (let op of queuePlanes) {
+                        const { error: errPlan } = await db.from('planes')
+                            .update({ monto_acumulado: op.nuevoAcumulado })
+                            .eq('id', op.planId)
+                            .eq('user_id', session.user.id);
+                            
+                        if (!errPlan) {
+                            planesPendientes = planesPendientes.filter(p => p.planId !== op.planId);
+                            huboSincronizacion = true;
+                        }
+                    }
+                    
+                    if (planesPendientes.length > 0) {
+                        localStorage.setItem('offline_queue_planes', JSON.stringify(planesPendientes));
+                    } else {
+                        localStorage.removeItem('offline_queue_planes');
+                    }
+                }
+
+                if (huboSincronizacion) {
+                    mostrarToast('⚡ Sincronizados registros pendientes offline');
+                    cargarEstadisticas();
+                    cargarPlanes();
+                }
+            } catch (error) {
+                console.warn('Sincronización pausada por inestabilidad de red:', error.message);
             }
         }
-
+           
         async function verificarEstadoSesion() {
-            const { data: { session } } = await db.auth.getSession();
-            actualizarUIIngreso(session);
+            const { data, error } = await db.auth.getSession();
+            if (error) console.warn('Sesión no disponible:', error.message);
+            actualizarUIIngreso(data?.session || null);
         }
 
         function actualizarUIIngreso(session) {
@@ -3005,24 +3012,27 @@
             document.getElementById('cuenta-tarjetas-val').textContent = formatearMoneda(totalesCuentas['Tarjetas']);
             document.getElementById('cuenta-transferencia-val').textContent = formatearMoneda(totalesCuentas['Transferencia']);
 
-            db.from('planes').select('*').eq('user_id', session.user.id).then(({ data: planesData }) => {
-                let totalDeudasPendientes = 0;
-                let totalAhorrosMetas = 0;
-                if (planesData) {
-                    planesData.forEach(p => {
-                        if (p.tipo === 'deuda') {
-                            totalDeudasPendientes += Math.max(0, parseFloat(p.monto) - parseFloat(p.monto_acumulado || 0));
-                        }
-                        if (p.tipo === 'meta') {
-                            totalAhorrosMetas += parseFloat(p.monto_acumulado || 0);
-                        }
-                    });
-                }
-                const totalEfectivoBancos = totalesCuentas['Efectivo'] + totalesCuentas['Bancos'] + totalesCuentas['Transferencia'];
-                const patrimonioNeto = (totalEfectivoBancos + totalAhorrosMetas) - totalDeudasPendientes;
-                const elPatrimonio = document.getElementById('dash-patrimonio-neto');
-                if (elPatrimonio) elPatrimonio.textContent = formatearMoneda(patrimonioNeto);
-            });
+            db.from('planes').select('*').eq('user_id', session.user.id)
+                .then(({ data: planesData, error }) => {
+                    if (error) throw error;
+                    let totalDeudasPendientes = 0;
+                    let totalAhorrosMetas = 0;
+                    if (planesData) {
+                        planesData.forEach(p => {
+                            if (p.tipo === 'deuda') {
+                                totalDeudasPendientes += Math.max(0, parseFloat(p.monto) - parseFloat(p.monto_acumulado || 0));
+                            }
+                            if (p.tipo === 'meta') {
+                                totalAhorrosMetas += parseFloat(p.monto_acumulado || 0);
+                            }
+                        });
+                    }
+                    const totalEfectivoBancos = totalesCuentas['Efectivo'] + totalesCuentas['Bancos'] + totalesCuentas['Transferencia'];
+                    const patrimonioNeto = (totalEfectivoBancos + totalAhorrosMetas) - totalDeudasPendientes;
+                    const elPatrimonio = document.getElementById('dash-patrimonio-neto');
+                    if (elPatrimonio) elPatrimonio.textContent = formatearMoneda(patrimonioNeto);
+                })
+                .catch(err => console.warn('Carga de patrimonio omitida por conectividad:', err.message));
 
             renderizarListaTransacciones(transaccionesCacheActuales, mapaCat);
             renderizarAccesosRapidosInicio(categorias);
@@ -3232,7 +3242,9 @@
             const matrizContainer = document.getElementById('matriz-presupuesto-excel');
             matrizContainer.innerHTML = '';
             
-            db.auth.getSession().then(({ data: { session: activeSession } }) => {
+            db.auth.getSession().then(({ data, error }) => {
+                if (error) throw error;
+                const activeSession = data?.session;
                 const userId = activeSession ? activeSession.user.id : null;
                 
                 const renderMatrixWithLimits = (planesLimites = []) => {
@@ -3422,6 +3434,13 @@
         verificarEstadoSesion();
         verificarSeguridadBiometrico();
         comprobarRolloverMes();
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .catch(err => console.error('Error SW:', err));
+            });
+        }
     </script>
 </body>
 </html>
