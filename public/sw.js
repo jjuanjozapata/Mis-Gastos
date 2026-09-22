@@ -34,6 +34,9 @@ self.addEventListener('fetch', event => {
     // Ignorar POST/PUT/DELETE y extensiones
     if (event.request.method !== 'GET' || url.protocol === 'chrome-extension:') return;
     
+    // Ignorar entorno de desarrollo local (Vite y WebSockets)
+    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') return;
+    
     // Ignorar Supabase para evitar datos fantasma
     if (url.origin.includes('supabase.co')) return;
 
