@@ -32,14 +32,16 @@
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
     <style>
         :root { color-scheme: dark; }
-        html {
-            height: -webkit-fill-available;
+        html, body {
+            height: 100%;
+            height: 100dvh;
+            width: 100vw;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #020617;
         }
         body { 
-            padding-top: env(safe-area-inset-top);
-            padding-bottom: env(safe-area-inset-bottom); 
-            height: 100dvh; 
-            min-height: -webkit-fill-available;
             overscroll-behavior-y: none; 
             -webkit-user-select: none; 
             user-select: none; 
@@ -55,6 +57,8 @@
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         select option { background-color: #0f172a; color: #f8fafc; }
         .tabular-nums { font-variant-numeric: tabular-nums; }
+        .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 16px); }
+        .pt-safe { padding-top: max(env(safe-area-inset-top), 16px); }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-100 flex flex-col items-center justify-center font-sans select-none overflow-hidden m-0 p-0">
@@ -1786,48 +1790,53 @@ let graficoInstancia = null;
 
         async function aplicarAporteMeta(plan) {
             const valorAporte = parseInt(monto);
-            const { data: { session } } = await db.auth.getSession();
-            if (!session) {
-                mostrarToast('Inicia sesión para gestionar metas', 'error');
-                return;
-            }
+            
+            try {
+                const { data: { session }, error: errAuth } = await db.auth.getSession();
+                if (errAuth || !session) throw new Error('Inicia sesión para gestionar metas');
 
-            const nuevoAcumulado = parseFloat(plan.monto_acumulado || 0) + valorAporte;
-            let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
-            const catAhorro = categorias.find(c => c.nombre.toLowerCase().includes('ahorro') || c.nombre.toLowerCase().includes('meta')) || categorias[0];
+                const nuevoAcumulado = parseFloat(plan.monto_acumulado || 0) + valorAporte;
+                let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+                const catAhorro = categorias.find(c => c.nombre.toLowerCase().includes('ahorro') || c.nombre.toLowerCase().includes('meta')) || categorias[0];
 
-            const txPayload = {
-                monto: valorAporte,
-                categoria_id: catAhorro ? catAhorro.id : null,
-                cuenta: cuentaActual,
-                fecha: new Date().toISOString(),
-                notas: `Aporte a meta: ${plan.titulo}`,
-                user_id: session.user.id
-            };
+                const txPayload = {
+                    id: window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : Date.now().toString(),
+                    monto: valorAporte,
+                    categoria_id: catAhorro ? catAhorro.id : null,
+                    cuenta: cuentaActual,
+                    fecha: new Date().toISOString(),
+                    notas: `Aporte a meta: ${plan.titulo}`,
+                    user_id: session.user.id
+                };
 
-            if (navigator.onLine) {
-                const { error: errPlan } = await db.from('planes').update({ monto_acumulado: nuevoAcumulado }).eq('id', plan.id);
-                if (errPlan) {
-                    mostrarToast('Error al registrar aporte: ' + errPlan.message, 'error');
-                    return;
+                if (navigator.onLine) {
+                    const { error: errPlan } = await db.from('planes').update({ monto_acumulado: nuevoAcumulado }).eq('id', plan.id);
+                    if (errPlan) throw new Error('Fallo al actualizar el acumulado: ' + errPlan.message);
+                    
+                    if (catAhorro) {
+                        const { error: errTx } = await db.from('transacciones').insert([txPayload]);
+                        if (errTx) throw new Error('Fallo al guardar la transacción contable: ' + errTx.message);
+                    }
+                } else {
+                    let queueTx = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+                    queueTx.push(txPayload);
+                    localStorage.setItem('offline_queue', JSON.stringify(queueTx));
+
+                    let queuePlanes = JSON.parse(localStorage.getItem('offline_queue_planes') || '[]');
+                    queuePlanes.push({ planId: plan.id, nuevoAcumulado });
+                    localStorage.setItem('offline_queue_planes', JSON.stringify(queuePlanes));
+                    mostrarToast('Aporte encolado offline. Se sincronizará al conectar.');
                 }
-                if (catAhorro) await db.from('transacciones').insert([txPayload]);
-            } else {
-                let queueTx = JSON.parse(localStorage.getItem('offline_queue') || '[]');
-                queueTx.push(txPayload);
-                localStorage.setItem('offline_queue', JSON.stringify(queueTx));
 
-                let queuePlanes = JSON.parse(localStorage.getItem('offline_queue_planes') || '[]');
-                queuePlanes.push({ planId: plan.id, nuevoAcumulado });
-                localStorage.setItem('offline_queue_planes', JSON.stringify(queuePlanes));
-                mostrarToast('Aporte guardado offline. Se sincronizará al recuperar conexión.');
+                mostrarToast(`🎯 Aporte de ${formatearMoneda(valorAporte)} sumado a "${plan.titulo}"`);
+                cerrarFlujo();
+                limpiar();
+                cargarPlanes();
+                cargarEstadisticas();
+            } catch (err) {
+                console.error('[CISO Audit] Cancelando aporte por falla crítica:', err.message);
+                mostrarToast(err.message, 'error');
             }
-
-            mostrarToast(`🎯 Aporte de ${formatearMoneda(valorAporte)} sumado a "${plan.titulo}"`);
-            cerrarFlujo();
-            limpiar();
-            cargarPlanes();
-            cargarEstadisticas();
         }
 
         let categoriaEdicionId = null;
@@ -2195,64 +2204,89 @@ let graficoInstancia = null;
         }
 
         document.getElementById('btn-guardar-nueva-cat').addEventListener('click', async () => {
-            const nombre = document.getElementById('input-nueva-cat-nombre').value.trim();
-            const inputEmojiCustom = document.getElementById('input-emoji-personalizado');
-            if (inputEmojiCustom && inputEmojiCustom.value.trim()) {
-                iconoNuevaCatSeleccionado = inputEmojiCustom.value.trim();
-            }
+            const btn = document.getElementById('btn-guardar-nueva-cat');
+            if (btn.disabled) return;
+
+            const inputNombreRaw = document.getElementById('input-nueva-cat-nombre').value.trim();
+            const inputEmojiRaw = document.getElementById('input-emoji-personalizado') ? document.getElementById('input-emoji-personalizado').value.trim() : iconoNuevaCatSeleccionado;
+            
+            const nombre = DOMPurify.sanitize(inputNombreRaw, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+            const iconoFinal = DOMPurify.sanitize(inputEmojiRaw, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] }) || iconoNuevaCatSeleccionado;
 
             if (!nombre) {
-                mostrarToast('Escribe un nombre para la categoría', 'error');
+                mostrarToast('Escribe un nombre seguro para la categoría', 'error');
                 return;
             }
 
-            const { data: { session } } = await db.auth.getSession();
-            if (!session) {
-                mostrarToast('Inicia sesión para guardar categorías propias', 'error');
-                return;
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="animate-pulse">Guardando...</span>';
+
+                const { data: { session }, error: authError } = await db.auth.getSession();
+                if (authError || !session) throw new Error('Sesión no válida. Inicia sesión.');
+
+                const payloadCat = {
+                    nombre: escapeHTML(nombre),
+                    icono: escapeHTML(iconoFinal),
+                    tipo: tipoActual,
+                    es_fijo: tipoActual === 'gasto' ? tipoNuevaCatEsFijo : false,
+                    user_id: session.user.id
+                };
+
+                const { data, error } = await db.from('categorias').insert([payloadCat]).select();
+                if (error) throw error;
+
+                let categoriasCache = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+                if (data && data.length > 0) {
+                    categoriasCache = [...categoriasCache, data[0]];
+                    localStorage.setItem('categorias_cache', JSON.stringify(categoriasCache));
+                }
+
+                cerrarModalNuevaCategoria();
+                renderizarCategoriasFlujo();
+                mostrarToast(`Categoría "${nombre}" creada con éxito`);
+            } catch (err) {
+                console.error('[CISO Audit] Fallo al crear categoría:', err.message);
+                mostrarToast('Error al crear categoría: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Guardar';
             }
-
-            const payloadCat = {
-                nombre: escapeHTML(nombre),
-                icono: escapeHTML(iconoNuevaCatSeleccionado),
-                tipo: tipoActual,
-                es_fijo: tipoActual === 'gasto' ? tipoNuevaCatEsFijo : false,
-                user_id: session.user.id
-            };
-
-            const { data, error } = await db.from('categorias').insert([payloadCat]).select();
-            if (error) {
-                mostrarToast('Error al crear categoría: ' + error.message, 'error');
-                return;
-            }
-
-            let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
-            if (data && data[0]) categorias.push(data[0]);
-            localStorage.setItem('categorias_cache', JSON.stringify(categorias));
-
-            cerrarModalNuevaCategoria();
-            renderizarCategoriasFlujo();
-            mostrarToast(`Categoría "${nombre}" creada con éxito`);
         });
+
+        let cacheTTL = { dashboard: 0, planes: 0 };
 
         function cambiarTab(pantalla) {
             const containerToast = document.getElementById('toast-container');
             if (containerToast) containerToast.innerHTML = '';
 
             const pantallas = ['captura', 'planes', 'dashboard', 'ajustes'];
-            pantallas.forEach(p => {
-                const el = document.getElementById(`pantalla-${p}`);
-                const tab = document.getElementById(`tab-${p}`);
-                if (p === pantalla) {
-                    el.classList.remove('hidden'); el.classList.add('flex');
-                    tab.classList.replace('tab-inactiva', 'tab-activa');
-                } else {
-                    el.classList.add('hidden'); el.classList.remove('flex');
-                    tab.classList.replace('tab-activa', 'tab-inactiva');
-                }
+            
+            requestAnimationFrame(() => {
+                pantallas.forEach(p => {
+                    const el = document.getElementById(`pantalla-${p}`);
+                    const tab = document.getElementById(`tab-${p}`);
+                    if (p === pantalla) {
+                        el.classList.remove('hidden'); el.classList.add('flex');
+                        tab.classList.replace('tab-inactiva', 'tab-activa');
+                    } else {
+                        el.classList.add('hidden'); el.classList.remove('flex');
+                        tab.classList.replace('tab-activa', 'tab-inactiva');
+                    }
+                });
             });
-            if (pantalla === 'dashboard') cargarEstadisticas();
-            if (pantalla === 'planes') cargarPlanes();
+
+            const ahora = Date.now();
+            if (pantalla === 'dashboard') {
+                if (ahora - cacheTTL.dashboard > 60000 || transaccionesCacheActuales.length === 0) {
+                    setTimeout(() => cargarEstadisticas().finally(() => cacheTTL.dashboard = Date.now()), 16);
+                }
+            }
+            if (pantalla === 'planes') {
+                if (ahora - cacheTTL.planes > 60000) {
+                    setTimeout(() => cargarPlanes().finally(() => cacheTTL.planes = Date.now()), 16);
+                }
+            }
         }
 
         document.getElementById('tab-captura').addEventListener('click', () => cambiarTab('captura'));
@@ -2816,9 +2850,18 @@ function encolarTransaccionManual(payload) {
         }
 
         async function eliminarPlan(id) {
-            await db.from('planes').delete().eq('id', id);
-            cargarPlanes();
-            mostrarToast('Plan eliminado');
+            try {
+                if (!navigator.onLine) throw new Error("Requiere conexión a internet activa.");
+                
+                const { error } = await db.from('planes').delete().eq('id', id);
+                if (error) throw error;
+                
+                mostrarToast('Plan eliminado');
+                cargarPlanes();
+            } catch (err) {
+                console.error('[Supabase Excepción] Error al eliminar plan:', err.message);
+                mostrarToast('No se pudo borrar el plan: ' + err.message, 'error');
+            }
         }
 
         async function generarRecomendacionSueldo(sueldoIngresado) {
@@ -2865,13 +2908,22 @@ function encolarTransaccionManual(payload) {
 
         async function eliminarTransaccion(id) {
             if (!confirm("¿Deseas eliminar este registro permanentemente?")) return;
-            const { error } = await db.from('transacciones').delete().eq('id', id);
-            if (error) {
-                mostrarToast('No se pudo borrar: ' + error.message, 'error');
-                return;
+            
+            try {
+                if (!navigator.onLine) throw new Error("Operación no disponible sin conexión.");
+                
+                const { error } = await db.from('transacciones').delete().eq('id', id);
+                if (error) throw error;
+                
+                // Sincronización inmutable manual de la caché para aliviar latencia de re-fetch
+                transaccionesCacheActuales = transaccionesCacheActuales.filter(t => t.id !== id);
+                
+                mostrarToast('Transacción eliminada');
+                await cargarEstadisticas();
+            } catch (err) {
+                console.error('[Supabase Excepción] Error al eliminar transacción:', err.message);
+                mostrarToast('Error al eliminar: ' + err.message, 'error');
             }
-            mostrarToast('Transacción eliminada');
-            await cargarEstadisticas();
         }
 
         let modoSimuladorEsDiario = true;
@@ -2978,15 +3030,34 @@ function encolarTransaccionManual(payload) {
                 }
             }
 
-            const { data: transacciones, error: errTrans } = await db.from('transacciones')
-                                                                .select('*')
-                                                                .eq('user_id', session.user.id)
-                                                                .gte('fecha', inicioISO)
-                                                                .lte('fecha', finISO)
-                                                                .order('fecha', { ascending: false });
-            
-            if (errTrans) return;
-            transaccionesCacheActuales = transacciones || [];
+            let transacciones = [];
+            try {
+                if (!navigator.onLine) throw new Error("Modo offline activo: Supabase inalcanzable");
+                
+                const { data, error: errTrans } = await db.from('transacciones')
+                    .select('*')
+                    .eq('user_id', session.user.id)
+                    .gte('fecha', inicioISO)
+                    .lte('fecha', finISO)
+                    .order('fecha', { ascending: false });
+                
+                if (errTrans) throw errTrans;
+                transacciones = data || [];
+                
+                // Persistencia local del último estado válido
+                localStorage.setItem(`transacciones_cache_${filtro}`, JSON.stringify(transacciones));
+            } catch (err) {
+                console.warn('[Offline Fallback] Construyendo Dashboard desde memoria local:', err.message);
+                
+                const cacheGuardada = JSON.parse(localStorage.getItem(`transacciones_cache_${filtro}`) || '[]');
+                const queueOffline = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+                
+                // Fusión atómica: Registros pasados + Registros encolados en modo offline para este usuario
+                const queueFiltrada = queueOffline.filter(t => t.fecha >= inicioISO && t.fecha <= finISO && t.user_id === session.user.id);
+                transacciones = [...queueFiltrada, ...cacheGuardada].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+            }
+
+            transaccionesCacheActuales = transacciones;
 
             let totalGastado = 0;
             let totalIngresado = 0;
