@@ -33,21 +33,17 @@
     <style>
         :root { color-scheme: dark; }
         
-        /* Capa 1 y 2: Anclaje Absoluto Nativo (El estándar de oro para PWAs) */
+        /* Capa 1 y 2: Viewport Dinámico Nativo (dvh) y Reset Seguro */
         html, body {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
             width: 100%;
-            height: 100%;
+            height: 100dvh; /* Estándar PWA moderno que ignora el rebote del notch/teclado */
+            margin: 0;
+            padding: 0;
             overflow: hidden;
             background-color: #020617;
-            touch-action: none; /* Bloquea el rebote elástico del navegador */
+            overscroll-behavior-y: none; 
         }
         body { 
-            overscroll-behavior-y: none; 
             -webkit-user-select: none; 
             user-select: none; 
         }
@@ -63,13 +59,13 @@
         select option { background-color: #0f172a; color: #f8fafc; }
         .tabular-nums { font-variant-numeric: tabular-nums; }
         
-        /* Forzamos el !important para que Tailwind no sobreescriba los insets de Apple */
-        .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 20px) !important; }
-        .pt-safe { padding-top: max(env(safe-area-inset-top), 20px) !important; }
+        /* Protecciones obligatorias inyectadas en las zonas seguras del hardware (Notch / Home Indicator) */
+        .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 24px) !important; }
+        .pt-safe { padding-top: max(env(safe-area-inset-top), 40px) !important; }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 flex flex-col sm:items-center sm:justify-center font-sans select-none overflow-hidden m-0 p-0">
-    <div id="contenedor-maestro-app" class="w-full h-full max-w-md sm:h-[92vh] sm:max-h-[900px] sm:rounded-[2.5rem] flex flex-col relative bg-slate-950 sm:border sm:border-slate-800/80 sm:shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden">
+<body class="bg-slate-950 text-slate-100 font-sans select-none overflow-hidden m-0 p-0 flex flex-col items-center justify-center h-[100dvh] min-h-[100dvh]">
+    <div id="contenedor-maestro-app" class="w-full h-[100dvh] max-w-md sm:h-[92vh] sm:max-h-[900px] sm:rounded-[2.5rem] flex flex-col relative bg-slate-950 sm:border sm:border-slate-800/80 shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden">
     
     <div id="network-banner" class="hidden fixed top-0 left-0 right-0 z-[200] bg-red-500 text-slate-950 text-center text-xs font-bold py-1.5 transition-all">
         📡 Sin conexión a internet. Los registros se almacenarán localmente en cola segura.
@@ -484,7 +480,7 @@
 
     <!-- Pantalla 2: Planes -->
     <div id="pantalla-planes" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-950 min-h-0 relative">
-        <div class="p-5 pb-28 flex flex-col min-h-full overflow-x-hidden">
+        <div class="px-5 pt-safe pb-28 flex flex-col min-h-full overflow-x-hidden">
             <h2 class="text-2xl font-bold text-white mb-6 tracking-tight">Planes, Metas y Deudas</h2>
             <div id="contenedor-planes" class="space-y-4 flex-1"></div>
         </div>
@@ -493,7 +489,7 @@
 
     <!-- Pantalla 3: Reportes -->
     <div id="pantalla-dashboard" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-950 min-h-0">
-        <div class="p-5 pb-12">
+        <div class="px-5 pt-safe pb-12">
             <div class="flex justify-between items-center mb-6 gap-2">
                 <select id="filtro-tiempo" class="bg-slate-900 text-white font-semibold text-sm rounded-xl px-4 py-2 border border-slate-800 outline-none focus:ring-1 focus:ring-emerald-500 flex-1 cursor-pointer">
                     <option value="dia">Hoy</option>
@@ -674,7 +670,7 @@
     </div>
 
     <!-- Pantalla 4: Ajustes -->
-    <div id="pantalla-ajustes" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-950 min-h-0 p-5 pb-24">
+    <div id="pantalla-ajustes" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-950 min-h-0 px-5 pt-safe pb-24">
         <h2 class="text-2xl font-bold text-white mb-6">Ajustes</h2>
         
         <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg mb-4">
@@ -749,7 +745,7 @@
     </div>
 
     <!-- Navegación Inferior -->
-    <nav class="shrink-0 w-full bg-slate-950 border-t border-slate-900 flex justify-around items-center h-[70px] pb-safe relative z-[90]">
+    <nav class="shrink-0 w-full bg-slate-950 border-t border-slate-900 flex justify-around items-center min-h-[70px] pt-1 pb-safe relative z-[90]">
         <button id="tab-captura" class="flex flex-col items-center justify-center w-full h-full tab-activa transition-colors cursor-pointer">
             <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
             <span class="text-[10px] font-bold">Inicio</span>
@@ -2715,160 +2711,178 @@ function encolarTransaccionManual(payload) {
                 return;
             }
 
-            const { data: planes, error } = await db.from('planes')
-                .select('*')
-                .eq('user_id', session.user.id)
-                .order('creado_en', { ascending: false });
-                
-            if(error) return;
+            // [OPTIMIZACIÓN ZERO-LATENCY]: Caché-First Render
+            let transacciones = transaccionesCacheActuales || [];
+            let planesGuardados = leerStorageSeguro('planes_cache', []);
 
-            if(planes.length === 0) {
-                fab.classList.add('hidden');
-                contenedor.innerHTML = `
-                <div class="flex flex-col items-center justify-center h-full text-center mt-12">
-                    <div class="w-20 h-20 bg-slate-900 rounded-full flex items-center justify-center border border-slate-800 mb-6 shadow-lg">
-                        <span class="text-3xl text-emerald-500 font-light">+</span>
-                    </div>
-                    <h3 class="text-lg font-bold text-white mb-2">No tienes ningún plan o meta</h3>
-                    <p class="text-sm text-slate-500 mb-8 max-w-xs">Organiza tus límites por categoría, metas con fondo de emergencia y deudas</p>
-                    <button id="btn-primer-plan" class="text-emerald-400 font-bold text-sm tracking-widest uppercase cursor-pointer">CREAR MI PRIMER PLAN</button>
-                </div>`;
-                document.getElementById('btn-primer-plan').addEventListener('click', abrirModalPlanes);
-                return;
-            } 
-            
-            fab.classList.remove('hidden');
-            contenedor.innerHTML = '';
-            
-            const fragmentoPlanes = document.createDocumentFragment();
-
-            const { data: transacciones } = await db.from('transacciones')
-                .select('monto, fecha, categoria_id')
-                .eq('user_id', session.user.id);
-            
-            planes.forEach(p => {
-                const tipo = p.tipo;
-                let estiloBadge = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-                let iconoTipo = '🎯';
-                let etiquetaTipo = 'Meta de Ahorro';
-                let barraColor = 'bg-emerald-500';
-                let porcentaje = 0;
-                let textoMetricaPrincipal = '';
-                let textoMetricaSecundaria = '';
-
-                if (tipo === 'limite') {
-                    estiloBadge = 'bg-red-500/10 text-red-400 border-red-500/20';
-                    iconoTipo = '🛡️';
-                    etiquetaTipo = `Límite (${(p.periodo || 'mensual').toUpperCase()})`;
-                    
-                    const rango = calcularVentanaPeriodo(p.periodo || 'mensual', p.fecha_inicio, p.fecha_fin, p.auto_renovar);
-                    const gastadoPeriodo = (transacciones || [])
-                        .filter(t => t.categoria_id === p.categoria_id && t.fecha >= rango.inicio && t.fecha <= rango.fin)
-                        .reduce((acc, t) => acc + parseFloat(t.monto), 0);
-
-                    const tope = parseFloat(p.monto);
-                    porcentaje = tope > 0 ? Math.round((gastadoPeriodo / tope) * 100) : 0;
-                    textoMetricaPrincipal = `${formatearMoneda(gastadoPeriodo)} / ${formatearMoneda(tope)}`;
-                    textoMetricaSecundaria = `${porcentaje}% consumido`;
-
-                    if (porcentaje >= 100) {
-                        barraColor = 'bg-red-500';
-                        estiloBadge = 'bg-red-500/10 text-red-400 border-red-500/20';
-                        textoMetricaSecundaria += ' • ¡SOBREGIRO!';
-                    } else if (porcentaje >= 80) {
-                        barraColor = 'bg-amber-500';
-                        estiloBadge = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-                        textoMetricaSecundaria += ' • ALERTA';
-                    } else {
-                        barraColor = 'bg-emerald-500';
-                        estiloBadge = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-                    }
-                } else if (tipo === 'meta') {
-                    estiloBadge = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-                    iconoTipo = p.es_fondo_emergencia ? '🚨' : '🎯';
-                    etiquetaTipo = p.es_fondo_emergencia ? 'Fondo de Emergencia' : 'Meta de Ahorro';
-                    const acum = parseFloat(p.monto_acumulado || 0);
-                    const obj = parseFloat(p.monto);
-                    porcentaje = obj > 0 ? Math.min(100, Math.round((acum / obj) * 100)) : 0;
-                    textoMetricaPrincipal = `${formatearMoneda(acum)} / ${formatearMoneda(obj)}`;
-                    textoMetricaSecundaria = `${porcentaje}% acumulado`;
-                    barraColor = 'bg-emerald-500';
-                } else if (tipo === 'deuda') {
-                    estiloBadge = 'bg-blue-500/10 text-blue-400 border-blue-500/20';
-                    iconoTipo = '💳';
-                    etiquetaTipo = 'Crédito / Deuda';
-                    const totalDeuda = parseFloat(p.monto);
-                    const pagado = parseFloat(p.monto_acumulado || 0);
-                    const restante = Math.max(0, totalDeuda - pagado);
-                    porcentaje = totalDeuda > 0 ? Math.min(100, Math.round((pagado / totalDeuda) * 100)) : 0;
-                    textoMetricaPrincipal = `Saldo restante: ${formatearMoneda(restante)}`;
-                    textoMetricaSecundaria = `${porcentaje}% pagado (${formatearMoneda(pagado)} de ${formatearMoneda(totalDeuda)})`;
-                    barraColor = 'bg-blue-500';
-                }
-
-                const wrapper = document.createElement('div');
-                wrapper.className = "relative overflow-hidden rounded-3xl mb-4 bg-red-500 flex justify-end";
-                
-                const btnDelete = document.createElement('button');
-                btnDelete.type = "button";
-                btnDelete.className = "absolute right-0 top-0 bottom-0 w-24 flex flex-col items-center justify-center text-white font-bold active:bg-red-600 transition-colors cursor-pointer";
-                btnDelete.innerHTML = `<span class="text-xl mb-1">🗑️</span><span class="text-[10px] uppercase tracking-wider">Borrar</span>`;
-                btnDelete.addEventListener('click', () => eliminarPlan(p.id));
-                wrapper.appendChild(btnDelete);
-
-                const tarjeta = document.createElement('div');
-                tarjeta.className = "bg-slate-900 p-5 rounded-3xl border border-slate-800 shadow-md relative z-10 w-full transition-transform duration-200 touch-pan-y";
-                tarjeta.innerHTML = `
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full flex items-center justify-center border ${estiloBadge} text-lg">${iconoTipo}</div>
-                            <div>
-                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">${etiquetaTipo}</p>
-                                <p class="text-sm font-bold text-white">${escapeHTML(p.titulo)}</p>
-                            </div>
+            const procesarYRenderizar = (listaPlanes, listaTrans) => {
+                if(!listaPlanes || listaPlanes.length === 0) {
+                    fab.classList.add('hidden');
+                    contenedor.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full text-center mt-12">
+                        <div class="w-20 h-20 bg-slate-900 rounded-full flex items-center justify-center border border-slate-800 mb-6 shadow-lg">
+                            <span class="text-3xl text-emerald-500 font-light">+</span>
                         </div>
-                        ${p.mostrar_en_inicio ? '<span class="text-[9px] bg-slate-800 border border-slate-700 text-slate-400 font-bold px-2 py-0.5 rounded-full">⚡ En Inicio</span>' : ''}
-                    </div>
+                        <h3 class="text-lg font-bold text-white mb-2">No tienes ningún plan o meta</h3>
+                        <p class="text-sm text-slate-500 mb-8 max-w-xs">Organiza tus límites por categoría, metas con fondo de emergencia y deudas</p>
+                        <button id="btn-primer-plan" class="text-emerald-400 font-bold text-sm tracking-widest uppercase cursor-pointer">CREAR MI PRIMER PLAN</button>
+                    </div>`;
+                    const btnPrimerPlan = document.getElementById('btn-primer-plan');
+                    if(btnPrimerPlan) btnPrimerPlan.addEventListener('click', abrirModalPlanes);
+                    return;
+                } 
+                
+                fab.classList.remove('hidden');
+                contenedor.innerHTML = '';
+                
+                const fragmentoPlanes = document.createDocumentFragment();
 
-                    <div class="flex justify-between items-baseline mb-2">
-                        <h4 class="text-lg font-extrabold text-white">${textoMetricaPrincipal}</h4>
-                        <span class="text-[10px] font-bold text-slate-400">${textoMetricaSecundaria}</span>
-                    </div>
+                listaPlanes.forEach(p => {
+                    const tipo = p.tipo;
+                    let estiloBadge = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+                    let iconoTipo = '🎯';
+                    let etiquetaTipo = 'Meta de Ahorro';
+                    let barraColor = 'bg-emerald-500';
+                    let porcentaje = 0;
+                    let textoMetricaPrincipal = '';
+                    let textoMetricaSecundaria = '';
 
-                    <div class="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
-                        <div class="${barraColor} h-2 rounded-full transition-all duration-500" style="width: ${Math.min(100, porcentaje)}%"></div>
-                    </div>
-                `;
-                
-                let startX = 0, currentX = 0, isDragging = false;
-                tarjeta.addEventListener('touchstart', e => { 
-                    startX = e.touches[0].clientX; 
-                    currentX = startX;
-                    isDragging = true; 
-                    tarjeta.style.transition = 'none';
-                }, {passive: true});
-                
-                tarjeta.addEventListener('touchmove', e => {
-                    if(!isDragging) return;
-                    currentX = e.touches[0].clientX;
-                    let diff = currentX - startX;
-                    if(diff < 0) tarjeta.style.transform = `translateX(${Math.max(diff, -100)}px)`;
-                }, {passive: true});
-                
-                tarjeta.addEventListener('touchend', () => {
-                    isDragging = false;
-                    tarjeta.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)';
-                    let diff = currentX - startX;
-                    if(diff < -50) tarjeta.style.transform = 'translateX(-96px)'; 
-                    else tarjeta.style.transform = 'translateX(0)'; 
-                    startX = 0; currentX = 0;
+                    if (tipo === 'limite') {
+                        estiloBadge = 'bg-red-500/10 text-red-400 border-red-500/20';
+                        iconoTipo = '🛡️';
+                        etiquetaTipo = `Límite (${(p.periodo || 'mensual').toUpperCase()})`;
+                        
+                        const rango = calcularVentanaPeriodo(p.periodo || 'mensual', p.fecha_inicio, p.fecha_fin, p.auto_renovar);
+                        const gastadoPeriodo = (listaTrans || [])
+                            .filter(t => t.categoria_id === p.categoria_id && t.fecha >= rango.inicio && t.fecha <= rango.fin)
+                            .reduce((acc, t) => acc + parseFloat(t.monto), 0);
+
+                        const tope = parseFloat(p.monto);
+                        porcentaje = tope > 0 ? Math.round((gastadoPeriodo / tope) * 100) : 0;
+                        textoMetricaPrincipal = `${formatearMoneda(gastadoPeriodo)} / ${formatearMoneda(tope)}`;
+                        textoMetricaSecundaria = `${porcentaje}% consumido`;
+
+                        if (porcentaje >= 100) {
+                            barraColor = 'bg-red-500';
+                            estiloBadge = 'bg-red-500/10 text-red-400 border-red-500/20';
+                            textoMetricaSecundaria += ' • ¡SOBREGIRO!';
+                        } else if (porcentaje >= 80) {
+                            barraColor = 'bg-amber-500';
+                            estiloBadge = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+                            textoMetricaSecundaria += ' • ALERTA';
+                        } else {
+                            barraColor = 'bg-emerald-500';
+                            estiloBadge = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+                        }
+                    } else if (tipo === 'meta') {
+                        estiloBadge = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+                        iconoTipo = p.es_fondo_emergencia ? '🚨' : '🎯';
+                        etiquetaTipo = p.es_fondo_emergencia ? 'Fondo de Emergencia' : 'Meta de Ahorro';
+                        const acum = parseFloat(p.monto_acumulado || 0);
+                        const obj = parseFloat(p.monto);
+                        porcentaje = obj > 0 ? Math.min(100, Math.round((acum / obj) * 100)) : 0;
+                        textoMetricaPrincipal = `${formatearMoneda(acum)} / ${formatearMoneda(obj)}`;
+                        textoMetricaSecundaria = `${porcentaje}% acumulado`;
+                        barraColor = 'bg-emerald-500';
+                    } else if (tipo === 'deuda') {
+                        estiloBadge = 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+                        iconoTipo = '💳';
+                        etiquetaTipo = 'Crédito / Deuda';
+                        const totalDeuda = parseFloat(p.monto);
+                        const pagado = parseFloat(p.monto_acumulado || 0);
+                        const restante = Math.max(0, totalDeuda - pagado);
+                        porcentaje = totalDeuda > 0 ? Math.min(100, Math.round((pagado / totalDeuda) * 100)) : 0;
+                        textoMetricaPrincipal = `Saldo restante: ${formatearMoneda(restante)}`;
+                        textoMetricaSecundaria = `${porcentaje}% pagado (${formatearMoneda(pagado)} de ${formatearMoneda(totalDeuda)})`;
+                        barraColor = 'bg-blue-500';
+                    }
+
+                    const wrapper = document.createElement('div');
+                    wrapper.className = "relative overflow-hidden rounded-3xl mb-4 bg-red-500 flex justify-end";
+                    
+                    const btnDelete = document.createElement('button');
+                    btnDelete.type = "button";
+                    btnDelete.className = "absolute right-0 top-0 bottom-0 w-24 flex flex-col items-center justify-center text-white font-bold active:bg-red-600 transition-colors cursor-pointer";
+                    btnDelete.innerHTML = `<span class="text-xl mb-1">🗑️</span><span class="text-[10px] uppercase tracking-wider">Borrar</span>`;
+                    btnDelete.addEventListener('click', () => eliminarPlan(p.id));
+                    wrapper.appendChild(btnDelete);
+
+                    const tarjeta = document.createElement('div');
+                    tarjeta.className = "bg-slate-900 p-5 rounded-3xl border border-slate-800 shadow-md relative z-10 w-full transition-transform duration-200 touch-pan-y";
+                    tarjeta.innerHTML = `
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full flex items-center justify-center border ${estiloBadge} text-lg">${iconoTipo}</div>
+                                <div>
+                                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">${etiquetaTipo}</p>
+                                    <p class="text-sm font-bold text-white">${escapeHTML(p.titulo)}</p>
+                                </div>
+                            </div>
+                            ${p.mostrar_en_inicio ? '<span class="text-[9px] bg-slate-800 border border-slate-700 text-slate-400 font-bold px-2 py-0.5 rounded-full">⚡ En Inicio</span>' : ''}
+                        </div>
+
+                        <div class="flex justify-between items-baseline mb-2">
+                            <h4 class="text-lg font-extrabold text-white">${textoMetricaPrincipal}</h4>
+                            <span class="text-[10px] font-bold text-slate-400">${textoMetricaSecundaria}</span>
+                        </div>
+
+                        <div class="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+                            <div class="${barraColor} h-2 rounded-full transition-all duration-500" style="width: ${Math.min(100, porcentaje)}%"></div>
+                        </div>
+                    `;
+                    
+                    let startX = 0, currentX = 0, isDragging = false;
+                    tarjeta.addEventListener('touchstart', e => { 
+                        startX = e.touches[0].clientX; 
+                        currentX = startX;
+                        isDragging = true; 
+                        tarjeta.style.transition = 'none';
+                    }, {passive: true});
+                    
+                    tarjeta.addEventListener('touchmove', e => {
+                        if(!isDragging) return;
+                        currentX = e.touches[0].clientX;
+                        let diff = currentX - startX;
+                        if(diff < 0) tarjeta.style.transform = `translateX(${Math.max(diff, -100)}px)`;
+                    }, {passive: true});
+                    
+                    tarjeta.addEventListener('touchend', () => {
+                        isDragging = false;
+                        tarjeta.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)';
+                        let diff = currentX - startX;
+                        if(diff < -50) tarjeta.style.transform = 'translateX(-96px)'; 
+                        else tarjeta.style.transform = 'translateX(0)'; 
+                        startX = 0; currentX = 0;
+                    });
+
+                    wrapper.appendChild(tarjeta);
+                    fragmentoPlanes.appendChild(wrapper);
                 });
+                
+                contenedor.appendChild(fragmentoPlanes);
+            };
 
-                wrapper.appendChild(tarjeta);
-                fragmentoPlanes.appendChild(wrapper);
-            });
-            
-            contenedor.appendChild(fragmentoPlanes);
+            // 1. Mostrar de inmediato la caché
+            if (planesGuardados.length > 0) procesarYRenderizar(planesGuardados, transacciones);
+
+            // 2. Traer fresco de BD sin bloquear UI
+            if (navigator.onLine) {
+                db.from('planes')
+                    .select('*')
+                    .eq('user_id', session.user.id)
+                    .order('creado_en', { ascending: false })
+                    .then(({ data: planesNuevos, error }) => {
+                        if (!error && planesNuevos) {
+                            const strViejo = JSON.stringify(planesGuardados);
+                            const strNuevo = JSON.stringify(planesNuevos);
+                            if (strViejo !== strNuevo || planesGuardados.length === 0) {
+                                localStorage.setItem('planes_cache', strNuevo);
+                                procesarYRenderizar(planesNuevos, transacciones);
+                            }
+                        }
+                    })
+                    .catch(err => console.warn('Silencio en fetch planes:', err));
+            }
         }
 
         async function eliminarPlan(id) {
