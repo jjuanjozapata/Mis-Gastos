@@ -30,34 +30,21 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
-    <script>
-        // Capa 1: Escucha dinámica vía JS para calcular el área visual real (evitando recortes por teclados o barras)
-        function aplicarViewportPreciso() {
-            const vh = (window.visualViewport ? window.visualViewport.height : window.innerHeight) * 0.01;
-            document.documentElement.style.setProperty('--vh', `${vh}px`);
-        }
-        window.addEventListener('resize', aplicarViewportPreciso);
-        window.addEventListener('orientationchange', aplicarViewportPreciso);
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', aplicarViewportPreciso);
-        }
-        aplicarViewportPreciso();
-    </script>
     <style>
-        :root { 
-            color-scheme: dark; 
-            --vh: 1vh; /* Variable base inyectada */
-        }
-        /* Capa 2: Blindaje CSS con Viewport Dinámico Moderno */
+        :root { color-scheme: dark; }
+        
+        /* Capa 1 y 2: Anclaje Absoluto Nativo (El estándar de oro para PWAs) */
         html, body {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
             height: 100%;
-            height: 100svh; /* Fallback nativo moderno */
-            height: calc(var(--vh, 1vh) * 100); /* Cálculo exacto por hardware */
-            width: 100vw;
-            margin: 0;
-            padding: 0;
             overflow: hidden;
             background-color: #020617;
+            touch-action: none; /* Bloquea el rebote elástico del navegador */
         }
         body { 
             overscroll-behavior-y: none; 
@@ -75,12 +62,14 @@
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         select option { background-color: #0f172a; color: #f8fafc; }
         .tabular-nums { font-variant-numeric: tabular-nums; }
-        .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 16px); }
-        .pt-safe { padding-top: max(env(safe-area-inset-top), 16px); }
+        
+        /* Forzamos el !important para que Tailwind no sobreescriba los insets de Apple */
+        .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 20px) !important; }
+        .pt-safe { padding-top: max(env(safe-area-inset-top), 20px) !important; }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 flex flex-col items-center justify-center font-sans select-none overflow-hidden m-0 p-0">
-    <div id="contenedor-maestro-app" class="w-full max-w-md sm:h-[92vh] sm:max-h-[900px] sm:rounded-[2.5rem] flex flex-col relative bg-slate-950 sm:border sm:border-slate-800/80 shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden" style="height: 100%; height: 100svh; height: calc(var(--vh, 1vh) * 100);">
+<body class="bg-slate-950 text-slate-100 flex flex-col sm:items-center sm:justify-center font-sans select-none overflow-hidden m-0 p-0">
+    <div id="contenedor-maestro-app" class="w-full h-full max-w-md sm:h-[92vh] sm:max-h-[900px] sm:rounded-[2.5rem] flex flex-col relative bg-slate-950 sm:border sm:border-slate-800/80 sm:shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden">
     
     <div id="network-banner" class="hidden fixed top-0 left-0 right-0 z-[200] bg-red-500 text-slate-950 text-center text-xs font-bold py-1.5 transition-all">
         📡 Sin conexión a internet. Los registros se almacenarán localmente en cola segura.
@@ -341,7 +330,7 @@
     </div>
 
     <!-- Modal para Administrar Categorías -->
-    <div id="modal-gestionar-categorias" class="hidden fixed inset-0 z-[130] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-5">
+    <div id="modal-gestionar-categorias" class="hidden fixed inset-0 z-[130] bg-slate-950/95 backdrop-blur-xl justify-center items-center px-5 pb-5 pt-safe">
         <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl max-h-[85vh] flex flex-col">
             <div class="flex justify-between items-center mb-3">
                 <h3 class="text-xl font-bold text-white">Administrar Categorías</h3>
@@ -450,7 +439,7 @@
 
     <!-- Pantalla 1: Captura Rápida -->
     <div id="pantalla-captura" class="flex-1 flex flex-col min-h-0 relative">
-        <header class="shrink-0 p-5 flex justify-between items-center">
+        <header class="shrink-0 px-5 pb-5 pt-safe flex justify-between items-center">
             <div class="flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Sistema en línea"></span>
                 <span class="text-xs font-bold text-slate-400 tracking-wider">MIS GASTOS</span>
