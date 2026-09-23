@@ -1,12 +1,12 @@
 const CACHE_VERSION = 'v21-prod';
 const CACHE_NAME = `gastos-${CACHE_VERSION}`;
 const ASSETS = [
-    '/',
-    '/index.html',
-    '/manifest.json',
-    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js',
-    'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js',
-    'https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js'
+'/',
+'/index.html',
+'/manifest.json',
+'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
+'https://cdn.jsdelivr.net/npm/chart.js',
+'https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js'
 ];
 
 self.addEventListener('install', event => {
