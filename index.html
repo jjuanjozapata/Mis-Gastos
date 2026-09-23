@@ -912,8 +912,10 @@
             const emailDisplay = document.getElementById('user-email-display');
             const infoTexto = document.getElementById('info-sesion-texto');
             const modalBienvenida = document.getElementById('modal-bienvenida');
+            const btnRegistrar = document.getElementById('btn-registrar');
+            const btnLogin = document.getElementById('btn-iniciar-sesion');
 
-            if (!divNoAuth || !divAuth) return;
+            if (!divNoAuth || !divAuth || !infoTexto) return;
 
             if (session && session.user) {
                 if (modalBienvenida) {
@@ -927,20 +929,20 @@
                     divNoAuth.classList.remove('hidden');
                     divAuth.classList.add('hidden');
                     infoTexto.textContent = "Estás usando una cuenta temporal. Conecta un correo y contraseña para no perder tus datos.";
-                    document.getElementById('btn-registrar').textContent = "Guardar mi progreso";
-                    document.getElementById('btn-iniciar-sesion').classList.add('hidden');
+                    if (btnRegistrar) btnRegistrar.textContent = "Guardar mi progreso";
+                    if (btnLogin) btnLogin.classList.add('hidden');
                 } else {
                     divNoAuth.classList.add('hidden');
                     divAuth.classList.remove('hidden');
-                    emailDisplay.textContent = session.user.email;
+                    if (emailDisplay) emailDisplay.textContent = session.user.email;
                     infoTexto.textContent = "Sesión activa. Tus registros están sincronizados con tu cuenta personal.";
                 }
             } else {
                 divNoAuth.classList.remove('hidden');
                 divAuth.classList.add('hidden');
                 infoTexto.textContent = "Inicia sesión o crea una cuenta para sincronizar tus datos.";
-                document.getElementById('btn-registrar').textContent = "Crear Cuenta";
-                document.getElementById('btn-iniciar-sesion').classList.remove('hidden');
+                if (btnRegistrar) btnRegistrar.textContent = "Crear Cuenta";
+                if (btnLogin) btnLogin.classList.remove('hidden');
                 
                 if (modalBienvenida) {
                     modalBienvenida.classList.remove('hidden');
@@ -975,10 +977,14 @@
 
         document.getElementById('btn-iniciar-sesion').addEventListener('click', async () => {
             const btnLogin = document.getElementById('btn-iniciar-sesion');
-            if (btnLogin.disabled) return;
+            if (!btnLogin || btnLogin.disabled) return;
 
-            const email = document.getElementById('auth-email').value.trim();
-            const password = document.getElementById('auth-password').value.trim();
+            const emailInput = document.getElementById('auth-email');
+            const passwordInput = document.getElementById('auth-password');
+            if (!emailInput || !passwordInput) return;
+
+            const email = emailInput.value.trim();
+            const password = passwordInput.value.trim();
 
             if (!email || !password) {
                 mostrarToast('Ingresa correo y contraseña', 'error');
@@ -989,24 +995,34 @@
             const textoOriginal = btnLogin.textContent;
             btnLogin.textContent = 'Verificando...';
 
-            const { data, error } = await db.auth.signInWithPassword({ email, password });
-            btnLogin.disabled = false;
-            btnLogin.textContent = textoOriginal;
-
-            if (error) {
-                mostrarToast('Error al iniciar sesión: ' + error.message, 'error');
-            } else {
+            try {
+                const { data, error } = await db.auth.signInWithPassword({ email, password });
+                if (error) throw error;
                 mostrarToast('¡Bienvenido de vuelta!');
-                document.getElementById('auth-password').value = '';
+                passwordInput.value = '';
                 actualizarUIIngreso(data.session);
                 cargarEstadisticas();
                 cargarPlanes();
+            } catch (err) {
+                mostrarToast('Error al iniciar sesión: ' + err.message, 'error');
+            } finally {
+                if (btnLogin) {
+                    btnLogin.disabled = false;
+                    btnLogin.textContent = textoOriginal;
+                }
             }
         });
 
         document.getElementById('btn-registrar').addEventListener('click', async () => {
-            const email = document.getElementById('auth-email').value.trim().toLowerCase();
-            const password = document.getElementById('auth-password').value.trim();
+            const btnRegistrar = document.getElementById('btn-registrar');
+            if (!btnRegistrar || btnRegistrar.disabled) return;
+
+            const emailInput = document.getElementById('auth-email');
+            const passwordInput = document.getElementById('auth-password');
+            if (!emailInput || !passwordInput) return;
+
+            const email = emailInput.value.trim().toLowerCase();
+            const password = passwordInput.value.trim();
 
             if (!email || !password) {
                 mostrarToast('Ingresa correo y contraseña', 'error');
@@ -1024,36 +1040,50 @@
                 return;
             }
             
-            const { data: { session } } = await db.auth.getSession();
-            
-            if (session && session.user && session.user.is_anonymous) {
-                const { error } = await db.auth.updateUser({ email, password });
-                if (error) {
-                    mostrarToast('Error al vincular cuenta: ' + error.message, 'error');
-                } else {
+            btnRegistrar.disabled = true;
+            const textoOriginal = btnRegistrar.textContent;
+            btnRegistrar.textContent = 'Procesando...';
+
+            try {
+                const { data: sessionData, error: sessionError } = await db.auth.getSession();
+                if (sessionError) throw sessionError;
+                
+                const session = sessionData?.session;
+                
+                if (session && session.user && session.user.is_anonymous) {
+                    const { error } = await db.auth.updateUser({ email, password });
+                    if (error) throw error;
                     mostrarToast('¡Progreso guardado! Tu cuenta oficial está lista.');
-                    document.getElementById('auth-password').value = '';
+                    passwordInput.value = '';
                     verificarEstadoSesion();
-                }
-            } else {
-                const { error } = await db.auth.signUp({ email, password });
-                if (error) {
-                    mostrarToast('Error al registrarse: ' + error.message, 'error');
                 } else {
+                    const { data, error } = await db.auth.signUp({ email, password });
+                    if (error) throw error;
                     mostrarToast('¡Cuenta creada con éxito!');
-                    document.getElementById('auth-password').value = '';
+                    passwordInput.value = '';
+                    actualizarUIIngreso(data?.session || null);
+                    cargarEstadisticas();
+                    cargarPlanes();
+                }
+            } catch (err) {
+                mostrarToast('Error en el registro: ' + err.message, 'error');
+            } finally {
+                if (btnRegistrar) {
+                    btnRegistrar.disabled = false;
+                    btnRegistrar.textContent = textoOriginal;
                 }
             }
         });
 
         document.getElementById('btn-cerrar-sesion').addEventListener('click', async () => {
-            const { error } = await db.auth.signOut();
-            if (!error) {
+            try {
+                const { error } = await db.auth.signOut();
+                if (error) throw error;
                 mostrarToast('Sesión cerrada correctamente');
                 actualizarUIIngreso(null);
                 cargarEstadisticas();
                 cargarPlanes();
-            } else {
+            } catch (err) {
                 mostrarToast('Error al cerrar sesión', 'error');
             }
         });
@@ -1404,8 +1434,8 @@
         document.getElementById('selector-mes-excel').addEventListener('change', cargarEstadisticas);
 
         let monto = '0';
-        let expresionCalculadora = '';
-        let graficoInstancia = null;
+let expresionCalculadora = '';
+let graficoInstancia = null;
 
         document.querySelectorAll('.op-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {

@@ -10,10 +10,11 @@ FILE: /index.html
     
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#020617" id="meta-theme-color">
-    
-    <title>Mis Gastos</title>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mis Gastos">
+<meta name="theme-color" content="#020617" id="meta-theme-color">
+
+<title>Mis Gastos</title>
     
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2933/2933116.png">
@@ -2521,94 +2522,104 @@ FILE: /index.html
         let guardandoTransaccionActiva = false;
 
         async function guardarTransaccion(categoriaId, notaGasto) {
-            if (guardandoTransaccionActiva) return;
-            const valorGasto = parseInt(monto);
-            if (isNaN(valorGasto) || valorGasto <= 0) return;
+  if (guardandoTransaccionActiva) return;
+  const valorGasto = parseInt(monto);
+  if (isNaN(valorGasto) || valorGasto <= 0) return;
 
-            const { data: { session } } = await db.auth.getSession();
-            if (!session) {
-                mostrarToast('Debes iniciar sesión para registrar movimientos', 'error');
-                return;
-            }
+  try {
+    const { data: { session }, error: authError } = await db.auth.getSession();
+    if (authError || !session) {
+      mostrarToast('Debes iniciar sesión para registrar movimientos', 'error');
+      return;
+    }
 
-            guardandoTransaccionActiva = true;
+    guardandoTransaccionActiva = true;
 
-            let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
-            const catObj = categorias.find(c => c.id === categoriaId);
-            
-            if (catObj && catObj.tipo === 'ingreso') {
-                await generarRecomendacionSueldo(valorGasto);
-            }
+    let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+    const catObj = categorias.find(c => c.id === categoriaId);
 
-            if (catObj && catObj.tipo === 'gasto') {
-                await verificarAlertaLimite(categoriaId, valorGasto);
-            }
+    // Evitamos bloqueos si fallan las consultas secundarias
+    if (catObj && catObj.tipo === 'ingreso') {
+      await generarRecomendacionSueldo(valorGasto).catch(e => console.warn('Aviso sueldo:', e));
+    }
 
-            const payload = { 
-                id: window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-                    const r = (window.crypto.getRandomValues(new Uint8Array(1))[0] % 16) | 0;
-                    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-                    return v.toString(16);
-                }),
-                monto: valorGasto, 
-                categoria_id: categoriaId, 
-                cuenta: escapeHTML(cuentaActual), 
-                fecha: new Date().toISOString(),
-                notas: notaGasto ? escapeHTML(notaGasto.trim().slice(0, 150)) : null,
-                user_id: session.user.id
-            };
-            
-            const display = document.getElementById('flujo-monto-display');
+    if (catObj && catObj.tipo === 'gasto') {
+      await verificarAlertaLimite(categoriaId, valorGasto).catch(e => console.warn('Aviso límite:', e));
+    }
 
-            if (navigator.onLine) {
-                const { error } = await db.from('transacciones').insert([payload]);
-                if (error) {
-                    guardandoTransaccionActiva = false;
-                    display.style.color = '#ef4444'; 
-                    setTimeout(() => display.style.color = 'white', 1000);
-                    mostrarToast('Error al sincronizar con Supabase: ' + error.message, 'error');
-                    return;
-                }
-            } else {
-                let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
-                queue.push(payload);
-                try {
-                    localStorage.setItem('offline_queue', JSON.stringify(queue));
-                } catch (e) {
-                    if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
-                        // Rescate quirúrgico: quitamos el 20% más viejo para liberar espacio real, no solo 1 item inútilmente
-                        const itemsAQuitar = Math.max(1, Math.floor(queue.length * 0.2));
-                        queue.splice(0, itemsAQuitar); 
-                        localStorage.setItem('offline_queue', JSON.stringify(queue));
-                        mostrarToast('Almacenamiento casi lleno. Conéctate a internet para vaciar la cola.', 'error');
-                    }
-                }
-                mostrarToast('Guardado offline. Se sincronizará al conectar.');
-            }
+    const payload = {
+      id: window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = (window.crypto.getRandomValues(new Uint8Array(1))[0] % 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      }),
+      monto: valorGasto,
+      categoria_id: categoriaId,
+      cuenta: escapeHTML(cuentaActual),
+      fecha: new Date().toISOString(),
+      notas: notaGasto ? escapeHTML(notaGasto.trim().slice(0, 150)) : null,
+      user_id: session.user.id
+    };
 
-            if (catObj && catObj.tipo === 'gasto') {
-                const porcentajeGastoDash = ultimosIngresosCalculados > 0 ? Math.round((valorGasto / ultimosIngresosCalculados) * 100) : 0;
-                if (porcentajeGastoDash >= 20) {
-                    setTimeout(() => {
-                        mostrarToast(`⚠️ Este gasto representa el ${porcentajeGastoDash}% de tus ingresos totales. ¡Vigila tu margen!`, 'error');
-                    }, 500);
-                }
-            }
-            
-            if (navigator.vibrate) navigator.vibrate(50);
-            
-            display.style.color = '#34d399'; 
-            setTimeout(() => {
-                display.style.color = 'white';
-                cerrarFlujo();
-                limpiar();
-                guardandoTransaccionActiva = false;
-                mostrarToast('Transacción registrada con éxito');
-                if (!document.getElementById('pantalla-dashboard').classList.contains('hidden')) {
-                    cargarEstadisticas();
-                }
-            }, 300);
-        }
+    const display = document.getElementById('flujo-monto-display');
+
+    if (navigator.onLine) {
+      const { error } = await db.from('transacciones').insert([payload]);
+      if (error) throw error; 
+    } else {
+      encolarTransaccionManual(payload);
+    }
+
+    if (catObj && catObj.tipo === 'gasto') {
+      const porcentajeGastoDash = ultimosIngresosCalculados > 0 ? Math.round((valorGasto / ultimosIngresosCalculados) * 100) : 0;
+      if (porcentajeGastoDash >= 20) {
+        setTimeout(() => {
+          mostrarToast(`⚠️ Este gasto representa el ${porcentajeGastoDash}% de tus ingresos totales. ¡Vigila tu margen!`, 'error');
+        }, 500);
+      }
+    }
+
+    if (navigator.vibrate) navigator.vibrate(50);
+
+    if (display) display.style.color = '#34d399';
+    setTimeout(() => {
+      if (display) display.style.color = 'white';
+      cerrarFlujo();
+      limpiar();
+      guardandoTransaccionActiva = false;
+      mostrarToast('Transacción registrada con éxito');
+      if (document.getElementById('pantalla-dashboard') && !document.getElementById('pantalla-dashboard').classList.contains('hidden')) {
+        cargarEstadisticas();
+      }
+    }, 300);
+
+  } catch (errorGlobal) {
+    console.warn('Excepción atrapada en red/guardado:', errorGlobal);
+    guardandoTransaccionActiva = false;
+    const display = document.getElementById('flujo-monto-display');
+    if (display) {
+      display.style.color = '#ef4444';
+      setTimeout(() => display.style.color = 'white', 1000);
+    }
+    mostrarToast('Hubo un problema de conexión. Intenta de nuevo o revisa tu red.', 'error');
+  }
+}
+
+function encolarTransaccionManual(payload) {
+  let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+  queue.push(payload);
+  try {
+    localStorage.setItem('offline_queue', JSON.stringify(queue));
+    mostrarToast('Guardado offline. Se sincronizará al conectar.');
+  } catch (e) {
+    if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+      const itemsAQuitar = Math.max(1, Math.floor(queue.length * 0.2));
+      queue.splice(0, itemsAQuitar);
+      localStorage.setItem('offline_queue', JSON.stringify(queue));
+      mostrarToast('Almacenamiento casi lleno. Conéctate a internet para vaciar la cola.', 'error');
+    }
+  }
+}
 
         async function cargarPlanes() {
             const { data: { session } } = await db.auth.getSession();
@@ -3490,12 +3501,12 @@ FILE: /public/sw.js
 const CACHE_VERSION = 'v21-prod';
 const CACHE_NAME = `gastos-${CACHE_VERSION}`;
 const ASSETS = [
-    '/',
-    '/index.html',
-    '/manifest.json',
-    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js',
-    'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js',
-    'https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js'
+'/',
+'/index.html',
+'/manifest.json',
+'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
+'https://cdn.jsdelivr.net/npm/chart.js',
+'https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js'
 ];
 
 self.addEventListener('install', event => {
@@ -3599,9 +3610,9 @@ FILE: /vercel.json
           "value": "strict-origin-when-cross-origin"
         },
         {
-          "key": "Permissions-Policy",
-          "value": "camera=(), microphone=(), geolocation=()"
-        },
+"key": "Permissions-Policy",
+"value": "camera=(), microphone=(self), geolocation=()"
+},
         {
           "key": "Strict-Transport-Security",
           "value": "max-age=63072000; includeSubDomains; preload"
