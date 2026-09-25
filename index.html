@@ -820,6 +820,8 @@
         let transaccionesCacheActuales = [];
 
         let formateadorRaw = new Intl.NumberFormat('es-CO', { style: 'currency', currency: monedaActual, maximumFractionDigits: 0 });
+        // [NUEVO] Caché global inmutable para inputs numéricos (Zero GC Thrashing)
+        let formateadorNumerico = new Intl.NumberFormat('es-CO');
 
         function formatearMoneda(val) {
             if (modoPrivacidad) return '••••••••';
@@ -833,6 +835,7 @@
             if (nuevaMoneda === 'USD') locale = 'en-US';
             if (nuevaMoneda === 'PEN') locale = 'es-PE';
             formateadorRaw = new Intl.NumberFormat(locale, { style: 'currency', currency: nuevaMoneda, maximumFractionDigits: 0 });
+            formateadorNumerico = new Intl.NumberFormat(locale);
             document.getElementById('simbolo-moneda-plan').textContent = nuevaMoneda === 'USD' ? '$' : (nuevaMoneda === 'PEN' ? 'S/.' : '$');
             actualizarPantalla();
             if (!document.getElementById('pantalla-dashboard').classList.contains('hidden')) {
@@ -1938,8 +1941,7 @@ let graficoInstancia = null;
         function abrirModalEditarPresupuesto(catId, catNombre, presupuestoActual) {
             categoriaEdicionId = catId;
             document.getElementById('label-cat-editar-presupuesto').textContent = `Categoría: ${catNombre}`;
-            let locale = monedaActual === 'USD' ? 'en-US' : (monedaActual === 'PEN' ? 'es-PE' : 'es-CO');
-            document.getElementById('input-nuevo-presupuesto-cat').value = new Intl.NumberFormat(locale).format(parseInt(presupuestoActual || 0));
+            document.getElementById('input-nuevo-presupuesto-cat').value = formateadorNumerico.format(parseInt(presupuestoActual || 0));
             
             const modal = document.getElementById('modal-editar-presupuesto');
             modal.classList.remove('hidden');
@@ -1967,8 +1969,7 @@ let graficoInstancia = null;
                 if (!valor) { e.target.value = ''; return; }
                 let numVal = parseInt(valor);
                 if (numVal > 999999999) numVal = 999999999;
-                let locale = monedaActual === 'USD' ? 'en-US' : (monedaActual === 'PEN' ? 'es-PE' : 'es-CO');
-                e.target.value = new Intl.NumberFormat(locale).format(numVal);
+                e.target.value = formateadorNumerico.format(numVal);
             });
         }
 
@@ -2505,15 +2506,13 @@ let graficoInstancia = null;
         document.getElementById('input-monto-plan').addEventListener('input', (e) => {
             let valor = e.target.value.replace(/\D/g, '');
             if (!valor) { e.target.value = ''; return; }
-            let locale = monedaActual === 'USD' ? 'en-US' : (monedaActual === 'PEN' ? 'es-PE' : 'es-CO');
-            e.target.value = new Intl.NumberFormat(locale).format(parseInt(valor));
+            e.target.value = formateadorNumerico.format(parseInt(valor));
         });
 
         document.getElementById('input-acumulado-inicial').addEventListener('input', (e) => {
             let valor = e.target.value.replace(/\D/g, '');
             if (!valor) { e.target.value = ''; return; }
-            let locale = monedaActual === 'USD' ? 'en-US' : (monedaActual === 'PEN' ? 'es-PE' : 'es-CO');
-            e.target.value = new Intl.NumberFormat(locale).format(parseInt(valor));
+            e.target.value = formateadorNumerico.format(parseInt(valor));
         });
 
         document.getElementById('btn-guardar-plan').addEventListener('click', async () => {
@@ -3078,12 +3077,12 @@ function encolarTransaccionManual(payload) {
                     e.target.value = '';
                 } else {
                     valorSimuladorBase = parseInt(raw);
-                    let locale = monedaActual === 'USD' ? 'en-US' : (monedaActual === 'PEN' ? 'es-PE' : 'es-CO');
-                    e.target.value = new Intl.NumberFormat(locale).format(valorSimuladorBase);
+                    e.target.value = formateadorNumerico.format(valorSimuladorBase);
                 }
                 actualizarSimulador();
             });
         }
+
 
         async function cargarEstadisticas() {
             const { data: { session } } = await db.auth.getSession();
@@ -3191,6 +3190,8 @@ function encolarTransaccionManual(payload) {
                 }
             });
 
+
+
             // Procesamiento en lotes para evitar bloqueos del hilo principal (V8 Optimization)
             transaccionesCacheActuales.forEach(t => {
                 const cat = mapaCat[t.categoria_id];
@@ -3231,6 +3232,8 @@ function encolarTransaccionManual(payload) {
                 }
             });
 
+
+
             document.getElementById('cuenta-efectivo-val').textContent = formatearMoneda(totalesCuentas['Efectivo']);
             document.getElementById('cuenta-bancos-val').textContent = formatearMoneda(totalesCuentas['Bancos']);
             document.getElementById('cuenta-tarjetas-val').textContent = formatearMoneda(totalesCuentas['Tarjetas']);
@@ -3269,6 +3272,8 @@ function encolarTransaccionManual(payload) {
 
             renderizarDashboardUI(balanceReal, totalIngresado, totalGastado, ultimaMatrizGastos, totalNecesidades, totalDeseos, totalAhorrosYDeudas);
         }
+
+
 
         function renderizarListaTransacciones(transacciones, mapaCat) {
             const contenedorHistorial = document.getElementById('historial-transacciones');
@@ -3325,9 +3330,10 @@ function encolarTransaccionManual(payload) {
                     
                     const btnBorrar = document.createElement('button');
                     btnBorrar.type = "button";
-                    btnBorrar.className = "w-6 h-6 rounded-full flex items-center justify-center bg-slate-800 text-slate-500 hover:text-red-400 hover:bg-slate-700 transition-colors cursor-pointer";
+                    /* [NUEVO] Inyección de clase rastreadora y dataset inmutable */
+                    btnBorrar.className = "w-6 h-6 rounded-full flex items-center justify-center bg-slate-800 text-slate-500 hover:text-red-400 hover:bg-slate-700 transition-colors cursor-pointer btn-borrar-tx";
+                    btnBorrar.dataset.txid = escapeHTML(t.id);
                     btnBorrar.textContent = "✕";
-                    btnBorrar.addEventListener('click', () => eliminarTransaccion(t.id));
                     
                     valDiv.appendChild(montoSpan);
                     valDiv.appendChild(btnBorrar);
@@ -3338,7 +3344,19 @@ function encolarTransaccionManual(payload) {
             });
             
             contenedorHistorial.appendChild(fragmentoDOM);
+
+            /* [NUEVO] Patrón Singleton: Único Event Listener Global para todo el historial */
+            if (!contenedorHistorial.dataset.listenerActivo) {
+                contenedorHistorial.addEventListener('click', (e) => {
+                    const btnBorrar = e.target.closest('.btn-borrar-tx');
+                    if (btnBorrar && btnBorrar.dataset.txid) {
+                        eliminarTransaccion(btnBorrar.dataset.txid);
+                    }
+                });
+                contenedorHistorial.dataset.listenerActivo = 'true';
+            }
         }
+
 
         let cuentaFiltroActiva = 'todas';
 
@@ -3520,14 +3538,19 @@ function encolarTransaccionManual(payload) {
                         matrizContainer.appendChild(row);
                     });
 
-                    matrizContainer.querySelectorAll('.btn-editar-presupuesto').forEach(btn => {
-                        btn.addEventListener('click', (e) => {
-                            const catId = e.currentTarget.getAttribute('data-catid');
-                            const catNombre = e.currentTarget.getAttribute('data-catnombre');
-                            const presActual = e.currentTarget.getAttribute('data-presupuesto');
+                    /* [NUEVO] Patrón Singleton de delegación para proteger la memoria RAM en el Dashboard */
+                    if (!matrizContainer.dataset.listenerActivo) {
+                        matrizContainer.addEventListener('click', (e) => {
+                            const btn = e.target.closest('.btn-editar-presupuesto');
+                            if (!btn) return;
+                            
+                            const catId = btn.getAttribute('data-catid');
+                            const catNombre = btn.getAttribute('data-catnombre');
+                            const presActual = btn.getAttribute('data-presupuesto');
                             abrirModalEditarPresupuesto(catId, catNombre, presActual);
                         });
-                    });
+                        matrizContainer.dataset.listenerActivo = 'true';
+                    }
                 };
 
                 if (userId) {
