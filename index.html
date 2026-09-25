@@ -1126,13 +1126,86 @@
 
         let tipoAdminActivo = 'gasto';
 
+        // [NUEVO] Delegación de Eventos Estática (Cero Fugas de Memoria V8)
+        document.getElementById('lista-categorias-admin').addEventListener('click', (e) => {
+            const btnEdit = e.target.closest('.btn-edit-admin');
+            const btnDel = e.target.closest('.btn-del-admin');
+            
+            if (btnEdit) {
+                const catId = btnEdit.getAttribute('data-id');
+                let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+                const cat = categorias.find(c => c.id === catId);
+                if (cat) abrirModalEditarCategoria(cat);
+            }
+            
+            if (btnDel) {
+                const catId = btnDel.getAttribute('data-id');
+                let idsEliminadas = JSON.parse(localStorage.getItem('categorias_eliminadas_ids') || '[]');
+                if (!idsEliminadas.includes(catId)) {
+                    idsEliminadas.push(catId);
+                    localStorage.setItem('categorias_eliminadas_ids', JSON.stringify(idsEliminadas));
+                    abrirModalGestionarCategorias(); // Forzar re-render para ocultar visualmente
+                    mostrarToast('Marcada para eliminar. Confirma para guardar.');
+                }
+            }
+        });
+
+        // [NUEVO] Despachador de Transacciones (Batch Commit)
+        const btnGuardarAdmin = document.getElementById('btn-guardar-admin-cat');
+        if (btnGuardarAdmin) {
+            // Clonamos para destruir posibles listeners previos (Zero-Leak Barrier)
+            const nuevoBtnGuardarAdmin = btnGuardarAdmin.cloneNode(true);
+            btnGuardarAdmin.parentNode.replaceChild(nuevoBtnGuardarAdmin, btnGuardarAdmin);
+            
+            nuevoBtnGuardarAdmin.addEventListener('click', async (e) => {
+                const btn = e.target;
+                btn.disabled = true;
+                btn.textContent = 'Guardando en la nube...';
+
+                const { data: { session } } = await db.auth.getSession();
+                let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+                let idsEliminadas = JSON.parse(localStorage.getItem('categorias_eliminadas_ids') || '[]');
+
+                if (session && navigator.onLine) {
+                    for (let id of idsEliminadas) {
+                        const esForanea = id.startsWith('fallback') || typeof id !== 'string' || id.length < 15;
+                        if (!esForanea) await db.from('categorias').delete().eq('id', id);
+                    }
+                    
+                    const editadas = categorias.filter(c => c._editado);
+                    for (let cat of editadas) {
+                        const payload = { nombre: cat.nombre, icono: cat.icono, es_fijo: cat.es_fijo };
+                        if (!cat.user_id) {
+                            const { data } = await db.from('categorias').insert([{...payload, tipo: cat.tipo, user_id: session.user.id}]).select();
+                            if (data) cat.id = data[0].id;
+                        } else {
+                            await db.from('categorias').update(payload).eq('id', cat.id).eq('user_id', session.user.id);
+                        }
+                    }
+                }
+
+                categorias = categorias.filter(c => !idsEliminadas.includes(c.id));
+                categorias = categorias.map(c => { delete c._editado; return c; });
+                localStorage.setItem('categorias_cache', JSON.stringify(categorias));
+                localStorage.removeItem('categorias_eliminadas_ids');
+
+                btn.classList.add('hidden');
+                btn.disabled = false;
+                btn.textContent = '💾 Confirmar y Guardar Cambios';
+                
+                renderizarCategoriasFlujo();
+                abrirModalGestionarCategorias();
+                mostrarToast('Categorías sincronizadas con éxito.');
+            });
+        }
+
         function abrirModalGestionarCategorias() {
             const contenedor = document.getElementById('lista-categorias-admin');
             contenedor.innerHTML = '';
             let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
             let idsEliminadas = JSON.parse(localStorage.getItem('categorias_eliminadas_ids') || '[]');
             
-            // Filtrar las que fueron eliminadas previamente por el usuario
+            // Oculta en tiempo real las marcadas para eliminación local
             categorias = categorias.filter(c => !idsEliminadas.includes(c.id));
             const catsFiltradas = categorias.filter(c => c.tipo === tipoAdminActivo);
 
@@ -1140,155 +1213,39 @@
                 contenedor.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">No hay categorías en esta sección.</p>';
             } else {
                 catsFiltradas.forEach(cat => {
+                    const isEditado = cat._editado ? '<span class="ml-2 text-[9px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full">Pendiente</span>' : '';
                     const item = document.createElement('div');
                     item.className = "flex items-center justify-between p-3 bg-slate-950 rounded-2xl border border-slate-800";
                     item.innerHTML = `
                         <div class="flex items-center gap-3">
                             <span class="text-xl">${escapeHTML(cat.icono)}</span>
                             <div>
-                                <span class="text-xs font-bold text-white block">${escapeHTML(cat.nombre)}</span>
+                                <div class="flex items-center">
+                                    <span class="text-xs font-bold text-white block">${escapeHTML(cat.nombre)}</span>
+                                    ${isEditado}
+                                </div>
                                 <span class="text-[10px] text-slate-400 uppercase">${cat.tipo} ${cat.es_fijo ? '• Fijo / Factura' : ''}</span>
                             </div>
                         </div>
                         <div class="flex items-center gap-1.5">
-                            <button type="button" class="btn-edit-admin px-2.5 py-1.5 rounded-xl bg-slate-800 text-emerald-400 text-xs font-bold active:scale-95 cursor-pointer">✏️</button>
-                            <button type="button" class="btn-del-admin px-2.5 py-1.5 rounded-xl bg-red-500/10 text-red-400 text-xs font-bold active:scale-95 cursor-pointer">🗑️</button>
+                            <button type="button" data-id="${cat.id}" class="btn-edit-admin px-2.5 py-1.5 rounded-xl bg-slate-800 text-emerald-400 text-xs font-bold active:scale-95 cursor-pointer">✏️</button>
+                            <button type="button" data-id="${cat.id}" class="btn-del-admin px-2.5 py-1.5 rounded-xl bg-red-500/10 text-red-400 text-xs font-bold active:scale-95 cursor-pointer">🗑️</button>
                         </div>
                     `;
-
-                    // Captura de Edición en Borrador Local
-        document.getElementById('btn-guardar-editar-cat').addEventListener('click', () => {
-            if (!categoriaEditandoId) return;
-            const nombre = document.getElementById('input-editar-cat-nombre').value.trim();
-            const inputEmojiCustom = document.getElementById('input-emoji-editar-personalizado');
-            const iconoFin = (inputEmojiCustom && inputEmojiCustom.value.trim()) ? inputEmojiCustom.value.trim() : iconoEditarCatSeleccionado;
-
-            if (!nombre) { mostrarToast('Escribe un nombre válido', 'error'); return; }
-
-            let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
-            categorias = categorias.map(c => {
-                if (c.id === categoriaEditandoId) {
-                    return { ...c, nombre: escapeHTML(nombre), icono: escapeHTML(iconoFin), es_fijo: tipoEditarCatEsFijo, _editado: true };
-                }
-                return c;
-            });
-            localStorage.setItem('categorias_cache', JSON.stringify(categorias));
-
-            cerrarModalEditarCategoria();
-            abrirModalGestionarCategorias();
-            document.getElementById('btn-guardar-admin-cat').classList.remove('hidden');
-            mostrarToast('Cambio retenido. Confirma para subir a la nube.');
-        });
-
-        // Despachador Principal (Batch Commit) a Supabase
-        document.getElementById('btn-guardar-admin-cat').addEventListener('click', async (e) => {
-            const btn = e.target;
-            btn.disabled = true;
-            btn.textContent = 'Guardando en la nube...';
-
-            const { data: { session } } = await db.auth.getSession();
-            let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
-            let idsEliminadas = JSON.parse(localStorage.getItem('categorias_eliminadas_ids') || '[]');
-
-            if (session && navigator.onLine) {
-                // 1. Ejecutar Eliminaciones
-                for (let id of idsEliminadas) {
-                    const esForanea = id.startsWith('fallback') || typeof id !== 'string' || id.length < 15;
-                    if(!esForanea) await db.from('categorias').delete().eq('id', id);
-                }
-                
-                // 2. Ejecutar Ediciones
-                const editadas = categorias.filter(c => c._editado);
-                for (let cat of editadas) {
-                    const payload = { nombre: cat.nombre, icono: cat.icono, es_fijo: cat.es_fijo };
-                    if (!cat.user_id) {
-                        const { data } = await db.from('categorias').insert([{...payload, tipo: cat.tipo, user_id: session.user.id}]).select();
-                        if (data) cat.id = data[0].id;
-                    } else {
-                        await db.from('categorias').update(payload).eq('id', cat.id).eq('user_id', session.user.id);
-                    }
-                    delete cat._editado;
-                }
-            }
-
-            // Consolidar Estado Final
-            categorias = categorias.filter(c => !idsEliminadas.includes(c.id));
-            localStorage.setItem('categorias_cache', JSON.stringify(categorias));
-            localStorage.removeItem('categorias_eliminadas_ids');
-
-            btn.classList.add('hidden');
-            btn.disabled = false;
-            btn.textContent = '💾 Confirmar y Guardar Cambios';
-            
-            renderizarCategoriasFlujo();
-            abrirModalGestionarCategorias();
-            mostrarToast('Tus categorías han sido guardadas y sincronizadas.');
-        });
-
-                    document.getElementById('btn-guardar-editar-cat').addEventListener('click', async () => {
-            if (!categoriaEditandoId) return;
-            const nombre = document.getElementById('input-editar-cat-nombre').value.trim();
-            const inputEmojiCustom = document.getElementById('input-emoji-editar-personalizado');
-            if (inputEmojiCustom && inputEmojiCustom.value.trim()) {
-                iconoEditarCatSeleccionado = inputEmojiCustom.value.trim();
-            }
-
-            if (!nombre) {
-                mostrarToast('Escribe un nombre válido', 'error');
-                return;
-            }
-
-            const { data: { session } } = await db.auth.getSession();
-            if (!session) {
-                mostrarToast('Inicia sesión para editar categorías', 'error');
-                return;
-            }
-
-            const payloadUpdate = {
-                nombre: escapeHTML(nombre),
-                icono: escapeHTML(iconoEditarCatSeleccionado),
-                es_fijo: tipoEditarCatEsFijo
-            };
-
-            let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
-            const catActual = categorias.find(c => c.id === categoriaEditandoId);
-
-            if (catActual && !catActual.user_id) {
-                const { data: nuevaCatData, error: errIns } = await db.from('categorias').insert([{
-                    nombre: payloadUpdate.nombre,
-                    icono: payloadUpdate.icono,
-                    tipo: catActual.tipo,
-                    es_fijo: payloadUpdate.es_fijo,
-                    user_id: session.user.id
-                }]).select();
-
-                if (errIns) {
-                    mostrarToast('Error al actualizar categoría: ' + errIns.message, 'error');
-                    return;
-                }
-                categorias = categorias.map(c => c.id === categoriaEditandoId ? { ...nuevaCatData[0] } : c);
-                localStorage.setItem('categorias_cache', JSON.stringify(categorias));
-            } else {
-                const { error } = await db.from('categorias').update(payloadUpdate).eq('id', categoriaEditandoId).eq('user_id', session.user.id);
-                if (error) {
-                    mostrarToast('Error al actualizar: ' + error.message, 'error');
-                    return;
-                }
-                categorias = categorias.map(c => c.id === categoriaEditandoId ? { ...c, ...payloadUpdate } : c);
-                localStorage.setItem('categorias_cache', JSON.stringify(categorias));
-            }
-
-            cerrarModalEditarCategoria();
-            renderizarCategoriasFlujo();
-            mostrarToast('Categoría actualizada con éxito');
-        });
-
                     contenedor.appendChild(item);
                 });
             }
 
             document.getElementById('modal-gestionar-categorias').classList.remove('hidden');
             document.getElementById('modal-gestionar-categorias').classList.add('flex');
+            
+            // Lógica de visibilidad del despachador final
+            const hasPendingEdits = categorias.some(c => c._editado);
+            if (idsEliminadas.length > 0 || hasPendingEdits) {
+                document.getElementById('btn-guardar-admin-cat').classList.remove('hidden');
+            } else {
+                document.getElementById('btn-guardar-admin-cat').classList.add('hidden');
+            }
         }
 
         const tabAdminGastos = document.getElementById('tab-admin-gastos');
@@ -2195,62 +2152,32 @@ let graficoInstancia = null;
             }
         }
 
-        document.getElementById('btn-guardar-editar-cat').addEventListener('click', async () => {
+        // [NUEVO] Handler de Edición Local - Exclusivo para Modo Borrador
+        document.getElementById('btn-guardar-editar-cat').addEventListener('click', () => {
             if (!categoriaEditandoId) return;
             const nombre = document.getElementById('input-editar-cat-nombre').value.trim();
             const inputEmojiCustom = document.getElementById('input-emoji-editar-personalizado');
-            if (inputEmojiCustom && inputEmojiCustom.value.trim()) {
-                iconoEditarCatSeleccionado = inputEmojiCustom.value.trim();
-            }
+            const iconoFin = (inputEmojiCustom && inputEmojiCustom.value.trim()) ? inputEmojiCustom.value.trim() : iconoEditarCatSeleccionado;
 
             if (!nombre) {
                 mostrarToast('Escribe un nombre válido', 'error');
                 return;
             }
 
-            const { data: { session } } = await db.auth.getSession();
-            if (!session) {
-                mostrarToast('Inicia sesión para editar categorías', 'error');
-                return;
-            }
-
-            const payloadUpdate = {
-                nombre: escapeHTML(nombre),
-                icono: escapeHTML(iconoEditarCatSeleccionado),
-                es_fijo: tipoEditarCatEsFijo
-            };
-
+            // Solo consolida el estado local y marca con bandera '_editado'
             let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
-            const catActual = categorias.find(c => c.id === categoriaEditandoId);
-
-            if (catActual && !catActual.user_id) {
-                const { data: nuevaCatData, error: errIns } = await db.from('categorias').insert([{
-                    nombre: payloadUpdate.nombre,
-                    icono: payloadUpdate.icono,
-                    tipo: catActual.tipo,
-                    es_fijo: payloadUpdate.es_fijo,
-                    user_id: session.user.id
-                }]).select();
-
-                if (errIns) {
-                    mostrarToast('Error al actualizar categoría: ' + errIns.message, 'error');
-                    return;
+            categorias = categorias.map(c => {
+                if (c.id === categoriaEditandoId) {
+                    return { ...c, nombre: escapeHTML(nombre), icono: escapeHTML(iconoFin), es_fijo: tipoEditarCatEsFijo, _editado: true };
                 }
-                categorias = categorias.map(c => c.id === categoriaEditandoId ? { ...nuevaCatData[0] } : c);
-                localStorage.setItem('categorias_cache', JSON.stringify(categorias));
-            } else {
-                const { error } = await db.from('categorias').update(payloadUpdate).eq('id', categoriaEditandoId).eq('user_id', session.user.id);
-                if (error) {
-                    mostrarToast('Error al actualizar: ' + error.message, 'error');
-                    return;
-                }
-                categorias = categorias.map(c => c.id === categoriaEditandoId ? { ...c, ...payloadUpdate } : c);
-                localStorage.setItem('categorias_cache', JSON.stringify(categorias));
-            }
-
+                return c;
+            });
+            
+            localStorage.setItem('categorias_cache', JSON.stringify(categorias));
+            
             cerrarModalEditarCategoria();
-            renderizarCategoriasFlujo();
-            mostrarToast('Categoría actualizada con éxito');
+            abrirModalGestionarCategorias(); // Fuerza el re-render para mostrar la etiqueta "Pendiente" y el Botón Final
+            mostrarToast('Edición en espera. Confirma para guardar en la nube.');
         });
 
         function abrirModalNuevaCategoria() {
@@ -2419,14 +2346,17 @@ let graficoInstancia = null;
                     }
                 });
                 
-                // Renderizado Diferido No Bloqueante (V8 Async Pipeline)
+                // [Seguridad Multiplataforma] Polyfill para WebKit/Safari (iOS/macOS)
+                const safeIdleCallback = window.requestIdleCallback || ((cb) => setTimeout(cb, 1));
+                
+                // Renderizado Diferido No Bloqueante (Async Pipeline)
                 requestAnimationFrame(() => {
                     const ahora = Date.now();
                     
                     if (pantalla === 'dashboard') {
                         if (ahora - cacheTTL.dashboard > 60000 || transaccionesCacheActuales.length === 0) {
                             // Ejecutamos cargas pesadas fuera del pipeline de pintado
-                            requestIdleCallback(() => {
+                            safeIdleCallback(() => {
                                 cargarEstadisticas().finally(() => cacheTTL.dashboard = Date.now());
                             }, { timeout: 1000 });
                         } else if (graficoInstancia) {
@@ -2436,7 +2366,7 @@ let graficoInstancia = null;
                     
                     if (pantalla === 'planes') {
                         if (ahora - cacheTTL.planes > 60000) {
-                            requestIdleCallback(() => {
+                            safeIdleCallback(() => {
                                 cargarPlanes().finally(() => cacheTTL.planes = Date.now());
                             }, { timeout: 1000 });
                         }
