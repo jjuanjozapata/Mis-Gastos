@@ -2031,48 +2031,50 @@ let graficoInstancia = null;
 
         async function aplicarAbonoDeuda(plan) {
             const valorAbono = parseInt(monto);
-            const { data: { session } } = await db.auth.getSession();
-            if (!session) {
-                mostrarToast('Inicia sesión para gestionar deudas', 'error');
-                return;
-            }
+            
+            try {
+                const { data: { session }, error: errAuth } = await db.auth.getSession();
+                if (errAuth || !session) throw new Error('Inicia sesión para gestionar deudas');
 
-            const nuevoAcumulado = parseFloat(plan.monto_acumulado || 0) + valorAbono;
-            let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
-            const catDeuda = categorias.find(c => c.nombre.toLowerCase().includes('deuda') || c.nombre.toLowerCase().includes('credito') || c.nombre.toLowerCase().includes('financiero')) || categorias[0];
+                const nuevoAcumulado = parseFloat(plan.monto_acumulado || 0) + valorAbono;
+                let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+                const catDeuda = categorias.find(c => c.nombre.toLowerCase().includes('deuda') || c.nombre.toLowerCase().includes('credito') || c.nombre.toLowerCase().includes('financiero')) || categorias[0];
 
-            const txPayload = {
-                monto: valorAbono,
-                categoria_id: catDeuda ? catDeuda.id : null,
-                cuenta: cuentaActual,
-                fecha: new Date().toISOString(),
-                notas: `Abono a deuda: ${plan.titulo}`,
-                user_id: session.user.id
-            };
+                const txPayload = {
+                    id: window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : Date.now().toString(),
+                    monto: valorAbono,
+                    categoria_id: catDeuda ? catDeuda.id : null,
+                    cuenta: cuentaActual,
+                    fecha: new Date().toISOString(),
+                    notas: `Abono a deuda: ${plan.titulo}`,
+                    user_id: session.user.id
+                };
 
-            if (navigator.onLine) {
-                const { error: errPlan } = await db.from('planes').update({ monto_acumulado: nuevoAcumulado }).eq('id', plan.id);
-                if (errPlan) {
-                    mostrarToast('Error al aplicar abono: ' + errPlan.message, 'error');
-                    return;
+                if (navigator.onLine) {
+                    const { error: errPlan } = await db.from('planes').update({ monto_acumulado: nuevoAcumulado }).eq('id', plan.id);
+                    if (errPlan) throw new Error('Fallo al actualizar el acumulado: ' + errPlan.message);
+                    
+                    if (catDeuda) {
+                        const { error: errTx } = await db.from('transacciones').insert([txPayload]);
+                        if (errTx) throw new Error('Fallo al guardar transacción: ' + errTx.message);
+                    }
+                } else {
+                    let queueTx = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+                    queueTx.push(txPayload);
+                    localStorage.setItem('offline_queue', JSON.stringify(queueTx));
+
+                    let queuePlanes = JSON.parse(localStorage.getItem('offline_queue_planes') || '[]');
+                    queuePlanes.push({ planId: plan.id, nuevoAcumulado });
+                    localStorage.setItem('offline_queue_planes', JSON.stringify(queuePlanes));
+                    mostrarToast('Abono encolado offline. Se sincronizará al conectar.');
                 }
-                if (catDeuda) await db.from('transacciones').insert([txPayload]);
-            } else {
-                let queueTx = JSON.parse(localStorage.getItem('offline_queue') || '[]');
-                queueTx.push(txPayload);
-                localStorage.setItem('offline_queue', JSON.stringify(queueTx));
 
-                let queuePlanes = JSON.parse(localStorage.getItem('offline_queue_planes') || '[]');
-                queuePlanes.push({ planId: plan.id, nuevoAcumulado });
-                localStorage.setItem('offline_queue_planes', JSON.stringify(queuePlanes));
-                mostrarToast('Abono guardado offline. Se sincronizará al conectar.');
+                mostrarToast(`💳 Abono de ${formatearMoneda(valorAbono)} aplicado a "${plan.titulo}"`);
+                cerrarFlujo(); limpiar(); cargarPlanes(); cargarEstadisticas();
+            } catch (err) {
+                console.error('[CISO Audit] Cancelando abono por falla crítica:', err.message);
+                mostrarToast(err.message, 'error');
             }
-
-            mostrarToast(`💳 Abono de ${formatearMoneda(valorAbono)} aplicado a "${plan.titulo}"`);
-            cerrarFlujo();
-            limpiar();
-            cargarPlanes();
-            cargarEstadisticas();
         }
 
         let categoriaEditandoId = null;
@@ -2743,11 +2745,26 @@ let graficoInstancia = null;
     console.warn('Excepción atrapada en red/guardado:', errorGlobal);
     guardandoTransaccionActiva = false;
     const display = document.getElementById('flujo-monto-display');
+    
+    // [NUEVO] Rescate Lie-Fi: Si el motor rechaza por Falsa Conectividad, forzar encolado local sin pérdida de datos
+    const isNetworkError = errorGlobal.message === 'Failed to fetch' || String(errorGlobal).includes('Network');
+    if (isNetworkError && payload) {
+        encolarTransaccionManual(payload);
+        if (display) display.style.color = '#34d399';
+        setTimeout(() => {
+            if (display) display.style.color = 'white';
+            cerrarFlujo(); limpiar();
+            if (document.getElementById('pantalla-dashboard') && !document.getElementById('pantalla-dashboard').classList.contains('hidden')) cargarEstadisticas();
+        }, 300);
+        return; // Salida temprana exitosa
+    }
+
+    // Fallo de lógica interna real (Autenticación, SQL, etc.)
     if (display) {
       display.style.color = '#ef4444';
       setTimeout(() => display.style.color = 'white', 1000);
     }
-    mostrarToast('Hubo un problema de conexión. Intenta de nuevo o revisa tu red.', 'error');
+    mostrarToast('Hubo un problema de conexión o sesión. Revisa tu red.', 'error');
   }
 }
 
@@ -3556,10 +3573,15 @@ function encolarTransaccionManual(payload) {
                 if (userId) {
                     db.from('planes').select('*').eq('tipo', 'limite').eq('user_id', userId).then(({ data: planesLimites }) => {
                         renderMatrixWithLimits(planesLimites || []);
+                    }).catch(err => {
+                        console.warn('[CISO Guard] Carga de límites cancelada por red:', err.message);
+                        renderMatrixWithLimits([]);
                     });
                 } else {
                     renderMatrixWithLimits([]);
                 }
+            }).catch(err => {
+                console.error('[CISO Guard] Pipeline de matriz abortado (Error de Sesión):', err.message);
             });
 
             const labelsGrafico = [];
