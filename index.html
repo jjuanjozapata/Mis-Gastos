@@ -36,12 +36,14 @@
         /* Capa 1 y 2: Viewport Dinámico Nativo (dvh) y Reset Seguro */
         html, body {
             width: 100%;
-            height: 100dvh; /* Estándar PWA moderno que ignora el rebote del notch/teclado */
+            height: 100dvh;
             margin: 0;
             padding: 0;
             overflow: hidden;
             background-color: #020617;
-            overscroll-behavior-y: none; 
+            overscroll-behavior-y: none;
+            position: fixed; /* Sella el documento al viewport físico en iOS Safari */
+            inset: 0; /* Asegura cobertura total sin desbordamiento blanco */
         }
         body { 
             -webkit-user-select: none; 
@@ -337,7 +339,10 @@
                 <button type="button" id="tab-admin-ingresos" class="py-2.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-400 transition-all cursor-pointer">Ingresos</button>
             </div>
             <div id="lista-categorias-admin" class="flex-1 overflow-y-auto space-y-2.5 pr-1 no-scrollbar mb-4"></div>
-            <button type="button" id="btn-nueva-desde-admin" class="w-full py-3.5 rounded-xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 text-sm cursor-pointer">+ Crear Nueva Categoría</button>
+            <div class="flex flex-col gap-2 shrink-0">
+                <button type="button" id="btn-nueva-desde-admin" class="w-full py-3.5 rounded-xl bg-slate-800 border border-slate-700 text-emerald-400 font-bold active:bg-slate-700 transition-colors text-sm cursor-pointer">+ Crear Nueva Categoría</button>
+                <button type="button" id="btn-guardar-admin-cat" class="hidden w-full py-3.5 rounded-xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-all text-sm cursor-pointer shadow-lg">💾 Confirmar y Guardar Cambios</button>
+            </div>
         </div>
     </div>
 
@@ -443,7 +448,6 @@
             <div class="flex items-center gap-2">
                 <button id="btn-voz" class="bg-slate-900 text-emerald-400 border border-slate-800 w-9 h-9 rounded-full flex items-center justify-center text-xs active:scale-95 transition-all shadow-sm cursor-pointer" title="Dictar movimiento por voz">🎙️</button>
                 <button id="btn-ahorro-expres" class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-2 rounded-full text-xs font-bold active:scale-95 transition-all shadow-sm flex items-center gap-1 cursor-pointer" title="Ahorro exprés a fondo de emergencia">⚡ Ahorrar</button>
-                <button id="btn-privacidad" class="bg-slate-900 text-slate-300 border border-slate-800/80 w-9 h-9 rounded-full flex items-center justify-center text-xs active:scale-95 transition-all shadow-sm cursor-pointer" title="Ocultar / Mostrar Saldos">👁️</button>
                 <button id="btn-cuenta" class="bg-slate-900 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-full text-xs font-bold tracking-widest uppercase active:scale-95 transition-all shadow-md cursor-pointer">Efectivo</button>
             </div>
         </header>
@@ -501,6 +505,7 @@
                     <option value="4">Mayo</option><option value="5">Junio</option><option value="6">Julio</option><option value="7">Agosto</option>
                     <option value="8">Septiembre</option><option value="9">Octubre</option><option value="10">Noviembre</option><option value="11">Diciembre</option>
                 </select>
+                <button id="btn-privacidad" class="bg-slate-900 text-slate-300 border border-slate-800/80 w-10 h-10 rounded-xl flex items-center justify-center text-lg active:scale-95 transition-all shadow-sm cursor-pointer shrink-0" title="Ocultar / Mostrar Saldos">👁️</button>
             </div>
             
             <div class="bg-gradient-to-br from-emerald-900/40 to-slate-900 rounded-[2rem] p-6 mb-4 border border-emerald-500/25 relative overflow-hidden shadow-xl">
@@ -1148,26 +1153,41 @@
                         abrirModalEditarCategoria(cat);
                     });
 
-                    item.querySelector('.btn-del-admin').addEventListener('click', async () => {
-                        if (!confirm(`¿Deseas eliminar la categoría "${cat.nombre}"?`)) return;
+                    // Estado local temporal introducido para retener operaciones en el Modal
+                    item.querySelector('.btn-del-admin').addEventListener('click', () => {
+                        // Mutación puramente visual para el usuario (Draft Mode)
+                        item.classList.add('hidden');
                         
-                        let idsEliminadas = JSON.parse(localStorage.getItem('categorias_eliminadas_ids') || '[]');
-                        if (!idsEliminadas.includes(cat.id)) {
-                            idsEliminadas.push(cat.id);
-                            localStorage.setItem('categorias_eliminadas_ids', JSON.stringify(idsEliminadas));
-                        }
+                        const btnGuardar = document.getElementById('btn-guardar-admin-cat');
+                        btnGuardar.classList.remove('hidden');
+                        
+                        // Vinculamos el commit final al botón Guardar
+                        btnGuardar.onclick = async () => {
+                            btnGuardar.disabled = true;
+                            btnGuardar.textContent = 'Guardando...';
+                            
+                            let idsEliminadas = JSON.parse(localStorage.getItem('categorias_eliminadas_ids') || '[]');
+                            if (!idsEliminadas.includes(cat.id)) {
+                                idsEliminadas.push(cat.id);
+                                localStorage.setItem('categorias_eliminadas_ids', JSON.stringify(idsEliminadas));
+                            }
 
-                        let cats = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
-                        cats = cats.filter(c => c.id !== cat.id);
-                        localStorage.setItem('categorias_cache', JSON.stringify(cats));
+                            let cats = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+                            cats = cats.filter(c => c.id !== cat.id);
+                            localStorage.setItem('categorias_cache', JSON.stringify(cats));
 
-                        if (cat.user_id) {
-                            await db.from('categorias').delete().eq('id', cat.id);
-                        }
+                            if (cat.user_id && navigator.onLine) {
+                                await db.from('categorias').delete().eq('id', cat.id);
+                            }
 
-                        mostrarToast(`Categoría "${cat.nombre}" eliminada definitivamente`);
-                        abrirModalGestionarCategorias();
-                        renderizarCategoriasFlujo();
+                            mostrarToast(`Categoría "${cat.nombre}" eliminada definitivamente`);
+                            btnGuardar.classList.add('hidden');
+                            btnGuardar.disabled = false;
+                            btnGuardar.textContent = '💾 Confirmar y Guardar Cambios';
+                            
+                            abrirModalGestionarCategorias();
+                            renderizarCategoriasFlujo();
+                        };
                     });
 
                     contenedor.appendChild(item);
@@ -1585,7 +1605,17 @@ let graficoInstancia = null;
 
         let iconoNuevaCatSeleccionado = '🍿';
         let tipoNuevaCatEsFijo = false;
-        const listaEmojisPopulares = ['🍿','🛒','🍔','🚗','💊','💡','🎮','👕','✈️','🐾','💈','📚','☕','🏋️','🍻','🎁','🍕','🏠','🐶','💻','📱','🔧','🥗','🥖','🚴','🎧'];
+        const listaEmojisPopulares = [
+            '🛒','🍔','🍿','🥩','🥑','🥦','🍓','☕','🍻','🍷','🍕','🥗','🥖',
+            '🚗','✈️','🚕','🚌','🚂','🛳️','⛽','🚴','🏍️','🛵',
+            '🏠','💡','🚿','🛁','🔌','🧹','🧺','🧻','🧼','🧴',
+            '👕','👟','👔','💄','💍','👗','🎒','👓',
+            '💊','🩺','🌡️','🏋️','💈','🧘','🧴',
+            '🎮','🎬','🎟️','🎧','📚','🎨','🏖️','⛺','🧸',
+            '🐶','🐾','🪴','💐','🐈',
+            '💻','📱','📺','🔧','🛠️','⚙️','🔋',
+            '🏦','💳','💰','🧾','📈','📉','🎁','🏫','🎓','🚀'
+        ];
 
         function iniciarCaptura() {
             if(parseInt(monto) === 0) {
@@ -1664,11 +1694,21 @@ let graficoInstancia = null;
 
         async function sincronizarCategoriasCache() {
             try {
-                let categoriasLocales = leerStorageSeguro('categorias_cache', []);
                 if (navigator.onLine) {
-                    const { data } = await db.from('categorias').select('*').order('nombre');
-                    if (data && data.length > 0) {
+                    const { data: { session } } = await db.auth.getSession();
+                    // Solo traemos categorías globales (user_id IS NULL) o del usuario actual
+                    let query = db.from('categorias').select('*').order('nombre');
+                    if (session) {
+                        query = query.or(`user_id.is.null,user_id.eq.${session.user.id}`);
+                    } else {
+                        query = query.is('user_id', null);
+                    }
+                    
+                    const { data, error } = await query;
+                    
+                    if (!error && data) {
                         let idsEliminadas = JSON.parse(localStorage.getItem('categorias_eliminadas_ids') || '[]');
+                        // La base de datos es la verdad absoluta para deletes reales, idsEliminadas cubre defaults
                         const categoriasFiltradas = data.filter(c => !idsEliminadas.includes(c.id));
                         localStorage.setItem('categorias_cache', JSON.stringify(categoriasFiltradas));
                     }
@@ -3066,34 +3106,37 @@ function encolarTransaccionManual(payload) {
                 }
             }
 
-            let transacciones = [];
-            try {
-                if (!navigator.onLine) throw new Error("Modo offline activo: Supabase inalcanzable");
-                
-                const { data, error: errTrans } = await db.from('transacciones')
+            // 1. Renderizado en Frío (Latencia Cero)
+            const cacheGuardada = JSON.parse(localStorage.getItem(`transacciones_cache_${filtro}`) || '[]');
+            const queueOffline = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+            const queueFiltrada = queueOffline.filter(t => t.fecha >= inicioISO && t.fecha <= finISO && t.user_id === session.user.id);
+            
+            let transacciones = [...queueFiltrada, ...cacheGuardada].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+            transaccionesCacheActuales = transacciones;
+
+            // 2. Fetch en Segundo Plano (Stale-While-Revalidate)
+            if (navigator.onLine) {
+                db.from('transacciones')
                     .select('*')
                     .eq('user_id', session.user.id)
                     .gte('fecha', inicioISO)
                     .lte('fecha', finISO)
-                    .order('fecha', { ascending: false });
-                
-                if (errTrans) throw errTrans;
-                transacciones = data || [];
-                
-                // Persistencia local del último estado válido
-                localStorage.setItem(`transacciones_cache_${filtro}`, JSON.stringify(transacciones));
-            } catch (err) {
-                console.warn('[Offline Fallback] Construyendo Dashboard desde memoria local:', err.message);
-                
-                const cacheGuardada = JSON.parse(localStorage.getItem(`transacciones_cache_${filtro}`) || '[]');
-                const queueOffline = JSON.parse(localStorage.getItem('offline_queue') || '[]');
-                
-                // Fusión atómica: Registros pasados + Registros encolados en modo offline para este usuario
-                const queueFiltrada = queueOffline.filter(t => t.fecha >= inicioISO && t.fecha <= finISO && t.user_id === session.user.id);
-                transacciones = [...queueFiltrada, ...cacheGuardada].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+                    .order('fecha', { ascending: false })
+                    .then(({ data, error }) => {
+                        if (!error && data) {
+                            localStorage.setItem(`transacciones_cache_${filtro}`, JSON.stringify(data));
+                            // Si la red trae datos nuevos, actualizamos la memoria y repintamos silenciosamente
+                            if (JSON.stringify(data) !== JSON.stringify(cacheGuardada)) {
+                                transaccionesCacheActuales = [...queueFiltrada, ...data].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+                                // Invocamos solo la lógica de pintado sin reiniciar todo el ciclo
+                                const mapaSilencioso = {};
+                                categorias.forEach(c => { mapaSilencioso[c.id] = c; });
+                                renderizarListaTransacciones(transaccionesCacheActuales, mapaSilencioso);
+                            }
+                        }
+                    })
+                    .catch(err => console.warn('[Sync Silenciosa Fallida]:', err.message));
             }
-
-            transaccionesCacheActuales = transacciones;
 
             let totalGastado = 0;
             let totalIngresado = 0;
@@ -3577,7 +3620,8 @@ function encolarTransaccionManual(payload) {
             });
         });
 
-        if (!localStorage.getItem('categorias_cache') && navigator.onLine) {
+        // Ejecución forzada sin candados locales para matar el Race Condition Multi-Dispositivo
+        if (navigator.onLine) {
             sincronizarCategoriasCache();
         }
         verificarEstadoSesion();
