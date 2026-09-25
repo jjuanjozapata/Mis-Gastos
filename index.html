@@ -66,8 +66,8 @@
         .pt-safe { padding-top: max(env(safe-area-inset-top), 40px) !important; }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 font-sans select-none overflow-hidden m-0 p-0 flex flex-col items-center justify-center h-[100dvh] min-h-[100dvh]">
-    <div id="contenedor-maestro-app" class="w-full h-[100dvh] max-w-md sm:h-[92vh] sm:max-h-[900px] sm:rounded-[2.5rem] flex flex-col relative bg-slate-950 sm:border sm:border-slate-800/80 shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden">
+<body class="bg-slate-950 text-slate-100 font-sans select-none overflow-hidden m-0 p-0 flex flex-col items-center justify-center h-full min-h-full">
+    <div id="contenedor-maestro-app" class="w-full h-full max-w-md sm:h-[92vh] sm:max-h-[900px] sm:rounded-[2.5rem] flex flex-col relative bg-slate-950 sm:border sm:border-slate-800/80 shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden">
     
     <div id="network-banner" class="hidden fixed top-0 left-0 right-0 z-[200] bg-red-500 text-slate-950 text-center text-xs font-bold py-1.5 transition-all">
         📡 Sin conexión a internet. Los registros se almacenarán localmente en cola segura.
@@ -1147,48 +1147,132 @@
                         </div>
                     `;
 
-                    item.querySelector('.btn-edit-admin').addEventListener('click', () => {
-                        document.getElementById('modal-gestionar-categorias').classList.add('hidden');
-                        document.getElementById('modal-gestionar-categorias').classList.remove('flex');
-                        abrirModalEditarCategoria(cat);
-                    });
+                    // Captura de Edición en Borrador Local
+        document.getElementById('btn-guardar-editar-cat').addEventListener('click', () => {
+            if (!categoriaEditandoId) return;
+            const nombre = document.getElementById('input-editar-cat-nombre').value.trim();
+            const inputEmojiCustom = document.getElementById('input-emoji-editar-personalizado');
+            const iconoFin = (inputEmojiCustom && inputEmojiCustom.value.trim()) ? inputEmojiCustom.value.trim() : iconoEditarCatSeleccionado;
 
-                    // Estado local temporal introducido para retener operaciones en el Modal
-                    item.querySelector('.btn-del-admin').addEventListener('click', () => {
-                        // Mutación puramente visual para el usuario (Draft Mode)
-                        item.classList.add('hidden');
-                        
-                        const btnGuardar = document.getElementById('btn-guardar-admin-cat');
-                        btnGuardar.classList.remove('hidden');
-                        
-                        // Vinculamos el commit final al botón Guardar
-                        btnGuardar.onclick = async () => {
-                            btnGuardar.disabled = true;
-                            btnGuardar.textContent = 'Guardando...';
-                            
-                            let idsEliminadas = JSON.parse(localStorage.getItem('categorias_eliminadas_ids') || '[]');
-                            if (!idsEliminadas.includes(cat.id)) {
-                                idsEliminadas.push(cat.id);
-                                localStorage.setItem('categorias_eliminadas_ids', JSON.stringify(idsEliminadas));
-                            }
+            if (!nombre) { mostrarToast('Escribe un nombre válido', 'error'); return; }
 
-                            let cats = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
-                            cats = cats.filter(c => c.id !== cat.id);
-                            localStorage.setItem('categorias_cache', JSON.stringify(cats));
+            let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+            categorias = categorias.map(c => {
+                if (c.id === categoriaEditandoId) {
+                    return { ...c, nombre: escapeHTML(nombre), icono: escapeHTML(iconoFin), es_fijo: tipoEditarCatEsFijo, _editado: true };
+                }
+                return c;
+            });
+            localStorage.setItem('categorias_cache', JSON.stringify(categorias));
 
-                            if (cat.user_id && navigator.onLine) {
-                                await db.from('categorias').delete().eq('id', cat.id);
-                            }
+            cerrarModalEditarCategoria();
+            abrirModalGestionarCategorias();
+            document.getElementById('btn-guardar-admin-cat').classList.remove('hidden');
+            mostrarToast('Cambio retenido. Confirma para subir a la nube.');
+        });
 
-                            mostrarToast(`Categoría "${cat.nombre}" eliminada definitivamente`);
-                            btnGuardar.classList.add('hidden');
-                            btnGuardar.disabled = false;
-                            btnGuardar.textContent = '💾 Confirmar y Guardar Cambios';
-                            
-                            abrirModalGestionarCategorias();
-                            renderizarCategoriasFlujo();
-                        };
-                    });
+        // Despachador Principal (Batch Commit) a Supabase
+        document.getElementById('btn-guardar-admin-cat').addEventListener('click', async (e) => {
+            const btn = e.target;
+            btn.disabled = true;
+            btn.textContent = 'Guardando en la nube...';
+
+            const { data: { session } } = await db.auth.getSession();
+            let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+            let idsEliminadas = JSON.parse(localStorage.getItem('categorias_eliminadas_ids') || '[]');
+
+            if (session && navigator.onLine) {
+                // 1. Ejecutar Eliminaciones
+                for (let id of idsEliminadas) {
+                    const esForanea = id.startsWith('fallback') || typeof id !== 'string' || id.length < 15;
+                    if(!esForanea) await db.from('categorias').delete().eq('id', id);
+                }
+                
+                // 2. Ejecutar Ediciones
+                const editadas = categorias.filter(c => c._editado);
+                for (let cat of editadas) {
+                    const payload = { nombre: cat.nombre, icono: cat.icono, es_fijo: cat.es_fijo };
+                    if (!cat.user_id) {
+                        const { data } = await db.from('categorias').insert([{...payload, tipo: cat.tipo, user_id: session.user.id}]).select();
+                        if (data) cat.id = data[0].id;
+                    } else {
+                        await db.from('categorias').update(payload).eq('id', cat.id).eq('user_id', session.user.id);
+                    }
+                    delete cat._editado;
+                }
+            }
+
+            // Consolidar Estado Final
+            categorias = categorias.filter(c => !idsEliminadas.includes(c.id));
+            localStorage.setItem('categorias_cache', JSON.stringify(categorias));
+            localStorage.removeItem('categorias_eliminadas_ids');
+
+            btn.classList.add('hidden');
+            btn.disabled = false;
+            btn.textContent = '💾 Confirmar y Guardar Cambios';
+            
+            renderizarCategoriasFlujo();
+            abrirModalGestionarCategorias();
+            mostrarToast('Tus categorías han sido guardadas y sincronizadas.');
+        });
+
+                    document.getElementById('btn-guardar-editar-cat').addEventListener('click', async () => {
+            if (!categoriaEditandoId) return;
+            const nombre = document.getElementById('input-editar-cat-nombre').value.trim();
+            const inputEmojiCustom = document.getElementById('input-emoji-editar-personalizado');
+            if (inputEmojiCustom && inputEmojiCustom.value.trim()) {
+                iconoEditarCatSeleccionado = inputEmojiCustom.value.trim();
+            }
+
+            if (!nombre) {
+                mostrarToast('Escribe un nombre válido', 'error');
+                return;
+            }
+
+            const { data: { session } } = await db.auth.getSession();
+            if (!session) {
+                mostrarToast('Inicia sesión para editar categorías', 'error');
+                return;
+            }
+
+            const payloadUpdate = {
+                nombre: escapeHTML(nombre),
+                icono: escapeHTML(iconoEditarCatSeleccionado),
+                es_fijo: tipoEditarCatEsFijo
+            };
+
+            let categorias = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
+            const catActual = categorias.find(c => c.id === categoriaEditandoId);
+
+            if (catActual && !catActual.user_id) {
+                const { data: nuevaCatData, error: errIns } = await db.from('categorias').insert([{
+                    nombre: payloadUpdate.nombre,
+                    icono: payloadUpdate.icono,
+                    tipo: catActual.tipo,
+                    es_fijo: payloadUpdate.es_fijo,
+                    user_id: session.user.id
+                }]).select();
+
+                if (errIns) {
+                    mostrarToast('Error al actualizar categoría: ' + errIns.message, 'error');
+                    return;
+                }
+                categorias = categorias.map(c => c.id === categoriaEditandoId ? { ...nuevaCatData[0] } : c);
+                localStorage.setItem('categorias_cache', JSON.stringify(categorias));
+            } else {
+                const { error } = await db.from('categorias').update(payloadUpdate).eq('id', categoriaEditandoId).eq('user_id', session.user.id);
+                if (error) {
+                    mostrarToast('Error al actualizar: ' + error.message, 'error');
+                    return;
+                }
+                categorias = categorias.map(c => c.id === categoriaEditandoId ? { ...c, ...payloadUpdate } : c);
+                localStorage.setItem('categorias_cache', JSON.stringify(categorias));
+            }
+
+            cerrarModalEditarCategoria();
+            renderizarCategoriasFlujo();
+            mostrarToast('Categoría actualizada con éxito');
+        });
 
                     contenedor.appendChild(item);
                 });
