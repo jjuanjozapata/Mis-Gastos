@@ -33,19 +33,28 @@
     <style>
         :root { color-scheme: dark; }
         
-        /* Capa 1 y 2: Viewport Dinámico Nativo (dvh) y Reset Seguro */
-        html, body {
+        /* Capa 1 y 2: Viewport Estricto iOS Standalone y Reset Seguro */
+        html {
             width: 100%;
-            height: 100dvh;
+            height: 100%;
+            box-sizing: border-box;
+            background-color: #020617;
+            -webkit-text-size-adjust: 100%;
+        }
+        *, *:before, *:after {
+            box-sizing: inherit;
+        }
+        body {
+            width: 100%;
+            /* Uso estricto de min-height para emulación PWA sin salto de viewport */
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
             margin: 0;
             padding: 0;
             overflow: hidden;
-            background-color: #020617;
             overscroll-behavior-y: none;
-            position: fixed; /* Sella el documento al viewport físico en iOS Safari */
-            inset: 0; /* Asegura cobertura total sin desbordamiento blanco */
-        }
-        body { 
+            position: fixed;
+            inset: 0;
             -webkit-user-select: none; 
             user-select: none; 
         }
@@ -61,9 +70,9 @@
         select option { background-color: #0f172a; color: #f8fafc; }
         .tabular-nums { font-variant-numeric: tabular-nums; }
         
-        /* Protecciones obligatorias inyectadas en las zonas seguras del hardware (Notch / Home Indicator) */
-        .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 24px) !important; }
-        .pt-safe { padding-top: max(env(safe-area-inset-top), 40px) !important; }
+        /* Gestión Píxel-Perfect de Áreas Seguras (Isla Dinámica y Home Indicator) */
+        .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 20px) !important; }
+        .pt-safe { padding-top: max(env(safe-area-inset-top), 24px) !important; }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans select-none overflow-hidden m-0 p-0 flex flex-col items-center justify-center h-full min-h-full">
@@ -1689,16 +1698,17 @@ let graficoInstancia = null;
 
         let iconoNuevaCatSeleccionado = '🍿';
         let tipoNuevaCatEsFijo = false;
+        // Diccionario Unicode Nativo Segmentado (Zero-Tofu Rendering en PWA OSs)
         const listaEmojisPopulares = [
-            '🛒','🍔','🍿','🥩','🥑','🥦','🍓','☕','🍻','🍷','🍕','🥗','🥖',
-            '🚗','✈️','🚕','🚌','🚂','🛳️','⛽','🚴','🏍️','🛵',
-            '🏠','💡','🚿','🛁','🔌','🧹','🧺','🧻','🧼','🧴',
-            '👕','👟','👔','💄','💍','👗','🎒','👓',
-            '💊','🩺','🌡️','🏋️','💈','🧘','🧴',
-            '🎮','🎬','🎟️','🎧','📚','🎨','🏖️','⛺','🧸',
-            '🐶','🐾','🪴','💐','🐈',
-            '💻','📱','📺','🔧','🛠️','⚙️','🔋',
-            '🏦','💳','💰','🧾','📈','📉','🎁','🏫','🎓','🚀'
+            '🍔', '🛒', '☕', '🍺', '🍿', '🥩', '🥑', '🍕', '🥖', '🥦', '🍓', '🍷', '🥗', // Alimentos & Ocio
+            '🚗', '⛽', '🚌', '🚕', '✈️', '🚂', '🛳️', '🚴', '🏍️', '🛵', // Transporte
+            '🏠', '💡', '💧', '🔌', '🚿', '🛁', '🧹', '🧺', '🧼', '🧻', '🧴', // Hogar & Servicios
+            '👕', '👗', '👟', '👔', '🎒', '💄', '💍', '👓', // Compras & Moda
+            '💊', '🩺', '🌡️', '🏋️', '💈', '🧘', '🏥', '🦷', // Salud & Cuidado
+            '🎮', '🎬', '🎟️', '🎧', '📚', '🎨', '🏖️', '⛺', '🧸', // Entretenimiento
+            '🐶', '🐈', '🐾', '🪴', '💐', // Mascotas & Vida
+            '📱', '💻', '📺', '🔧', '🛠️', '⚙️', '🔋', // Tecnología
+            '🏦', '💳', '💰', '📉', '📈', '🧾', '🎁', '🏫', '🎓', '🚀' // Finanzas & Metas
         ];
 
         function iniciarCaptura() {
@@ -2409,25 +2419,29 @@ let graficoInstancia = null;
                     }
                 });
                 
-                // Procesamiento post-paint: evitamos bloquear el motor de renderizado del móvil
-                setTimeout(() => {
+                // Renderizado Diferido No Bloqueante (V8 Async Pipeline)
+                requestAnimationFrame(() => {
                     const ahora = Date.now();
                     
                     if (pantalla === 'dashboard') {
-                        // Leemos directo de caché; Chart.js no congela la UI
                         if (ahora - cacheTTL.dashboard > 60000 || transaccionesCacheActuales.length === 0) {
-                            cargarEstadisticas().finally(() => cacheTTL.dashboard = Date.now());
+                            // Ejecutamos cargas pesadas fuera del pipeline de pintado
+                            requestIdleCallback(() => {
+                                cargarEstadisticas().finally(() => cacheTTL.dashboard = Date.now());
+                            }, { timeout: 1000 });
                         } else if (graficoInstancia) {
-                            graficoInstancia.update();
+                            requestAnimationFrame(() => graficoInstancia.update());
                         }
                     }
                     
                     if (pantalla === 'planes') {
                         if (ahora - cacheTTL.planes > 60000) {
-                            cargarPlanes().finally(() => cacheTTL.planes = Date.now());
+                            requestIdleCallback(() => {
+                                cargarPlanes().finally(() => cacheTTL.planes = Date.now());
+                            }, { timeout: 1000 });
                         }
                     }
-                }, 0); 
+                }); 
             });
         }
 
@@ -3247,10 +3261,14 @@ function encolarTransaccionManual(payload) {
                 }
             });
 
+            // Procesamiento en lotes para evitar bloqueos del hilo principal (V8 Optimization)
             transaccionesCacheActuales.forEach(t => {
                 const cat = mapaCat[t.categoria_id];
                 if (!cat) return;
-                const valor = parseFloat(t.monto);
+                // Blindaje estricto de coerción de tipos para cálculos financieros
+                const valor = (Number.parseFloat(t.monto) || 0);
+                if (valor <= 0) return; // Auditoría de montos corruptos o negativos fantasma
+                
                 const isIngreso = cat.tipo === 'ingreso';
                 const cuentaNom = t.cuenta || 'Efectivo';
 
