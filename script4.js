@@ -1,791 +1,7 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <link rel="stylesheet" href="/style.css">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-touch-fullscreen" content="yes">
-    <meta name="apple-touch-fullscreen" content="yes">
-<meta name="apple-mobile-web-app-title" content="Mis Gastos">
-<meta name="theme-color" content="#020617" id="meta-theme-color">
 
-<title>Mis Gastos</title>
-    
-    <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2933/2933116.png">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2933/2933116.png">
-
-    <!-- CSP gestionada centralizadamente vía encabezados HTTP en vercel.json para máxima seguridad -->
-    
-    <script>
-        // Monitoreo global de excepciones no capturadas para prevenir crashes silenciosos
-        window.addEventListener('error', (event) => {
-            console.error('Fallo global atrapado:', event.message);
-        });
-    </script>
-
-    
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
-    <style>
-        :root { color-scheme: dark; }
-        
-        /* Capa 1 y 2: Viewport Estricto iOS Standalone y Reset Seguro */
-        html {
-            width: 100%;
-            height: 100%;
-            box-sizing: border-box;
-            background-color: #020617;
-            -webkit-text-size-adjust: 100%;
-        }
-        *, *:before, *:after {
-            box-sizing: inherit;
-        }
-        body {
-            width: 100%;
-            /* Uso estricto de min-height para emulación PWA sin salto de viewport */
-            min-height: 100vh;
-            min-height: -webkit-fill-available;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            overscroll-behavior-y: none;
-            position: fixed;
-            inset: 0;
-            -webkit-user-select: none; 
-            user-select: none; 
-        }
-        button, input, select { 
-            touch-action: manipulation; 
-            -webkit-tap-highlight-color: transparent; 
-            font-size: 16px; 
-        }
-        .tab-activa { color: #10b981; }
-        .tab-inactiva { color: #64748b; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        select option { background-color: #0f172a; color: #f8fafc; }
-        .tabular-nums { font-variant-numeric: tabular-nums; }
-        
-        /* Gestión Píxel-Perfect de Áreas Seguras (Isla Dinámica y Home Indicator) */
-        .pb-safe { padding-bottom: 20px !important; padding-bottom: calc(env(safe-area-inset-bottom) + 20px) !important; }
-        .pt-safe { padding-top: 24px !important; padding-top: calc(env(safe-area-inset-top) + 24px) !important; }
-    </style>
-</head>
-<body class="bg-slate-950 text-slate-100 font-sans select-none overflow-hidden m-0 p-0 flex flex-col items-center justify-center h-full min-h-full">
-    <div id="contenedor-maestro-app" class="w-full h-full max-w-md sm:h-[92vh] sm:max-h-[900px] sm:rounded-[2.5rem] flex flex-col relative bg-slate-950 sm:border sm:border-slate-800/80 shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden">
-    
-    <div id="network-banner" class="hidden fixed top-0 left-0 right-0 z-[200] bg-red-500 text-slate-950 text-center text-xs font-bold py-1.5 transition-all">
-        📡 Sin conexión a internet. Los registros se almacenarán localmente en cola segura.
-    </div>
-
-    <div id="toast-container" class="fixed top-12 left-1/2 -translate-x-1/2 z-[150] flex flex-col gap-2 pointer-events-none w-11/12 max-w-sm"></div>
-    
-    <div id="modal-bienvenida" class="hidden fixed inset-0 z-[300] bg-slate-950 flex-col justify-center items-center p-6 text-center">
-        <div class="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-400 border border-emerald-500/20 text-5xl mb-6 shadow-[0_0_30px_rgba(16,185,129,0.2)]">📊</div>
-        <h2 class="text-3xl font-extrabold text-white mb-3">Mis Gastos</h2>
-        <p class="text-slate-400 text-sm mb-10 max-w-xs leading-relaxed">Toma el control de tus finanzas. Empieza como invitado o crea tu cuenta personal.</p>
-        
-        <div class="w-full max-w-xs space-y-4">
-            <button id="btn-bienvenida-anonimo" class="w-full py-4 rounded-2xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-all text-base shadow-lg flex items-center justify-center gap-2 cursor-pointer">
-                <span>🚀</span> Probar sin registro
-            </button>
-            
-            <div class="relative flex items-center py-2">
-                <div class="flex-grow border-t border-slate-800"></div>
-                <span class="flex-shrink-0 mx-4 text-slate-500 text-[10px] uppercase font-bold tracking-wider">O usa tu correo</span>
-                <div class="flex-grow border-t border-slate-800"></div>
-            </div>
-
-            <div class="flex gap-3">
-                <button id="btn-bienvenida-login" class="flex-1 py-3.5 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors border border-slate-700 text-sm cursor-pointer">Iniciar Sesión</button>
-                <button id="btn-bienvenida-registro" class="flex-1 py-3.5 rounded-xl bg-slate-900 text-emerald-400 font-bold active:bg-slate-800 transition-colors border border-emerald-500/20 text-sm cursor-pointer">Crear Cuenta</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="modal-biometrico" class="hidden fixed inset-0 z-[200] bg-slate-950 flex-col justify-center items-center p-6 text-center">
-        <div class="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-400 border border-emerald-500/20 text-4xl mb-6 animate-pulse">🔒</div>
-        <h3 class="text-2xl font-bold text-white mb-2">Acceso Protegido</h3>
-        <p class="text-slate-400 text-sm mb-8 max-w-xs">Usa tu huella, rostro o clave para desbloquear tus finanzas.</p>
-        <button id="btn-desbloquear" class="w-full max-w-xs py-4 rounded-2xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-all text-base shadow-lg cursor-pointer">Desbloquear App</button>
-    </div>
-
-    <div id="modal-rollover" class="hidden fixed inset-0 z-[140] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-6">
-        <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl text-center relative">
-            <button type="button" id="btn-cerrar-rollover" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-sm active:scale-90 transition-all cursor-pointer">✕</button>
-            <div class="text-3xl mb-3 mt-1">🔄</div>
-            <h3 class="text-xl font-bold text-white mb-2">Cierre de Mes Detectado</h3>
-            <p id="texto-rollover" class="text-slate-400 text-sm mb-6">Tienes un saldo restante del mes pasado. ¿Qué deseas hacer con este dinero?</p>
-            <div class="space-y-3">
-                <button id="btn-rollover-ahorro" class="w-full py-3.5 rounded-xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-colors cursor-pointer">Mandar a Fondo de Emergencia</button>
-                <button id="btn-rollover-colchon" class="w-full py-3.5 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors cursor-pointer">Pasar como Colchón del Nuevo Mes</button>
-                <button id="btn-rollover-omitir" class="w-full py-2.5 text-xs text-slate-400 hover:text-slate-200 transition-colors font-medium cursor-pointer">Omitir por ahora</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="modal-notas" class="hidden fixed inset-0 z-[120] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-6">
-        <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl">
-            <h3 class="text-xl font-bold text-white mb-2">Detalle del Movimiento</h3>
-            <p class="text-slate-400 text-sm mb-4">Escribe brevemente el concepto o descripción.</p>
-            <input type="text" id="input-notas" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 mb-3 text-lg" placeholder="Ej. Compras, Netflix, Salario..." autocomplete="off">
-            <div class="flex gap-1.5 mb-5 overflow-x-auto no-scrollbar" id="sugerencias-notas-container">
-                <button type="button" class="sug-nota-chip px-3 py-1 bg-slate-950 border border-slate-800 rounded-full text-xs text-slate-300 shrink-0 cursor-pointer">Almuerzo</button>
-                <button type="button" class="sug-nota-chip px-3 py-1 bg-slate-950 border border-slate-800 rounded-full text-xs text-slate-300 shrink-0 cursor-pointer">Transporte</button>
-                <button type="button" class="sug-nota-chip px-3 py-1 bg-slate-950 border border-slate-800 rounded-full text-xs text-slate-300 shrink-0 cursor-pointer">Café</button>
-                <button type="button" class="sug-nota-chip px-3 py-1 bg-slate-950 border border-slate-800 rounded-full text-xs text-slate-300 shrink-0 cursor-pointer">Supermercado</button>
-            </div>
-            <div class="flex gap-3">
-                <button id="btn-cancelar-notas" class="flex-1 py-4 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors cursor-pointer">Cancelar</button>
-                <button id="btn-guardar-notas" class="flex-1 py-4 rounded-xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-colors cursor-pointer">Guardar</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="modal-flujo" class="hidden fixed inset-0 z-[110] bg-slate-950/95 backdrop-blur-xl justify-center items-end sm:items-center p-0 pb-0 sm:p-6">
-        <div class="bg-slate-900 w-full h-[80vh] sm:h-auto sm:max-h-[85vh] rounded-t-[2.5rem] sm:rounded-3xl p-6 border-t sm:border border-slate-800 shadow-[0_-20px_40px_rgba(0,0,0,0.5)] flex flex-col relative transition-transform">
-            <div class="w-12 h-1.5 bg-slate-800 rounded-full mx-auto mb-6 shrink-0 sm:hidden"></div>
-            <button id="btn-cerrar-flujo" class="absolute top-6 right-6 w-8 h-8 flex items-center justify-center rounded-full bg-slate-800 text-slate-400 hover:text-white shrink-0 active:scale-90 transition-transform cursor-pointer">✕</button>
-            
-            <div class="flex-1 min-h-0 overflow-y-auto no-scrollbar pb-safe">
-                <div id="flujo-paso-1" class="flex flex-col h-full justify-center space-y-3">
-                    <div class="text-center mb-2">
-                        <p class="text-slate-500 text-xs tracking-widest uppercase font-bold mb-1">Registrando</p>
-                        <span class="text-white font-bold text-4xl sm:text-5xl tracking-tighter" id="flujo-monto-display">$ 0</span>
-                    </div>
-                    <h3 class="text-sm font-bold text-slate-400 text-center mb-1">¿Qué tipo de movimiento es?</h3>
-                    <button id="btn-tipo-gasto" class="w-full bg-slate-800 p-4 rounded-2xl border border-slate-700 active:bg-slate-700 active:scale-[0.98] transition-all flex items-center gap-4 shadow-md cursor-pointer">
-                        <div class="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center text-red-400 border border-red-500/20 text-xl">📉</div>
-                        <div class="text-left">
-                            <span class="block text-base font-bold text-white">Es un Gasto / Factura</span>
-                            <span class="block text-xs text-slate-400">Mercado, arriendo, salidas, servicios</span>
-                        </div>
-                        <span class="ml-auto text-slate-500">›</span>
-                    </button>
-                    <button id="btn-tipo-ingreso" class="w-full bg-slate-800 p-4 rounded-2xl border border-slate-700 active:bg-slate-700 active:scale-[0.98] transition-all flex items-center gap-4 shadow-md cursor-pointer">
-                        <div class="w-12 h-12 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-400 border border-emerald-500/20 text-xl">📈</div>
-                        <div class="text-left">
-                            <span class="block text-base font-bold text-white">Es un Ingreso</span>
-                            <span class="block text-xs text-slate-400">Salario principal, bonos, extras</span>
-                        </div>
-                        <span class="ml-auto text-slate-500">›</span>
-                    </button>
-                    <button id="btn-tipo-meta" class="w-full bg-slate-800 p-4 rounded-2xl border border-slate-700 active:bg-slate-700 active:scale-[0.98] transition-all flex items-center gap-4 shadow-md cursor-pointer">
-                        <div class="w-12 h-12 bg-teal-500/10 rounded-full flex items-center justify-center text-teal-400 border border-teal-500/20 text-xl">🎯</div>
-                        <div class="text-left">
-                            <span class="block text-base font-bold text-white">Aportar a Meta</span>
-                            <span class="block text-xs text-slate-400">Fondo de emergencia, ahorro moto, viaje</span>
-                        </div>
-                        <span class="ml-auto text-slate-500">›</span>
-                    </button>
-                    <button id="btn-tipo-deuda" class="w-full bg-slate-800 p-4 rounded-2xl border border-slate-700 active:bg-slate-700 active:scale-[0.98] transition-all flex items-center gap-4 shadow-md cursor-pointer">
-                        <div class="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-400 border border-blue-500/20 text-xl">💳</div>
-                        <div class="text-left">
-                            <span class="block text-base font-bold text-white">Abonar a Deuda</span>
-                            <span class="block text-xs text-slate-400">Tarjetas, créditos, saldos pendientes</span>
-                        </div>
-                        <span class="ml-auto text-slate-500">›</span>
-                    </button>
-                </div>
-
-                <div id="flujo-paso-2" class="hidden flex-col h-full min-h-0">
-                    <div class="flex items-center gap-3 mb-3 shrink-0 mt-1">
-                        <button id="btn-retroceder-flujo" class="w-9 h-9 flex items-center justify-center rounded-full bg-slate-800 text-slate-300 active:scale-90 transition-transform cursor-pointer">←</button>
-                        <div>
-                            <h3 class="text-lg font-bold text-white">Selecciona Categoría</h3>
-                            <p id="flujo-tipo-label" class="text-[10px] text-emerald-400 uppercase tracking-wider font-bold"></p>
-                        </div>
-                    </div>
-
-                    <div class="mb-3 shrink-0">
-                        <label for="input-buscar-categoria" class="sr-only">Buscar categoría</label>
-                        <input type="text" id="input-buscar-categoria" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-emerald-500" placeholder="🔍 Buscar categoría..." autocomplete="off" aria-label="Buscar categoría">
-                    </div>
-                    
-                    <div class="mb-3 shrink-0" id="seccion-filtros-cat">
-                        <div class="grid grid-cols-2 gap-2">
-                            <button id="filtro-cat-variable" class="py-2 px-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition-all cursor-pointer">Variables</button>
-                            <button id="filtro-cat-fijo" class="py-2 px-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 text-xs font-bold transition-all cursor-pointer">Fijos / Facturas</button>
-                        </div>
-                    </div>
-
-                    <div class="flex-1 overflow-y-auto pr-1 pb-10 grid grid-cols-3 gap-2.5 no-scrollbar" id="flujo-categorias-container"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="modal-tipo-plan" class="hidden fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-xl justify-center items-end sm:items-center p-0 sm:p-6 pb-0">
-        <div class="bg-slate-900 w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6 border border-slate-800 shadow-[0_-20px_40px_rgba(0,0,0,0.5)] transform transition-transform">
-            <div class="w-12 h-1.5 bg-slate-800 rounded-full mx-auto mb-6 sm:hidden"></div>
-            <h3 class="text-xl font-bold text-white mb-6">Gestión de Planes</h3>
-            
-            <button id="btn-crear-limite" class="w-full flex items-center gap-4 bg-slate-800/50 hover:bg-slate-800 p-4 rounded-2xl border border-slate-700/50 mb-3 transition-colors text-left cursor-pointer">
-                <div class="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center text-red-400 border border-red-500/20">🛡️</div>
-                <div>
-                    <p class="text-sm font-bold text-white">Controlar Límite / Fijo</p>
-                    <p class="text-xs text-slate-400">Tope o gasto obligatorio mensual</p>
-                </div>
-                <span class="ml-auto text-slate-500">›</span>
-            </button>
-            
-            <button id="btn-crear-meta" class="w-full flex items-center gap-4 bg-slate-800/50 hover:bg-slate-800 p-4 rounded-2xl border border-slate-700/50 mb-3 transition-colors text-left cursor-pointer">
-                <div class="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20">🎯</div>
-                <div>
-                    <p class="text-sm font-bold text-white">Meta de Ahorro</p>
-                    <p class="text-xs text-slate-400">Fondo de emergencia u objetivo</p>
-                </div>
-                <span class="ml-auto text-slate-500">›</span>
-            </button>
-
-            <button id="btn-crear-deuda" class="w-full flex items-center gap-4 bg-slate-800/50 hover:bg-slate-800 p-4 rounded-2xl border border-slate-700/50 mb-6 transition-colors text-left cursor-pointer">
-                <div class="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/20">💳</div>
-                <div>
-                    <p class="text-sm font-bold text-white">Registrar Deuda / Crédito</p>
-                    <p class="text-xs text-slate-400">Control de abonos y saldo</p>
-                </div>
-                <span class="ml-auto text-slate-500">›</span>
-            </button>
-
-            <button id="btn-cancelar-planes" class="w-full py-4 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors mb-safe cursor-pointer">Cancelar</button>
-        </div>
-    </div>
-
-    <div id="modal-form-plan" class="hidden fixed inset-0 z-[110] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-4">
-        <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl max-h-[90vh] overflow-y-auto no-scrollbar">
-            <h3 id="titulo-form-plan" class="text-xl font-bold text-white mb-4">Nuevo Plan</h3>
-            
-            <div class="flex items-center gap-2 mb-4 border-b border-slate-800 pb-3">
-                <span id="simbolo-moneda-plan" class="text-3xl font-bold text-emerald-400">$</span>
-                <input type="text" inputmode="numeric" id="input-monto-plan" class="w-full bg-transparent text-3xl font-bold text-white focus:outline-none placeholder-slate-700" placeholder="0" autocomplete="off">
-            </div>
-
-            <div class="space-y-3 mb-6 text-left">
-                <div class="bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
-                    <label for="input-nombre-plan" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Nombre o Concepto</label>
-                    <input type="text" id="input-nombre-plan" class="w-full bg-transparent text-sm text-white focus:outline-none" placeholder="Ej. Mercado mensual, Tarjeta Nu..." autocomplete="off">
-                </div>
-
-                <div id="campo-categoria-plan" class="hidden bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
-                    <label for="select-categoria-plan" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Categoría Amarrada</label>
-                    <select id="select-categoria-plan" class="w-full bg-transparent text-sm text-white focus:outline-none"></select>
-                </div>
-
-                <div id="campo-periodo-plan" class="hidden bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
-                    <label for="select-periodo-plan" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Periodo de Evaluación</label>
-                    <select id="select-periodo-plan" class="w-full bg-transparent text-sm text-white focus:outline-none">
-                        <option value="semanal">Semanal (Lun - Dom)</option>
-                        <option value="quincenal">Quincenal (1-15 o 16-Fin)</option>
-                        <option value="mensual" selected>Mensual (Mes en curso)</option>
-                        <option value="trimestral">Trimestral</option>
-                        <option value="semestral">Semestral</option>
-                        <option value="anual">Anual</option>
-                        <option value="personalizado">Personalizado</option>
-                    </select>
-                </div>
-
-                <div id="campo-fechas-plan" class="hidden grid grid-cols-2 gap-2 bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
-                    <div>
-                        <label for="input-fecha-inicio-plan" class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Inicio</label>
-                        <input type="date" id="input-fecha-inicio-plan" class="w-full bg-slate-900 text-xs text-white p-2 rounded-xl border border-slate-800">
-                    </div>
-                    <div>
-                        <label for="input-fecha-fin-plan" class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Fin</label>
-                        <input type="date" id="input-fecha-fin-plan" class="w-full bg-slate-900 text-xs text-white p-2 rounded-xl border border-slate-800">
-                    </div>
-                </div>
-
-                <div id="campo-auto-renovar" class="hidden flex items-center justify-between bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
-                    <div>
-                        <span class="text-xs font-bold text-white block">Auto-renovación</span>
-                        <span class="text-[10px] text-slate-400 block">Avanza al siguiente ciclo automáticamente</span>
-                    </div>
-                    <input type="checkbox" id="check-auto-renovar" checked class="w-5 h-5 accent-emerald-500 rounded cursor-pointer">
-                </div>
-
-                <div id="campo-fondo-emergencia" class="hidden flex items-center justify-between bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
-                    <div>
-                        <span class="text-xs font-bold text-white block">¿Fondo de Emergencia?</span>
-                        <span class="text-[10px] text-slate-400 block">Obligatorio al recibir sueldos</span>
-                    </div>
-                    <input type="checkbox" id="check-fondo-emergencia" class="w-5 h-5 accent-emerald-500 rounded cursor-pointer">
-                </div>
-
-                <div id="campo-mostrar-inicio" class="hidden flex items-center justify-between bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
-                    <div>
-                        <span class="text-xs font-bold text-white block">Ver en Pantalla de Inicio</span>
-                        <span class="text-[10px] text-slate-400 block">Botón de abono directo en teclado</span>
-                    </div>
-                    <input type="checkbox" id="check-mostrar-inicio" checked class="w-5 h-5 accent-emerald-500 rounded cursor-pointer">
-                </div>
-
-                <div id="campo-monto-acumulado-inicial" class="hidden bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
-                    <label for="input-acumulado-inicial" id="label-acumulado-inicial" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Ya Ahorrado / Pagado (Opcional)</label>
-                    <input type="text" inputmode="numeric" id="input-acumulado-inicial" class="w-full bg-transparent text-sm text-white focus:outline-none" placeholder="0" autocomplete="off">
-                </div>
-            </div>
-
-            <div class="flex gap-3">
-                <button id="btn-cancelar-form-plan" class="flex-1 py-3.5 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors text-sm cursor-pointer">Cancelar</button>
-                <button id="btn-guardar-plan" class="flex-1 py-3.5 rounded-xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-colors text-sm cursor-pointer">Guardar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para Administrar Categorías -->
-    <div id="modal-gestionar-categorias" class="hidden fixed inset-0 z-[130] bg-slate-950/95 backdrop-blur-xl justify-center items-center px-5 pb-5 pt-safe">
-        <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl max-h-[85vh] flex flex-col">
-            <div class="flex justify-between items-center mb-3">
-                <h3 class="text-xl font-bold text-white">Administrar Categorías</h3>
-                <button type="button" id="btn-cerrar-gestionar-cat" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-sm cursor-pointer">✕</button>
-            </div>
-            <div class="grid grid-cols-2 gap-2 mb-4 shrink-0">
-                <button type="button" id="tab-admin-gastos" class="py-2.5 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950 transition-all cursor-pointer">Gastos</button>
-                <button type="button" id="tab-admin-ingresos" class="py-2.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-400 transition-all cursor-pointer">Ingresos</button>
-            </div>
-            <div id="lista-categorias-admin" class="flex-1 overflow-y-auto space-y-2.5 pr-1 no-scrollbar mb-4"></div>
-            <div class="flex flex-col gap-2 shrink-0">
-                <button type="button" id="btn-nueva-desde-admin" class="w-full py-3.5 rounded-xl bg-slate-800 border border-slate-700 text-emerald-400 font-bold active:bg-slate-700 transition-colors text-sm cursor-pointer">+ Crear Nueva Categoría</button>
-                <button type="button" id="btn-guardar-admin-cat" class="hidden w-full py-3.5 rounded-xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-all text-sm cursor-pointer shadow-lg">💾 Confirmar y Guardar Cambios</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para Nueva Categoría -->
-    <div id="modal-nueva-cat" class="hidden fixed inset-0 z-[130] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-5">
-        <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl">
-            <h3 class="text-xl font-bold text-white mb-1">Nueva Categoría</h3>
-            <p class="text-slate-400 text-xs mb-4">Crea una categoría propia para tus gastos o ingresos.</p>
-
-            <div class="space-y-4 mb-6">
-                <div>
-                    <label for="input-nueva-cat-nombre" class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Nombre</label>
-                    <input type="text" id="input-nueva-cat-nombre" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500" placeholder="Ej. Mekatos, Cine, Cursos..." autocomplete="off">
-                </div>
-
-                <div>
-                    <div class="flex justify-between items-center mb-1">
-                        <span class="text-[10px] uppercase font-bold text-slate-400">Selecciona o Escribe un Emoji</span>
-                        <input type="text" id="input-emoji-personalizado" maxlength="2" class="w-12 text-center bg-slate-950 border border-slate-700 rounded-lg py-1 text-base text-white focus:outline-none focus:border-emerald-500" value="🍿" title="Escribe tu propio emoji">
-                    </div>
-                    <div id="selector-iconos-cat" class="grid grid-cols-6 gap-2 p-2 bg-slate-950 rounded-2xl border border-slate-800 max-h-32 overflow-y-auto"></div>
-                </div>
-
-                <div id="seccion-tipo-nueva-cat">
-                    <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Tipo de Gasto</span>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button type="button" id="btn-nueva-cat-var" class="py-2.5 rounded-xl text-xs font-bold border border-emerald-500/40 bg-emerald-500/20 text-emerald-300 cursor-pointer">Variable</button>
-                        <button type="button" id="btn-nueva-cat-fijo" class="py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800 text-slate-400 cursor-pointer">Fijo / Factura</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex gap-3">
-                <button type="button" id="btn-cancelar-nueva-cat" class="flex-1 py-3.5 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors text-sm cursor-pointer">Cancelar</button>
-                <button type="button" id="btn-guardar-nueva-cat" class="flex-1 py-3.5 rounded-xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-colors text-sm cursor-pointer">Guardar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para Editar Categoría -->
-    <div id="modal-editar-cat" class="hidden fixed inset-0 z-[130] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-5">
-        <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl">
-            <h3 class="text-xl font-bold text-white mb-1">Editar Categoría</h3>
-            <p class="text-slate-400 text-xs mb-4">Modifica el nombre, icono o tipo de tu categoría.</p>
-
-            <div class="space-y-4 mb-6">
-                <div>
-                    <label for="input-editar-cat-nombre" class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Nombre</label>
-                    <input type="text" id="input-editar-cat-nombre" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500" placeholder="Nombre..." autocomplete="off">
-                </div>
-
-                <div>
-                    <div class="flex justify-between items-center mb-1">
-                        <span class="text-[10px] uppercase font-bold text-slate-400">Emoji</span>
-                        <input type="text" id="input-emoji-editar-personalizado" maxlength="2" class="w-12 text-center bg-slate-950 border border-slate-700 rounded-lg py-1 text-base text-white focus:outline-none focus:border-emerald-500" value="🍿">
-                    </div>
-                    <div id="selector-iconos-editar-cat" class="grid grid-cols-6 gap-2 p-2 bg-slate-950 rounded-2xl border border-slate-800 max-h-32 overflow-y-auto"></div>
-                </div>
-
-                <div id="seccion-tipo-editar-cat">
-                    <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Tipo de Gasto</span>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button type="button" id="btn-editar-cat-var" class="py-2.5 rounded-xl text-xs font-bold border border-emerald-500/40 bg-emerald-500/20 text-emerald-300 cursor-pointer">Variable</button>
-                        <button type="button" id="btn-editar-cat-fijo" class="py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800 text-slate-400 cursor-pointer">Fijo / Factura</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex gap-3">
-                <button type="button" id="btn-cancelar-editar-cat" class="flex-1 py-3.5 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors text-sm cursor-pointer">Cancelar</button>
-                <button type="button" id="btn-guardar-editar-cat" class="flex-1 py-3.5 rounded-xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-colors text-sm cursor-pointer">Actualizar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para Editar Presupuesto de Categoría -->
-    <div id="modal-editar-presupuesto" class="hidden fixed inset-0 z-[135] bg-slate-950/95 backdrop-blur-xl justify-center items-center p-5">
-        <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl">
-            <h3 class="text-xl font-bold text-white mb-1">Ajustar Presupuesto</h3>
-            <p id="label-cat-editar-presupuesto" class="text-emerald-400 text-xs font-bold mb-4">Categoría</p>
-
-            <div class="space-y-4 mb-6">
-                <div class="bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
-                    <label for="input-nuevo-presupuesto-cat" class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Nuevo Tope / Presupuesto</label>
-                    <input type="text" inputmode="numeric" id="input-nuevo-presupuesto-cat" class="w-full bg-transparent text-xl font-bold text-white focus:outline-none" placeholder="0" autocomplete="off">
-                </div>
-            </div>
-
-            <div class="flex gap-3">
-                <button type="button" id="btn-cancelar-edit-presupuesto" class="flex-1 py-3.5 rounded-xl bg-slate-800 text-white font-bold active:bg-slate-700 transition-colors text-sm cursor-pointer">Cancelar</button>
-                <button type="button" id="btn-guardar-edit-presupuesto" class="flex-1 py-3.5 rounded-xl bg-emerald-500 text-slate-950 font-bold active:bg-emerald-400 transition-colors text-sm cursor-pointer">Actualizar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Pantalla 1: Captura Rápida -->
-    <div id="pantalla-captura" class="flex-1 flex flex-col min-h-0 relative">
-        <header class="shrink-0 px-5 pb-5 pt-safe flex justify-between items-center">
-            <div class="flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Sistema en línea"></span>
-                <span class="text-xs font-bold text-slate-400 tracking-wider">MIS GASTOS</span>
-            </div>
-            <div class="flex items-center gap-2">
-                <button id="btn-voz" class="bg-slate-900 text-emerald-400 border border-slate-800 w-9 h-9 rounded-full flex items-center justify-center text-xs active:scale-95 transition-all shadow-sm cursor-pointer" title="Dictar movimiento por voz">🎙️</button>
-                <button id="btn-ahorro-expres" class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-2 rounded-full text-xs font-bold active:scale-95 transition-all shadow-sm flex items-center gap-1 cursor-pointer" title="Ahorro exprés a fondo de emergencia">⚡ Ahorrar</button>
-                <button id="btn-cuenta" class="bg-slate-900 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-full text-xs font-bold tracking-widest uppercase active:scale-95 transition-all shadow-md cursor-pointer">Efectivo</button>
-            </div>
-        </header>
-
-        <div class="flex-1 flex flex-col justify-center items-center px-4 w-full max-w-md mx-auto">
-            <div id="accesos-frecuentes-inicio" class="flex gap-2 mb-3 w-full max-w-xs overflow-x-auto no-scrollbar px-2 shrink-0 justify-start sm:justify-center"></div>
-            <span id="fecha-actual" class="text-slate-400 text-[11px] tracking-wider uppercase font-semibold mb-3 border border-slate-800/80 px-3.5 py-1 rounded-full bg-slate-900/60 backdrop-blur-md"></span>
-            <div id="monto-display" class="text-5xl sm:text-6xl md:text-7xl font-black tracking-tight text-white transition-all drop-shadow-md text-center tabular-nums truncate max-w-full px-2">$ 0</div>
-        </div>
-
-        <div class="shrink-0 grid grid-cols-4 gap-2 p-4 bg-slate-900/95 backdrop-blur-xl rounded-t-[2.2rem] border-t border-slate-800/80 shadow-[0_-15px_30px_rgba(0,0,0,0.6)] max-w-md mx-auto w-full">
-            <button class="num-btn py-3 text-xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-xl text-white active:bg-emerald-500 active:text-slate-950 cursor-pointer" data-num="1">1</button>
-            <button class="num-btn py-3 text-xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-xl text-white active:bg-emerald-500 active:text-slate-950 cursor-pointer" data-num="2">2</button>
-            <button class="num-btn py-3 text-xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-xl text-white active:bg-emerald-500 active:text-slate-950 cursor-pointer" data-num="3">3</button>
-            <button id="btn-op-sumar" class="op-btn py-3 text-xl font-bold bg-slate-800/40 border border-slate-700 text-emerald-400 rounded-xl active:bg-emerald-500/20 cursor-pointer" data-op="+">+</button>
-            
-            <button class="num-btn py-3 text-xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-xl text-white active:bg-emerald-500 active:text-slate-950 cursor-pointer" data-num="4">4</button>
-            <button class="num-btn py-3 text-xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-xl text-white active:bg-emerald-500 active:text-slate-950 cursor-pointer" data-num="5">5</button>
-            <button class="num-btn py-3 text-xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-xl text-white active:bg-emerald-500 active:text-slate-950 cursor-pointer" data-num="6">6</button>
-            <button id="btn-op-restar" class="op-btn py-3 text-xl font-bold bg-slate-800/40 border border-slate-700 text-emerald-400 rounded-xl active:bg-emerald-500/20 cursor-pointer" data-op="-">-</button>
-            
-            <button class="num-btn py-3 text-xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-xl text-white active:bg-emerald-500 active:text-slate-950 cursor-pointer" data-num="7">7</button>
-            <button class="num-btn py-3 text-xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-xl text-white active:bg-emerald-500 active:text-slate-950 cursor-pointer" data-num="8">8</button>
-            <button class="num-btn py-3 text-xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-xl text-white active:bg-emerald-500 active:text-slate-950 cursor-pointer" data-num="9">9</button>
-            <button id="btn-igual" class="py-3 text-xl font-bold bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 rounded-xl active:bg-emerald-500 active:text-slate-950 cursor-pointer row-span-2 flex items-center justify-center">=</button>
-
-            <button id="btn-limpiar" class="py-3 text-base font-bold text-slate-400 bg-slate-800/40 border border-slate-800 rounded-xl active:bg-red-500/20 cursor-pointer">C</button>
-            <button class="num-btn py-3 text-xl font-semibold bg-slate-800/70 border border-slate-700/40 rounded-xl text-white active:bg-emerald-500 active:text-slate-950 cursor-pointer" data-num="0">0</button>
-            <button id="btn-borrar" class="py-3 text-lg font-semibold text-slate-300 bg-slate-800/40 border border-slate-800 rounded-xl active:bg-slate-700 cursor-pointer">⌫</button>
-            
-            <button id="btn-siguiente" class="col-span-4 py-3.5 text-base font-bold bg-emerald-500 text-slate-950 rounded-xl active:bg-emerald-400 tracking-wider uppercase shadow-[0_0_25px_rgba(16,185,129,0.25)] cursor-pointer mt-1">Continuar</button>
-        </div>
-    </div>
-
-    <!-- Pantalla 2: Planes -->
-    <div id="pantalla-planes" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-950 min-h-0 relative">
-        <div class="px-5 pt-safe pb-28 flex flex-col min-h-full overflow-x-hidden">
-            <h2 class="text-2xl font-bold text-white mb-6 tracking-tight">Planes, Metas y Deudas</h2>
-            <div id="contenedor-planes" class="space-y-4 flex-1"></div>
-        </div>
-        <button id="btn-fab-plan" class="hidden fixed bottom-24 right-6 w-14 h-14 bg-emerald-500 hover:bg-emerald-400 rounded-full flex items-center justify-center text-slate-950 text-3xl font-semibold shadow-[0_10px_25px_rgba(16,185,129,0.35)] active:scale-90 transition-all z-40 cursor-pointer">+</button>
-    </div>
-
-    <!-- Pantalla 3: Reportes -->
-    <div id="pantalla-dashboard" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-950 min-h-0">
-        <div class="px-5 pt-safe pb-12">
-            <div class="flex justify-between items-center mb-6 gap-2">
-                <select id="filtro-tiempo" class="bg-slate-900 text-white font-semibold text-sm rounded-xl px-4 py-2 border border-slate-800 outline-none focus:ring-1 focus:ring-emerald-500 flex-1 cursor-pointer">
-                    <option value="dia">Hoy</option>
-                    <option value="mes" selected>Este Mes</option>
-                    <option value="anio">Anual</option>
-                </select>
-                <select id="selector-mes-excel" class="bg-slate-900 text-emerald-400 font-bold text-sm rounded-xl px-4 py-2 border border-slate-800 outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer">
-                    <option value="0">Enero</option><option value="1">Febrero</option><option value="2">Marzo</option><option value="3">Abril</option>
-                    <option value="4">Mayo</option><option value="5">Junio</option><option value="6">Julio</option><option value="7">Agosto</option>
-                    <option value="8">Septiembre</option><option value="9">Octubre</option><option value="10">Noviembre</option><option value="11">Diciembre</option>
-                </select>
-                <button id="btn-privacidad" class="bg-slate-900 text-slate-300 border border-slate-800/80 w-10 h-10 rounded-xl flex items-center justify-center text-lg active:scale-95 transition-all shadow-sm cursor-pointer shrink-0" title="Ocultar / Mostrar Saldos">👁️</button>
-            </div>
-            
-            <div class="bg-gradient-to-br from-emerald-900/40 to-slate-900 rounded-[2rem] p-6 mb-4 border border-emerald-500/25 relative overflow-hidden shadow-xl">
-                <div class="flex justify-between items-start">
-                    <p class="text-emerald-100/60 text-xs font-bold tracking-wider mb-1">PATRIMONIO NETO REAL</p>
-                    <span id="badge-patrimonio" class="bg-teal-500/20 text-teal-300 border border-teal-500/30 text-[9px] uppercase font-bold px-2.5 py-1 rounded-full">Riqueza Neta</span>
-                </div>
-                <h3 id="dash-patrimonio-neto" class="text-4xl font-extrabold text-white mt-1">$ 0</h3>
-
-                <div class="mt-4 pt-4 border-t border-emerald-500/20 flex justify-between items-center text-xs">
-                    <span class="text-emerald-200/60 font-semibold">Balance del Mes:</span>
-                    <strong id="dash-balance" class="text-white font-bold">$ 0</strong>
-                </div>
-                
-                <div class="mt-5">
-                    <div class="flex justify-between text-[10px] font-bold text-emerald-200/50 mb-2">
-                        <span>DISPONIBLE REAL FRENTE A INGRESOS</span>
-                        <span id="dash-porcentaje">0%</span>
-                    </div>
-                    <div class="w-full bg-slate-950/50 rounded-full h-1.5 border border-slate-800">
-                        <div id="dash-bar" class="bg-gradient-to-r from-emerald-500 to-teal-300 h-1.5 rounded-full transition-all duration-1000" style="width: 0%"></div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3 mt-6">
-                    <div class="bg-slate-950/30 p-3 rounded-xl border border-slate-800/50">
-                        <p class="text-slate-400 text-[10px] font-bold flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> INGRESOS REALES</p>
-                        <p id="dash-ingresos" class="text-emerald-400 font-bold text-sm mt-1">+$ 0</p>
-                    </div>
-                    <div class="bg-slate-950/30 p-3 rounded-xl border border-slate-800/50">
-                        <p class="text-slate-400 text-[10px] font-bold flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-400"></span> GASTOS TOTALES</p>
-                        <p id="dash-gastos" class="text-white font-bold text-sm mt-1">-$ 0</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Desglose por Cuentas -->
-            <div class="bg-slate-900 rounded-3xl p-5 mb-4 border border-slate-800 shadow-lg">
-                <div class="flex justify-between items-center mb-3">
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Distribución por Cuentas</p>
-                    <span class="text-[10px] text-emerald-400 font-semibold">Saldos Netos</span>
-                </div>
-                <div id="desglose-cuentas-container" class="grid grid-cols-2 gap-2 text-center">
-                    <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                        <span class="text-[10px] text-slate-500 font-bold block mb-1">Efectivo</span>
-                        <span id="cuenta-efectivo-val" class="text-xs font-bold text-white">$ 0</span>
-                    </div>
-                    <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                        <span class="text-[10px] text-slate-500 font-bold block mb-1">Bancos</span>
-                        <span id="cuenta-bancos-val" class="text-xs font-bold text-white">$ 0</span>
-                    </div>
-                    <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                        <span class="text-[10px] text-slate-500 font-bold block mb-1">Tarjetas</span>
-                        <span id="cuenta-tarjetas-val" class="text-xs font-bold text-white">$ 0</span>
-                    </div>
-                    <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                        <span class="text-[10px] text-slate-500 font-bold block mb-1">Transferencia</span>
-                        <span id="cuenta-transferencia-val" class="text-xs font-bold text-white">$ 0</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-slate-900 rounded-3xl p-5 mb-4 border border-slate-800 shadow-lg">
-                <div class="flex justify-between items-center mb-3">
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Modelo Financiero 50/30/20</p>
-                    <span class="text-[10px] text-emerald-400 font-semibold">Distribución Teórica</span>
-                </div>
-                <div class="grid grid-cols-3 gap-2 text-center">
-                    <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                        <span class="text-[10px] text-slate-500 font-bold block mb-1">Necesidades (50%)</span>
-                        <span id="stat-50" class="text-xs font-bold text-white">50%</span>
-                    </div>
-                    <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                        <span class="text-[10px] text-slate-500 font-bold block mb-1">Deseos (30%)</span>
-                        <span id="stat-30" class="text-xs font-bold text-white">30%</span>
-                    </div>
-                    <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                        <span class="text-[10px] text-slate-500 font-bold block mb-1">Ahorro/Deuda (20%)</span>
-                        <span id="stat-20" class="text-xs font-bold text-emerald-400">20%</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-slate-900 rounded-3xl p-5 mb-4 border border-slate-800 shadow-lg">
-                <div class="flex justify-between items-center mb-3">
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Simulador de Recorte de Gastos</p>
-                    <div class="flex bg-slate-950 rounded-xl p-0.5 border border-slate-800">
-                        <button type="button" id="btn-sim-diario" class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-500 text-slate-950 cursor-pointer">Diario</button>
-                        <button type="button" id="btn-sim-mensual" class="px-2.5 py-1 rounded-lg text-[10px] font-bold text-slate-400 cursor-pointer">Mensual</button>
-                    </div>
-                </div>
-                <div class="space-y-3">
-                    <div class="bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
-                        <label for="input-simulador-valor" id="label-simulador-modo" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Monto a recortar (Diario)</label>
-                        <input type="text" inputmode="numeric" id="input-simulador-valor" class="w-full bg-transparent text-xl font-bold text-white focus:outline-none tabular-nums" value="10.000" autocomplete="off">
-                    </div>
-                    <div class="grid grid-cols-2 gap-2 text-center pt-2 border-t border-slate-800">
-                        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800/60">
-                            <span class="text-[9px] text-slate-500 block font-bold mb-0.5">AHORRO MENSUAL</span>
-                            <span id="sim-mensual" class="text-sm font-bold text-emerald-400 tabular-nums">$ 300.000</span>
-                        </div>
-                        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800/60">
-                            <span class="text-[9px] text-slate-500 block font-bold mb-0.5">AHORRO ANUAL</span>
-                            <span id="sim-anual" class="text-sm font-bold text-emerald-400 tabular-nums">$ 3.600.000</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-slate-900 rounded-3xl p-5 mb-6 border border-slate-800 flex items-center justify-between shadow-lg">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 text-xl border border-emerald-500/20">🛡️</div>
-                    <div>
-                        <p class="text-slate-400 text-xs font-bold">Seguro para Gastar</p>
-                        <h3 id="dash-seguro" class="text-xl font-extrabold text-emerald-400 mt-0.5">$ 0</h3>
-                    </div>
-                </div>
-                <div class="text-right">
-                    <p id="dash-dias-restantes" class="text-xs font-semibold text-slate-300">0 días</p>
-                    <p class="text-[10px] text-slate-500">restantes</p>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3 mb-6">
-                <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800">
-                    <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 mb-3 text-sm border border-slate-700">💲</div>
-                    <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wide">Promedio Diario</p>
-                    <p id="dash-promedio" class="text-lg font-bold text-white mt-1">$ 0</p>
-                </div>
-                <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800">
-                    <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 mb-3 text-sm border border-slate-700">⭐</div>
-                    <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wide">Categoría Top</p>
-                    <p id="dash-top-cat" class="text-sm font-bold text-white mt-1 truncate">-</p>
-                </div>
-            </div>
-
-            <div class="bg-slate-900 rounded-3xl p-6 mb-6 border border-slate-800">
-                <div class="flex justify-between items-center mb-4">
-                    <p class="text-white text-sm font-bold">Presupuesto vs Real por Categoría</p>
-                </div>
-                <div id="matriz-presupuesto-excel" class="space-y-3 mb-6"></div>
-
-                <p class="text-white text-sm font-bold mb-4 pt-4 border-t border-slate-800">Gastos por Categoría y Concentración</p>
-                <div class="relative flex justify-center h-56">
-                    <canvas id="graficoCategorias"></canvas>
-                </div>
-                <div id="lista-presupuestos" class="space-y-2 mt-6"></div>
-            </div>
-
-            <div class="mt-8">
-                <div class="flex justify-between items-center mb-3">
-                    <p class="text-white text-sm font-bold">Historial de Transacciones</p>
-                </div>
-                <div class="mb-3">
-                    <input type="text" id="input-buscar-historial" class="w-full bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-white placeholder-slate-500 outline-none focus:border-emerald-500" placeholder="🔍 Buscar por nota, categoría o cuenta..." autocomplete="off">
-                </div>
-                <div class="flex gap-1.5 mb-4 overflow-x-auto no-scrollbar" id="filtros-cuenta-historial">
-                    <button type="button" class="filtro-cta-btn px-3 py-1.5 rounded-full bg-emerald-500 text-slate-950 font-bold text-[11px] shrink-0 cursor-pointer" data-cuenta="todas">Todas</button>
-                    <button type="button" class="filtro-cta-btn px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-400 font-bold text-[11px] shrink-0 cursor-pointer" data-cuenta="Efectivo">Efectivo</button>
-                    <button type="button" class="filtro-cta-btn px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-400 font-bold text-[11px] shrink-0 cursor-pointer" data-cuenta="Bancos">Bancos</button>
-                    <button type="button" class="filtro-cta-btn px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-400 font-bold text-[11px] shrink-0 cursor-pointer" data-cuenta="Tarjetas">Tarjetas</button>
-                    <button type="button" class="filtro-cta-btn px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-400 font-bold text-[11px] shrink-0 cursor-pointer" data-cuenta="Transferencia">Transferencia</button>
-                </div>
-                <div id="historial-transacciones" class="space-y-3"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Pantalla 4: Ajustes -->
-    <div id="pantalla-ajustes" class="flex-1 hidden flex-col h-full overflow-y-auto bg-slate-950 min-h-0 px-5 pt-safe pb-24">
-        <h2 class="text-2xl font-bold text-white mb-6">Ajustes</h2>
-        
-        <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg mb-4">
-            <h3 class="text-slate-300 font-bold text-sm mb-2">Cuenta de Usuario</h3>
-            <p id="info-sesion-texto" class="text-xs text-slate-500 mb-4">Inicia sesión o crea una cuenta para sincronizar tus datos de forma privada.</p>
-            
-            <form onsubmit="event.preventDefault();" class="space-y-3">
-                <div id="contenedor-no-autenticado" class="space-y-3">
-                    <div>
-                        <label for="auth-email" class="sr-only">Correo electrónico</label>
-                        <input type="email" id="auth-email" class="w-full bg-slate-950 text-white text-sm rounded-xl px-4 py-3 border border-slate-800 outline-none focus:border-emerald-500" placeholder="tu_correo@misgastos.com" autocomplete="email">
-                    </div>
-                    <div>
-                        <label for="auth-password" class="sr-only">Contraseña</label>
-                        <input type="password" id="auth-password" class="w-full bg-slate-950 text-white text-sm rounded-xl px-4 py-3 border border-slate-800 outline-none focus:border-emerald-500" placeholder="Contraseña segura" autocomplete="current-password">
-                    </div>
-                    <div class="flex gap-2 pt-1">
-                        <button type="button" id="btn-iniciar-sesion" class="flex-1 py-3 bg-emerald-500 text-slate-950 font-bold rounded-xl text-xs active:scale-95 transition-all cursor-pointer">Iniciar Sesión</button>
-                        <button type="button" id="btn-registrar" class="flex-1 py-3 bg-slate-800 text-white font-bold rounded-xl text-xs active:scale-95 transition-all border border-slate-700 cursor-pointer">Crear Cuenta</button>
-                    </div>
-                </div>
-            </form>
-
-            <div id="contenedor-autenticado" class="hidden space-y-3">
-                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
-                    <span id="user-email-display" class="text-xs text-emerald-400 font-bold truncate"></span>
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                </div>
-                <button id="btn-cerrar-sesion" class="w-full py-3 bg-red-500/10 text-red-400 border border-red-500/20 font-bold rounded-xl text-xs active:scale-95 transition-all cursor-pointer">Cerrar Sesión</button>
-            </div>
-        </div>
-
-        <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg mb-4">
-            <p class="text-slate-300 font-bold text-sm mb-2">Gestión de Categorías</p>
-            <p class="text-xs text-slate-500 mb-4">Personaliza, edita o elimina tus categorías de gastos e ingresos.</p>
-            <button type="button" id="btn-abrir-gestionar-cat" class="w-full py-3.5 bg-slate-800 text-emerald-400 border border-slate-700 font-bold rounded-2xl active:bg-slate-700 transition-all text-xs cursor-pointer">⚙️ Administrar Categorías</button>
-        </div>
-
-        <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg mb-4">
-            <p class="text-slate-300 font-bold text-sm mb-2">Selector de Moneda y Tema</p>
-            <p class="text-xs text-slate-500 mb-3">Elige la divisa con la que operan tus finanzas:</p>
-            <select id="selector-moneda" class="w-full bg-slate-950 text-white font-semibold text-sm rounded-xl px-4 py-3 border border-slate-800 outline-none focus:ring-1 focus:ring-emerald-500 mb-4 cursor-pointer">
-                <option value="COP">Pesos Colombianos (COP - $)</option>
-                <option value="USD">Dólares Estadounidenses (USD - $)</option>
-                <option value="PEN">Soles Peruanos (PEN - S/.)</option>
-            </select>
-            <p class="text-xs text-slate-500 mb-2">Color de acento visual de la app:</p>
-            <div class="grid grid-cols-3 gap-2">
-                <button type="button" class="btn-tema py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs cursor-pointer" data-tema="emerald">Esmeralda</button>
-                <button type="button" class="btn-tema py-2.5 rounded-xl bg-blue-500 text-slate-950 font-bold text-xs cursor-pointer" data-tema="blue">Azul Océano</button>
-                <button type="button" class="btn-tema py-2.5 rounded-xl bg-purple-500 text-slate-950 font-bold text-xs cursor-pointer" data-tema="purple">Púrpura</button>
-            </div>
-        </div>
-
-        <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg mb-4">
-            <p class="text-slate-300 font-bold text-sm mb-2">Respaldo y Exportación Contable</p>
-            <p class="text-xs text-slate-500 mb-4">Descarga tus transacciones para Excel, JSON o genera un reporte impreso en PDF.</p>
-            <div class="grid grid-cols-3 gap-2">
-                <button id="btn-exportar-csv" class="py-3 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold rounded-xl active:bg-emerald-500/20 transition-all text-[11px] cursor-pointer">Excel</button>
-                <button id="btn-exportar-json" class="py-3 bg-slate-800 text-slate-300 border border-slate-700 font-bold rounded-xl active:bg-slate-700 transition-all text-[11px] cursor-pointer">JSON</button>
-                <button id="btn-exportar-pdf" class="py-3 bg-teal-500/10 text-teal-300 border border-teal-500/20 font-bold rounded-xl active:bg-teal-500/20 transition-all text-[11px] cursor-pointer">Imprimir PDF</button>
-            </div>
-        </div>
-
-        <div class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg">
-            <p class="text-slate-300 font-bold text-sm mb-2">Conexión con Atajos de iOS</p>
-            <p class="text-xs text-slate-500 mb-4 leading-relaxed">Registra gastos con doble toque en tu iPhone:</p>
-            <button id="btn-copiar-atajo" class="w-full flex items-center justify-center gap-2 py-4 bg-slate-800 text-emerald-400 font-bold rounded-2xl active:bg-slate-700 border border-emerald-500/20 transition-all cursor-pointer">
-                <span id="btn-copiar-texto">Copiar Enlace para iOS</span>
-            </button>
-        </div>
-    </div>
-
-    <!-- Navegación Inferior -->
-    <nav class="shrink-0 w-full bg-slate-950 border-t border-slate-900 flex justify-around items-center min-h-[70px] pt-1 pb-safe relative z-[90]">
-        <button id="tab-captura" class="flex flex-col items-center justify-center w-full h-full tab-activa transition-colors cursor-pointer">
-            <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-            <span class="text-[10px] font-bold">Inicio</span>
-        </button>
-        <button id="tab-planes" class="flex flex-col items-center justify-center w-full h-full tab-inactiva transition-colors cursor-pointer">
-            <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
-            <span class="text-[10px] font-bold">Planes</span>
-        </button>
-        <button id="tab-dashboard" class="flex flex-col items-center justify-center w-full h-full tab-inactiva transition-colors cursor-pointer">
-            <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-            <span class="text-[10px] font-bold">👁️ Reportes</span>
-        </button>
-        <button id="tab-ajustes" class="flex flex-col items-center justify-center w-full h-full tab-inactiva transition-colors cursor-pointer">
-            <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-            <span class="text-[10px] font-bold">Ajustes</span>
-        </button>
-    </nav>
-    </div>
-
-    <!-- JavaScript Principal -->
-    <script>
         const db = supabase.createClient(
             'https://znszebnjcgjfzxvnexxd.supabase.co', 
-            SUPABASE_ANON_KEY,
+            typeof SUPABASE_ANON_KEY !== "undefined" ? SUPABASE_ANON_KEY : "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpuc3plYm5qY2dqZnp4dm5leHhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4NzkwNzcsImV4cCI6MjEwNTQ1NTA3N30.Od66KMiiuXPrzAUfuiprc7Q7SF3909lxDeBevMK25h0",
             {
                 auth: {
                 storage: window.localStorage,
@@ -838,15 +54,15 @@
             if (nuevaMoneda === 'PEN') locale = 'es-PE';
             formateadorRaw = new Intl.NumberFormat(locale, { style: 'currency', currency: nuevaMoneda, maximumFractionDigits: 0 });
             formateadorNumerico = new Intl.NumberFormat(locale);
-            document.getElementById('simbolo-moneda-plan')?.textContent = nuevaMoneda === 'USD' ? '$' : (nuevaMoneda === 'PEN' ? 'S/.' : '$');
+            document.getElementById('simbolo-moneda-plan').textContent = nuevaMoneda === 'USD' ? '$' : (nuevaMoneda === 'PEN' ? 'S/.' : '$');
             actualizarPantalla();
-            if (!document.getElementById('pantalla-dashboard')?.classList.contains('hidden')) {
+            if (!document.getElementById('pantalla-dashboard').classList.contains('hidden')) {
                 cargarEstadisticas();
             }
         }
 
-        document.getElementById('selector-moneda')?.value = monedaActual;
-        document.getElementById('selector-moneda')?.addEventListener('change', (e) => {
+        document.getElementById('selector-moneda').value = monedaActual;
+        document.getElementById('selector-moneda').addEventListener('change', (e) => {
             actualizarFormatoMoneda(e.target.value);
             mostrarToast('Moneda actualizada con éxito');
         });
@@ -927,7 +143,7 @@
         }
            
         async function verificarEstadoSesion() {
-            const { data: sessionData, error: sessionError } = await db.auth.getSession();
+            const { data, error } = await db.auth.getSession();
             if (error) console.warn('Sesión no disponible:', error.message);
             actualizarUIIngreso(data?.session || null);
         }
@@ -977,8 +193,8 @@
             }
         }
 
-        document.getElementById('btn-bienvenida-anonimo')?.addEventListener('click', async () => {
-            const { data: anonData, error: anonError } = await db.auth.signInAnonymously();
+        document.getElementById('btn-bienvenida-anonimo').addEventListener('click', async () => {
+            const { data, error } = await db.auth.signInAnonymously();
             if (error) {
                 mostrarToast('Error al entrar: ' + error.message, 'error');
             } else {
@@ -989,19 +205,19 @@
             }
         });
 
-        document.getElementById('btn-bienvenida-login')?.addEventListener('click', () => {
-            document.getElementById('modal-bienvenida')?.classList.add('hidden');
-            document.getElementById('modal-bienvenida')?.classList.remove('flex');
+        document.getElementById('btn-bienvenida-login').addEventListener('click', () => {
+            document.getElementById('modal-bienvenida').classList.add('hidden');
+            document.getElementById('modal-bienvenida').classList.remove('flex');
             cambiarTab('ajustes');
         });
 
-        document.getElementById('btn-bienvenida-registro')?.addEventListener('click', () => {
-            document.getElementById('modal-bienvenida')?.classList.add('hidden');
-            document.getElementById('modal-bienvenida')?.classList.remove('flex');
+        document.getElementById('btn-bienvenida-registro').addEventListener('click', () => {
+            document.getElementById('modal-bienvenida').classList.add('hidden');
+            document.getElementById('modal-bienvenida').classList.remove('flex');
             cambiarTab('ajustes');
         });
 
-        document.getElementById('btn-iniciar-sesion')?.addEventListener('click', async () => {
+        document.getElementById('btn-iniciar-sesion').addEventListener('click', async () => {
             const btnLogin = document.getElementById('btn-iniciar-sesion');
             if (!btnLogin || btnLogin.disabled) return;
 
@@ -1022,7 +238,7 @@
             btnLogin.textContent = 'Verificando...';
 
             try {
-                const { data: loginData, error: loginError } = await db.auth.signInWithPassword({ email, password });
+                const { data, error } = await db.auth.signInWithPassword({ email, password });
                 if (error) throw error;
                 mostrarToast('¡Bienvenido de vuelta!');
                 passwordInput.value = '';
@@ -1039,7 +255,7 @@
             }
         });
 
-        document.getElementById('btn-registrar')?.addEventListener('click', async () => {
+        document.getElementById('btn-registrar').addEventListener('click', async () => {
             const btnRegistrar = document.getElementById('btn-registrar');
             if (!btnRegistrar || btnRegistrar.disabled) return;
 
@@ -1077,13 +293,13 @@
                 const session = sessionData?.session;
                 
                 if (session && session.user && session.user.is_anonymous) {
-                    const { error: updateError } = await db.auth.updateUser({ email, password });
+                    const { error } = await db.auth.updateUser({ email, password });
                     if (error) throw error;
                     mostrarToast('¡Progreso guardado! Tu cuenta oficial está lista.');
                     passwordInput.value = '';
                     verificarEstadoSesion();
                 } else {
-                    const { data: signUpData, error: signUpError } = await db.auth.signUp({ email, password });
+                    const { data, error } = await db.auth.signUp({ email, password });
                     if (error) throw error;
                     mostrarToast('¡Cuenta creada con éxito!');
                     passwordInput.value = '';
@@ -1101,9 +317,9 @@
             }
         });
 
-        document.getElementById('btn-cerrar-sesion')?.addEventListener('click', async () => {
+        document.getElementById('btn-cerrar-sesion').addEventListener('click', async () => {
             try {
-                const { error: signOutError } = await db.auth.signOut();
+                const { error } = await db.auth.signOut();
                 if (error) throw error;
                 
                 // [CISO] Purga absoluta de memoria volátil cross-tenant para evitar resurrección de datos
@@ -1141,7 +357,7 @@
         let tipoAdminActivo = 'gasto';
 
         // [NUEVO] Delegación de Eventos Estática (Cero Fugas de Memoria V8)
-        document.getElementById('lista-categorias-admin')?.addEventListener('click', (e) => {
+        document.getElementById('lista-categorias-admin').addEventListener('click', (e) => {
             const btnEdit = e.target.closest('.btn-edit-admin');
             const btnDel = e.target.closest('.btn-del-admin');
             
@@ -1171,7 +387,7 @@
             const nuevoBtnGuardarAdmin = btnGuardarAdmin.cloneNode(true);
             btnGuardarAdmin.parentNode.replaceChild(nuevoBtnGuardarAdmin, btnGuardarAdmin);
             
-            nuevoBtnGuardarAdmin?.addEventListener('click', async (e) => {
+            nuevoBtnGuardarAdmin.addEventListener('click', async (e) => {
                 const btn = e.target;
                 btn.disabled = true;
                 btn.textContent = 'Guardando en la nube...';
@@ -1185,7 +401,7 @@
                         for (let id of idsEliminadas) {
                             const esForanea = id.startsWith('fallback') || typeof id !== 'string' || id.length < 15;
                             if (!esForanea) {
-                                const { error: delCatError } = await db.from('categorias').delete().eq('id', id).eq('user_id', session.user.id);
+                                const { error } = await db.from('categorias').delete().eq('id', id).eq('user_id', session.user.id);
                                 if (error) throw new Error(`Fallo RLS al borrar: ${error.message}`);
                             }
                         }
@@ -1194,11 +410,11 @@
                         for (let cat of editadas) {
                             const payload = { nombre: cat.nombre, icono: cat.icono, es_fijo: cat.es_fijo };
                             if (!cat.user_id) {
-                                const { data: catData, error: catError } = await db.from('categorias').insert([{...payload, tipo: cat.tipo, user_id: session.user.id}]).select();
+                                const { data, error } = await db.from('categorias').insert([{...payload, tipo: cat.tipo, user_id: session.user.id}]).select();
                                 if (error) throw new Error(`Fallo inserción: ${error.message}`);
-                                if (data && data?.length > 0) cat?.id = data?.[0].id;
+                                if (data && data.length > 0) cat?.id = data[0].id;
                             } else {
-                                const { error: upCatError } = await db.from('categorias').update(payload).eq('id', cat?.id).eq('user_id', session.user.id);
+                                const { error } = await db.from('categorias').update(payload).eq('id', cat?.id).eq('user_id', session.user.id);
                                 if (error) throw new Error(`Fallo actualización: ${error.message}`);
                             }
                         }
@@ -1268,15 +484,15 @@
                 });
             }
 
-            document.getElementById('modal-gestionar-categorias')?.classList.remove('hidden');
-            document.getElementById('modal-gestionar-categorias')?.classList.add('flex');
+            document.getElementById('modal-gestionar-categorias').classList.remove('hidden');
+            document.getElementById('modal-gestionar-categorias').classList.add('flex');
             
             // Lógica de visibilidad del despachador final
             const hasPendingEdits = categorias.some(c => c._editado);
             if (idsEliminadas.length > 0 || hasPendingEdits) {
-                document.getElementById('btn-guardar-admin-cat')?.classList.remove('hidden');
+                document.getElementById('btn-guardar-admin-cat').classList.remove('hidden');
             } else {
-                document.getElementById('btn-guardar-admin-cat')?.classList.add('hidden');
+                document.getElementById('btn-guardar-admin-cat').classList.add('hidden');
             }
         }
 
@@ -1284,14 +500,14 @@
         const tabAdminIngresos = document.getElementById('tab-admin-ingresos');
 
         if (tabAdminGastos && tabAdminIngresos) {
-            tabAdminGastos?.addEventListener('click', () => {
+            tabAdminGastos.addEventListener('click', () => {
                 tipoAdminActivo = 'gasto';
                 tabAdminGastos.className = "py-2.5 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950 transition-all cursor-pointer";
                 tabAdminIngresos.className = "py-2.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-400 transition-all cursor-pointer";
                 abrirModalGestionarCategorias();
             });
 
-            tabAdminIngresos?.addEventListener('click', () => {
+            tabAdminIngresos.addEventListener('click', () => {
                 tipoAdminActivo = 'ingreso';
                 tabAdminIngresos.className = "py-2.5 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950 transition-all cursor-pointer";
                 tabAdminGastos.className = "py-2.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-400 transition-all cursor-pointer";
@@ -1299,18 +515,18 @@
             });
         }
 
-        document.getElementById('btn-abrir-gestionar-cat')?.addEventListener('click', abrirModalGestionarCategorias);
-        document.getElementById('btn-cerrar-gestionar-cat')?.addEventListener('click', () => {
-            document.getElementById('modal-gestionar-categorias')?.classList.add('hidden');
-            document.getElementById('modal-gestionar-categorias')?.classList.remove('flex');
+        document.getElementById('btn-abrir-gestionar-cat').addEventListener('click', abrirModalGestionarCategorias);
+        document.getElementById('btn-cerrar-gestionar-cat').addEventListener('click', () => {
+            document.getElementById('modal-gestionar-categorias').classList.add('hidden');
+            document.getElementById('modal-gestionar-categorias').classList.remove('flex');
         });
-        document.getElementById('btn-nueva-desde-admin')?.addEventListener('click', () => {
-            document.getElementById('modal-gestionar-categorias')?.classList.add('hidden');
-            document.getElementById('modal-gestionar-categorias')?.classList.remove('flex');
+        document.getElementById('btn-nueva-desde-admin').addEventListener('click', () => {
+            document.getElementById('modal-gestionar-categorias').classList.add('hidden');
+            document.getElementById('modal-gestionar-categorias').classList.remove('flex');
             abrirModalNuevaCategoria();
         });
 
-        document.getElementById('btn-desbloquear')?.addEventListener('click', async () => {
+        document.getElementById('btn-desbloquear').addEventListener('click', async () => {
             try {
                 // Forzamos al navegador a pedir verificación local (huella, pin, face id) si está disponible
                 if (window.PublicKeyCredential) {
@@ -1326,8 +542,8 @@
                     });
                 }
                 
-                document.getElementById('modal-biometrico')?.classList.add('hidden');
-                document.getElementById('modal-biometrico')?.classList.remove('flex');
+                document.getElementById('modal-biometrico').classList.add('hidden');
+                document.getElementById('modal-biometrico').classList.remove('flex');
                 mostrarToast('Identidad confirmada');
             } catch (err) {
                 mostrarToast('Autenticación fallida o cancelada. Acceso denegado.', 'error');
@@ -1335,8 +551,8 @@
         });
 
         function cerrarModalRollover() {
-            document.getElementById('modal-rollover')?.classList.add('hidden');
-            document.getElementById('modal-rollover')?.classList.remove('flex');
+            document.getElementById('modal-rollover').classList.add('hidden');
+            document.getElementById('modal-rollover').classList.remove('flex');
         }
 
         async function comprobarRolloverMes() {
@@ -1362,14 +578,14 @@
             
             if (periodoGuardado && periodoGuardado !== periodoActual) {
                 if (ultimoBalanceCalculado > 0) {
-                    document.getElementById('texto-rollover')?.textContent = `Tienes un saldo restante de ${formatearMoneda(ultimoBalanceCalculado)} del mes anterior. ¿Qué deseas hacer con este dinero?`;
-                    document.getElementById('modal-rollover')?.classList.remove('hidden');
-                    document.getElementById('modal-rollover')?.classList.add('flex');
+                    document.getElementById('texto-rollover').textContent = `Tienes un saldo restante de ${formatearMoneda(ultimoBalanceCalculado)} del mes anterior. ¿Qué deseas hacer con este dinero?`;
+                    document.getElementById('modal-rollover').classList.remove('hidden');
+                    document.getElementById('modal-rollover').classList.add('flex');
                 }
 
                 const { data: { session } } = await db.auth.getSession();
                 if (session) {
-                    const { data: planes, error: errPlanes } = await db.from('planes').select('*').eq('user_id', session.user.id).eq('tipo', 'limite').eq('auto_renovar', true);
+                    const { data, error } = await db.from('').select('*').eq('user_id', session.user.id).eq('tipo', 'limite').eq('auto_renovar', true);
                     if (planes && planes.length > 0) {
                         mostrarToast(`📅 Nuevo mes detectado: Tienes ${planes.length} límites fijos listos para el ciclo.`);
                     }
@@ -1380,7 +596,7 @@
 
         const btnAhorroExpres = document.getElementById('btn-ahorro-expres');
         if (btnAhorroExpres) {
-            btnAhorroExpres?.addEventListener('click', async () => {
+            btnAhorroExpres.addEventListener('click', async () => {
                 const valMonto = parseInt(monto);
                 if (isNaN(valMonto) || valMonto <= 0) {
                     mostrarToast('Digita primero el monto en pantalla para apartar como ahorro', 'error');
@@ -1393,7 +609,7 @@
                     return;
                 }
 
-                const { data: metas, error: errMetas } = await db.from('planes')
+                const { data, error } = await db.from('')
                     .select('*')
                     .eq('tipo', 'meta')
                     .eq('user_id', session.user.id);
@@ -1421,12 +637,12 @@
         }
 
         const btnCerrarRollover = document.getElementById('btn-cerrar-rollover');
-        if (btnCerrarRollover) btnCerrarRollover?.addEventListener('click', cerrarModalRollover);
+        if (btnCerrarRollover) btnCerrarRollover.addEventListener('click', cerrarModalRollover);
 
         const btnOmitirRollover = document.getElementById('btn-rollover-omitir');
-        if (btnOmitirRollover) btnOmitirRollover?.addEventListener('click', cerrarModalRollover);
+        if (btnOmitirRollover) btnOmitirRollover.addEventListener('click', cerrarModalRollover);
 
-        document.getElementById('btn-rollover-ahorro')?.addEventListener('click', async () => {
+        document.getElementById('btn-rollover-ahorro').addEventListener('click', async () => {
             const { data: { session } } = await db.auth.getSession();
             if (session && ultimoBalanceCalculado > 0) {
                 await db.from('planes').insert([{ 
@@ -1442,19 +658,19 @@
             mostrarToast('Saldo trasladado a Ahorro');
         });
 
-        document.getElementById('btn-rollover-colchon')?.addEventListener('click', () => {
+        document.getElementById('btn-rollover-colchon').addEventListener('click', () => {
             cerrarModalRollover();
             mostrarToast('Saldo mantenido como colchón');
         });
 
-        document.getElementById('btn-exportar-json')?.addEventListener('click', async () => {
+        document.getElementById('btn-exportar-json').addEventListener('click', async () => {
             const { data: { session } } = await db.auth.getSession();
             if (!session) {
                 mostrarToast('Inicia sesión para exportar tus datos', 'error');
                 return;
             }
-            const { data: trans, error: errTrans } = await db.from('transacciones').select('*').eq('user_id', session.user.id);
-            const { data: plans, error: errPlans } = await db.from('planes').select('*').eq('user_id', session.user.id);
+            const { data, error } = await db.from('').select('*').eq('user_id', session.user.id);
+            const { data, error } = await db.from('').select('*').eq('user_id', session.user.id);
             const backup = { transacciones: trans || [], planes: plans || [], fechaExportacion: new Date().toISOString() };
             
             const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -1469,13 +685,13 @@
 
         const btnExportCsv = document.getElementById('btn-exportar-csv');
         if (btnExportCsv) {
-            btnExportCsv?.addEventListener('click', async () => {
+            btnExportCsv.addEventListener('click', async () => {
                 const { data: { session } } = await db.auth.getSession();
                 if (!session) {
                     mostrarToast('Inicia sesión para exportar tus datos', 'error');
                     return;
                 }
-                const { data: trans, error: errTrans } = await db.from('transacciones').select('*').eq('user_id', session.user.id).order('fecha', { ascending: false });
+                const { data, error } = await db.from('').select('*').eq('user_id', session.user.id).order('fecha', { ascending: false });
                 if (!trans || trans.length === 0) {
                     mostrarToast('No hay transacciones para exportar', 'error');
                     return;
@@ -1511,43 +727,43 @@
 
         const btnExportPdf = document.getElementById('btn-exportar-pdf');
         if (btnExportPdf) {
-            btnExportPdf?.addEventListener('click', () => {
+            btnExportPdf.addEventListener('click', () => {
                 window.print();
             });
         }
 
-        document.getElementById('btn-copiar-atajo')?.addEventListener('click', () => {
+        document.getElementById('btn-copiar-atajo').addEventListener('click', () => {
             navigator.clipboard.writeText(window.location.href);
-            document.getElementById('btn-copiar-texto')?.textContent = '¡Enlace copiado al portapapeles!';
+            document.getElementById('btn-copiar-texto').textContent = '¡Enlace copiado al portapapeles!';
             setTimeout(() => {
-                document.getElementById('btn-copiar-texto')?.textContent = 'Copiar Enlace para iOS';
+                document.getElementById('btn-copiar-texto').textContent = 'Copiar Enlace para iOS';
             }, 2500);
             mostrarToast('Enlace listo para tu atajo');
         });
 
-        document.getElementById('btn-privacidad')?.textContent = modoPrivacidad ? '🔒' : '👁️';
+        document.getElementById('btn-privacidad').textContent = modoPrivacidad ? '🔒' : '👁️';
 
-        document.getElementById('btn-privacidad')?.addEventListener('click', () => {
+        document.getElementById('btn-privacidad').addEventListener('click', () => {
             modoPrivacidad = !modoPrivacidad;
             localStorage.setItem('modo_privacidad_gastos', modoPrivacidad);
-            document.getElementById('btn-privacidad')?.textContent = modoPrivacidad ? '🔒' : '👁️';
+            document.getElementById('btn-privacidad').textContent = modoPrivacidad ? '🔒' : '👁️';
             actualizarPantalla();
-            if (!document.getElementById('pantalla-dashboard')?.classList.contains('hidden')) {
+            if (!document.getElementById('pantalla-dashboard').classList.contains('hidden')) {
                 cargarEstadisticas();
             }
             if (navigator.vibrate) navigator.vibrate(20);
         });
 
         const mesActualIndex = new Date().getMonth();
-        document.getElementById('selector-mes-excel')?.value = mesActualIndex;
-        document.getElementById('selector-mes-excel')?.addEventListener('change', cargarEstadisticas);
+        document.getElementById('selector-mes-excel').value = mesActualIndex;
+        document.getElementById('selector-mes-excel').addEventListener('change', cargarEstadisticas);
 
         let monto = '0';
 let expresionCalculadora = '';
 let graficoInstancia = null;
 
         document.querySelectorAll('.op-btn').forEach(btn => {
-            btn?.addEventListener('click', (e) => {
+            btn.addEventListener('click', (e) => {
                 const op = e.target.getAttribute('data-op');
                 if (monto !== '0') {
                     expresionCalculadora += monto + ' ' + op + ' ';
@@ -1584,7 +800,7 @@ let graficoInstancia = null;
 
         const btnIgual = document.getElementById('btn-igual');
         if (btnIgual) {
-            btnIgual?.addEventListener('click', () => {
+            btnIgual.addEventListener('click', () => {
                 if (expresionCalculadora) {
                     const expresionFinal = expresionCalculadora + monto;
                     const resultado = calcularExpresionSegura(expresionFinal);
@@ -1609,9 +825,9 @@ let graficoInstancia = null;
         let cuentaGuardada = localStorage.getItem('cuenta_mis_gastos');
         let cuentaIndex = listaCuentas.includes(cuentaGuardada) ? listaCuentas.indexOf(cuentaGuardada) : 0;
         let cuentaActual = listaCuentas[cuentaIndex];
-        document.getElementById('btn-cuenta')?.textContent = cuentaActual;
+        document.getElementById('btn-cuenta').textContent = cuentaActual;
 
-        document.getElementById('fecha-actual')?.textContent = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }).format(new Date());
+        document.getElementById('fecha-actual').textContent = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }).format(new Date());
 
         function mostrarToast(mensaje, tipo = 'exito') {
             const container = document.getElementById('toast-container');
@@ -1650,20 +866,20 @@ let graficoInstancia = null;
         };
         Chart.register(centerTextPlugin);
 
-        document.getElementById('btn-cuenta')?.addEventListener('click', () => {
+        document.getElementById('btn-cuenta').addEventListener('click', () => {
             cuentaIndex = (cuentaIndex + 1) % listaCuentas.length;
             cuentaActual = listaCuentas[cuentaIndex];
             localStorage.setItem('cuenta_mis_gastos', cuentaActual);
-            document.getElementById('btn-cuenta')?.textContent = cuentaActual;
+            document.getElementById('btn-cuenta').textContent = cuentaActual;
             if (navigator.vibrate) navigator.vibrate(20);
         });
 
         function actualizarPantalla() { 
-            document.getElementById('monto-display')?.textContent = formatearMoneda(parseInt(monto || '0')); 
+            document.getElementById('monto-display').textContent = formatearMoneda(parseInt(monto || '0')); 
         }
 
         document.querySelectorAll('.num-btn').forEach(btn => {
-            btn?.addEventListener('click', (e) => {
+            btn.addEventListener('click', (e) => {
                 const num = e.target.getAttribute('data-num');
                 if (monto === '0' || monto === 0) monto = num; 
                 else if (monto.length < 10) monto += num; 
@@ -1672,14 +888,14 @@ let graficoInstancia = null;
             });
         });
 
-        document.getElementById('btn-borrar')?.addEventListener('click', () => { 
+        document.getElementById('btn-borrar').addEventListener('click', () => { 
             monto = monto.slice(0, -1); 
             if (monto === '') monto = '0'; 
             actualizarPantalla(); 
             if (navigator.vibrate) navigator.vibrate(15);
         });
 
-        document.getElementById('btn-limpiar')?.addEventListener('click', () => { 
+        document.getElementById('btn-limpiar').addEventListener('click', () => { 
             monto = '0'; 
             actualizarPantalla(); 
             if (navigator.vibrate) navigator.vibrate(15);
@@ -1705,43 +921,43 @@ let graficoInstancia = null;
                 mostrarToast('Digita un valor mayor a cero.', 'error');
                 return;
             }
-            document.getElementById('flujo-monto-display')?.textContent = formatearMoneda(parseInt(monto));
-            document.getElementById('modal-flujo')?.classList.remove('hidden');
-            document.getElementById('modal-flujo')?.classList.add('flex');
-            document.getElementById('flujo-paso-1')?.classList.remove('hidden');
-            document.getElementById('flujo-paso-1')?.classList.add('flex');
-            document.getElementById('flujo-paso-2')?.classList.add('hidden');
-            document.getElementById('flujo-paso-2')?.classList.remove('flex');
+            document.getElementById('flujo-monto-display').textContent = formatearMoneda(parseInt(monto));
+            document.getElementById('modal-flujo').classList.remove('hidden');
+            document.getElementById('modal-flujo').classList.add('flex');
+            document.getElementById('flujo-paso-1').classList.remove('hidden');
+            document.getElementById('flujo-paso-1').classList.add('flex');
+            document.getElementById('flujo-paso-2').classList.add('hidden');
+            document.getElementById('flujo-paso-2').classList.remove('flex');
         }
 
-        document.getElementById('btn-siguiente')?.addEventListener('click', iniciarCaptura);
+        document.getElementById('btn-siguiente').addEventListener('click', iniciarCaptura);
 
         function cerrarFlujo() {
-            document.getElementById('modal-flujo')?.classList.add('hidden');
-            document.getElementById('modal-flujo')?.classList.remove('flex');
+            document.getElementById('modal-flujo').classList.add('hidden');
+            document.getElementById('modal-flujo').classList.remove('flex');
         }
 
-        document.getElementById('btn-cerrar-flujo')?.addEventListener('click', cerrarFlujo);
-        document.getElementById('btn-retroceder-flujo')?.addEventListener('click', () => {
-            document.getElementById('flujo-paso-2')?.classList.add('hidden');
-            document.getElementById('flujo-paso-2')?.classList.remove('flex');
-            document.getElementById('flujo-paso-1')?.classList.remove('hidden');
-            document.getElementById('flujo-paso-1')?.classList.add('flex');
+        document.getElementById('btn-cerrar-flujo').addEventListener('click', cerrarFlujo);
+        document.getElementById('btn-retroceder-flujo').addEventListener('click', () => {
+            document.getElementById('flujo-paso-2').classList.add('hidden');
+            document.getElementById('flujo-paso-2').classList.remove('flex');
+            document.getElementById('flujo-paso-1').classList.remove('hidden');
+            document.getElementById('flujo-paso-1').classList.add('flex');
         });
 
-        document.getElementById('btn-tipo-gasto')?.addEventListener('click', () => avanzarFlujo('gasto'));
-        document.getElementById('btn-tipo-ingreso')?.addEventListener('click', () => avanzarFlujo('ingreso'));
-        document.getElementById('btn-tipo-meta')?.addEventListener('click', () => avanzarFlujo('meta'));
-        document.getElementById('btn-tipo-deuda')?.addEventListener('click', () => avanzarFlujo('deuda'));
+        document.getElementById('btn-tipo-gasto').addEventListener('click', () => avanzarFlujo('gasto'));
+        document.getElementById('btn-tipo-ingreso').addEventListener('click', () => avanzarFlujo('ingreso'));
+        document.getElementById('btn-tipo-meta').addEventListener('click', () => avanzarFlujo('meta'));
+        document.getElementById('btn-tipo-deuda').addEventListener('click', () => avanzarFlujo('deuda'));
 
-        document.getElementById('filtro-cat-variable')?.addEventListener('click', () => {
+        document.getElementById('filtro-cat-variable').addEventListener('click', () => {
             tipoSubCatActual = 'variable';
             document.getElementById('filtro-cat-variable').className = "py-2.5 px-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition-all cursor-pointer";
             document.getElementById('filtro-cat-fijo').className = "py-2.5 px-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 text-xs font-bold transition-all cursor-pointer";
             renderizarCategoriasFlujo();
         });
 
-        document.getElementById('filtro-cat-fijo')?.addEventListener('click', () => {
+        document.getElementById('filtro-cat-fijo').addEventListener('click', () => {
             tipoSubCatActual = 'fijo';
             document.getElementById('filtro-cat-fijo').className = "py-2.5 px-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition-all cursor-pointer";
             document.getElementById('filtro-cat-variable').className = "py-2.5 px-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 text-xs font-bold transition-all cursor-pointer";
@@ -1767,11 +983,11 @@ let graficoInstancia = null;
                 label.textContent = '💳 Abonar a Crédito / Deuda';
             }
 
-            document.getElementById('flujo-paso-1')?.classList.add('hidden');
-            document.getElementById('flujo-paso-1')?.classList.remove('flex');
-            document.getElementById('flujo-paso-2')?.classList.remove('hidden');
-            document.getElementById('flujo-paso-2')?.classList.remove('flex');
-            document.getElementById('flujo-paso-2')?.classList.add('flex');
+            document.getElementById('flujo-paso-1').classList.add('hidden');
+            document.getElementById('flujo-paso-1').classList.remove('flex');
+            document.getElementById('flujo-paso-2').classList.remove('hidden');
+            document.getElementById('flujo-paso-2').classList.remove('flex');
+            document.getElementById('flujo-paso-2').classList.add('flex');
             renderizarCategoriasFlujo();
         }
 
@@ -1787,7 +1003,7 @@ let graficoInstancia = null;
                         query = query.is('user_id', null);
                     }
                     
-                    const { data: queryData, error: queryError } = await query;
+                    const { data, error } = await query;
                     
                     if (!error && data) {
                         let idsEliminadas = JSON.parse(localStorage.getItem('categorias_eliminadas_ids') || '[]');
@@ -1811,7 +1027,7 @@ let graficoInstancia = null;
                     contenedor.innerHTML = '<p class="col-span-3 text-center text-xs text-slate-500 py-6">Inicia sesión para gestionar metas y deudas.</p>';
                     return;
                 }
-                const { data: planes, error: errPlanes } = await db.from('planes')
+                const { data, error } = await db.from('')
                     .select('*')
                     .eq('tipo', tipoActual)
                     .eq('user_id', session.user.id)
@@ -1850,7 +1066,7 @@ let graficoInstancia = null;
                         </div>
                         <span class="text-xs font-bold text-emerald-400">Abonar +</span>
                     `;
-                    btn?.addEventListener('click', () => {
+                    btn.addEventListener('click', () => {
                         if (tipoActual === 'meta') aplicarAporteMeta(plan);
                         else aplicarAbonoDeuda(plan);
                     });
@@ -1865,7 +1081,7 @@ let graficoInstancia = null;
             categorias = categorias.filter(c => !idsEliminadas.includes(c.id));
 
             if (navigator.onLine && categorias.length === 0) {
-                const { data, error: errCat } = await db.from('categorias').select('*').order('nombre');
+                const { data, error } = await db.from('').select('*').order('nombre');
                 if (data) { 
                     categorias = data.filter(c => !idsEliminadas.includes(c.id)); 
                     localStorage.setItem('categorias_cache', JSON.stringify(categorias)); 
@@ -1892,7 +1108,7 @@ let graficoInstancia = null;
                 btn.type = "button";
                 btn.className = "flex-1 flex flex-col items-center justify-center p-3 bg-slate-800 rounded-2xl active:bg-emerald-600 active:scale-95 transition-all border border-slate-700 shadow-md min-h-[85px] cursor-pointer";
                 btn.innerHTML = `<span class="text-2xl mb-2">${escapeHTML(cat.icono)}</span><span class="text-[9px] font-bold text-slate-300 uppercase tracking-wider text-center leading-tight">${escapeHTML(cat.nombre)}</span>`;
-                btn?.addEventListener('click', () => {
+                btn.addEventListener('click', () => {
                     if (cat.nombre.toUpperCase().includes('OTROS') || cat.nombre.toUpperCase().includes('EXTRA') || cat.nombre.toUpperCase().includes('MEKATO')) {
                         abrirModal(cat?.id);
                     } else {
@@ -1908,7 +1124,7 @@ let graficoInstancia = null;
             btnNuevaCat.type = "button";
             btnNuevaCat.className = "flex flex-col items-center justify-center p-3 bg-slate-800/40 rounded-2xl active:bg-slate-700 border border-dashed border-emerald-500/40 shadow-sm min-h-[85px] cursor-pointer";
             btnNuevaCat.innerHTML = `<span class="text-2xl mb-1 text-emerald-400 font-light">+</span><span class="text-[9px] font-bold text-emerald-400 uppercase tracking-wider text-center">Nueva</span>`;
-            btnNuevaCat?.addEventListener('click', abrirModalNuevaCategoria);
+            btnNuevaCat.addEventListener('click', abrirModalNuevaCategoria);
             fragmentoCategorias.appendChild(btnNuevaCat);
             
             contenedor.appendChild(fragmentoCategorias);
@@ -1969,8 +1185,8 @@ let graficoInstancia = null;
 
         function abrirModalEditarPresupuesto(catId, catNombre, presupuestoActual) {
             categoriaEdicionId = catId;
-            document.getElementById('label-cat-editar-presupuesto')?.textContent = `Categoría: ${catNombre}`;
-            document.getElementById('input-nuevo-presupuesto-cat')?.value = formateadorNumerico.format(parseInt(presupuestoActual || 0));
+            document.getElementById('label-cat-editar-presupuesto').textContent = `Categoría: ${catNombre}`;
+            document.getElementById('input-nuevo-presupuesto-cat').value = formateadorNumerico.format(parseInt(presupuestoActual || 0));
             
             const modal = document.getElementById('modal-editar-presupuesto');
             modal.classList.remove('hidden');
@@ -1983,17 +1199,17 @@ let graficoInstancia = null;
         }
 
         function cerrarModalEditarPresupuesto() {
-            document.getElementById('modal-editar-presupuesto')?.classList.add('hidden');
-            document.getElementById('modal-editar-presupuesto')?.classList.remove('flex');
+            document.getElementById('modal-editar-presupuesto').classList.add('hidden');
+            document.getElementById('modal-editar-presupuesto').classList.remove('flex');
             categoriaEdicionId = null;
         }
 
         const btnCancelEditPres = document.getElementById('btn-cancelar-edit-presupuesto');
-        if (btnCancelEditPres) btnCancelEditPres?.addEventListener('click', cerrarModalEditarPresupuesto);
+        if (btnCancelEditPres) btnCancelEditPres.addEventListener('click', cerrarModalEditarPresupuesto);
 
         const inputEditPres = document.getElementById('input-nuevo-presupuesto-cat');
         if (inputEditPres) {
-            inputEditPres?.addEventListener('input', (e) => {
+            inputEditPres.addEventListener('input', (e) => {
                 let valor = e.target.value.replace(/\D/g, '');
                 if (!valor) { e.target.value = ''; return; }
                 let numVal = parseInt(valor);
@@ -2004,9 +1220,9 @@ let graficoInstancia = null;
 
         const btnGuardarEditPres = document.getElementById('btn-guardar-edit-presupuesto');
         if (btnGuardarEditPres) {
-            btnGuardarEditPres?.addEventListener('click', async () => {
+            btnGuardarEditPres.addEventListener('click', async () => {
                 if (!categoriaEdicionId) return;
-                const rawVal = document.getElementById('input-nuevo-presupuesto-cat')?.value.replace(/\D/g, '');
+                const rawVal = document.getElementById('input-nuevo-presupuesto-cat').value.replace(/\D/g, '');
                 const nuevoMonto = parseInt(rawVal);
                 if (isNaN(nuevoMonto) || nuevoMonto < 0) {
                     mostrarToast('Ingresa un monto válido', 'error');
@@ -2019,7 +1235,7 @@ let graficoInstancia = null;
                     return;
                 }
 
-                const { data: planExistente, error: errSelect } = await db.from('planes')
+                const { data, error } = await db.from('')
                     .select('id')
                     .eq('tipo', 'limite')
                     .eq('categoria_id', categoriaEdicionId)
@@ -2027,7 +1243,7 @@ let graficoInstancia = null;
                     .maybeSingle();
 
                 if (planExistente) {
-                    const { error: errUpdate } = await db.from('planes').update({ monto: nuevoMonto }).eq('id', planExistente?.id);
+                    const { error } = await db.from('planes').update({ monto: nuevoMonto }).eq('id', planExistente?.id);
                     if (error) {
                         mostrarToast('Error al actualizar presupuesto: ' + error.message, 'error');
                         return;
@@ -2037,7 +1253,7 @@ let graficoInstancia = null;
                     const catObj = categorias.find(c => c.id === categoriaEdicionId);
                     const tituloPlan = catObj ? `Presupuesto ${catObj.nombre}` : 'Presupuesto Categoría';
 
-                    const { error: insPlanError } = await db.from('planes').insert([{
+                    const { error } = await db.from('planes').insert([{
                         tipo: 'limite',
                         monto: nuevoMonto,
                         titulo: tituloPlan,
@@ -2112,7 +1328,7 @@ let graficoInstancia = null;
 
         function abrirModalEditarCategoria(cat) {
             categoriaEditandoId = cat?.id;
-            document.getElementById('input-editar-cat-nombre')?.value = cat.nombre;
+            document.getElementById('input-editar-cat-nombre').value = cat.nombre;
             tipoEditarCatEsFijo = Boolean(cat.es_fijo);
             actualizarBotonesTipoEditarCat();
 
@@ -2140,7 +1356,7 @@ let graficoInstancia = null;
                 b.type = 'button';
                 b.className = `p-2 rounded-xl text-xl flex items-center justify-center transition-all ${emoji === iconoEditarCatSeleccionado ? 'bg-emerald-500/20 border border-emerald-500' : 'bg-slate-900 border border-slate-800'} cursor-pointer`;
                 b.textContent = emoji;
-                b?.addEventListener('click', () => {
+                b.addEventListener('click', () => {
                     gridEmojis.querySelectorAll('button').forEach(btn => btn.className = 'p-2 rounded-xl text-xl flex items-center justify-center bg-slate-900 border border-slate-800');
                     b.className = 'p-2 rounded-xl text-xl flex items-center justify-center bg-emerald-500/20 border border-emerald-500';
                     iconoEditarCatSeleccionado = emoji;
@@ -2149,25 +1365,25 @@ let graficoInstancia = null;
                 gridEmojis.appendChild(b);
             });
 
-            document.getElementById('modal-editar-cat')?.classList.remove('hidden');
-            document.getElementById('modal-editar-cat')?.classList.add('flex');
+            document.getElementById('modal-editar-cat').classList.remove('hidden');
+            document.getElementById('modal-editar-cat').classList.add('flex');
             document.getElementById('input-editar-cat-nombre').focus();
         }
 
         function cerrarModalEditarCategoria() {
-            document.getElementById('modal-editar-cat')?.classList.add('hidden');
-            document.getElementById('modal-editar-cat')?.classList.remove('flex');
+            document.getElementById('modal-editar-cat').classList.add('hidden');
+            document.getElementById('modal-editar-cat').classList.remove('flex');
             categoriaEditandoId = null;
         }
 
-        document.getElementById('btn-cancelar-editar-cat')?.addEventListener('click', cerrarModalEditarCategoria);
+        document.getElementById('btn-cancelar-editar-cat').addEventListener('click', cerrarModalEditarCategoria);
 
-        document.getElementById('btn-editar-cat-var')?.addEventListener('click', () => {
+        document.getElementById('btn-editar-cat-var').addEventListener('click', () => {
             tipoEditarCatEsFijo = false;
             actualizarBotonesTipoEditarCat();
         });
 
-        document.getElementById('btn-editar-cat-fijo')?.addEventListener('click', () => {
+        document.getElementById('btn-editar-cat-fijo').addEventListener('click', () => {
             tipoEditarCatEsFijo = true;
             actualizarBotonesTipoEditarCat();
         });
@@ -2185,9 +1401,9 @@ let graficoInstancia = null;
         }
 
         // [NUEVO] Handler de Edición Local - Exclusivo para Modo Borrador
-        document.getElementById('btn-guardar-editar-cat')?.addEventListener('click', () => {
+        document.getElementById('btn-guardar-editar-cat').addEventListener('click', () => {
             if (!categoriaEditandoId) return;
-            const nombre = document.getElementById('input-editar-cat-nombre')?.value.trim();
+            const nombre = document.getElementById('input-editar-cat-nombre').value.trim();
             const inputEmojiCustom = document.getElementById('input-emoji-editar-personalizado');
             const iconoFin = (inputEmojiCustom && inputEmojiCustom.value.trim()) ? inputEmojiCustom.value.trim() : iconoEditarCatSeleccionado;
 
@@ -2213,7 +1429,7 @@ let graficoInstancia = null;
         });
 
         function abrirModalNuevaCategoria() {
-            document.getElementById('input-nueva-cat-nombre')?.value = '';
+            document.getElementById('input-nueva-cat-nombre').value = '';
             tipoNuevaCatEsFijo = (tipoSubCatActual === 'fijo');
             actualizarBotonesTipoNuevaCat();
             
@@ -2225,7 +1441,7 @@ let graficoInstancia = null;
             inputEmojiCustom.value = listaEmojisPopulares[0];
             iconoNuevaCatSeleccionado = listaEmojisPopulares[0];
 
-            inputEmojiCustom?.addEventListener('input', (e) => {
+            inputEmojiCustom.addEventListener('input', (e) => {
                 const val = e.target.value.trim();
                 if (val) {
                     iconoNuevaCatSeleccionado = val;
@@ -2240,7 +1456,7 @@ let graficoInstancia = null;
                 b.type = 'button';
                 b.className = `p-2 rounded-xl text-xl flex items-center justify-center transition-all ${i === 0 ? 'bg-emerald-500/20 border border-emerald-500' : 'bg-slate-900 border border-slate-800'} cursor-pointer`;
                 b.textContent = emoji;
-                b?.addEventListener('click', () => {
+                b.addEventListener('click', () => {
                     gridEmojis.querySelectorAll('button').forEach(btn => btn.className = 'p-2 rounded-xl text-xl flex items-center justify-center bg-slate-900 border border-slate-800');
                     b.className = 'p-2 rounded-xl text-xl flex items-center justify-center bg-emerald-500/20 border border-emerald-500';
                     iconoNuevaCatSeleccionado = emoji;
@@ -2249,24 +1465,24 @@ let graficoInstancia = null;
                 gridEmojis.appendChild(b);
             });
 
-            document.getElementById('modal-nueva-cat')?.classList.remove('hidden');
-            document.getElementById('modal-nueva-cat')?.classList.add('flex');
+            document.getElementById('modal-nueva-cat').classList.remove('hidden');
+            document.getElementById('modal-nueva-cat').classList.add('flex');
             document.getElementById('input-nueva-cat-nombre').focus();
         }
 
         function cerrarModalNuevaCategoria() {
-            document.getElementById('modal-nueva-cat')?.classList.add('hidden');
-            document.getElementById('modal-nueva-cat')?.classList.remove('flex');
+            document.getElementById('modal-nueva-cat').classList.add('hidden');
+            document.getElementById('modal-nueva-cat').classList.remove('flex');
         }
 
-        document.getElementById('btn-cancelar-nueva-cat')?.addEventListener('click', cerrarModalNuevaCategoria);
+        document.getElementById('btn-cancelar-nueva-cat').addEventListener('click', cerrarModalNuevaCategoria);
 
-        document.getElementById('btn-nueva-cat-var')?.addEventListener('click', () => {
+        document.getElementById('btn-nueva-cat-var').addEventListener('click', () => {
             tipoNuevaCatEsFijo = false;
             actualizarBotonesTipoNuevaCat();
         });
 
-        document.getElementById('btn-nueva-cat-fijo')?.addEventListener('click', () => {
+        document.getElementById('btn-nueva-cat-fijo').addEventListener('click', () => {
             tipoNuevaCatEsFijo = true;
             actualizarBotonesTipoNuevaCat();
         });
@@ -2285,7 +1501,7 @@ let graficoInstancia = null;
 
         const inputBuscarCat = document.getElementById('input-buscar-categoria');
         if (inputBuscarCat) {
-            inputBuscarCat?.addEventListener('input', (e) => {
+            inputBuscarCat.addEventListener('input', (e) => {
                 const query = e.target.value.toLowerCase().trim();
                 const botonesCat = document.querySelectorAll('#flujo-categorias-container > div, #flujo-categorias-container > button');
                 botonesCat.forEach(el => {
@@ -2299,12 +1515,12 @@ let graficoInstancia = null;
             });
         }
 
-        document.getElementById('btn-guardar-nueva-cat')?.addEventListener('click', async () => {
+        document.getElementById('btn-guardar-nueva-cat').addEventListener('click', async () => {
             const btn = document.getElementById('btn-guardar-nueva-cat');
             if (btn.disabled) return;
 
-            const inputNombreRaw = document.getElementById('input-nueva-cat-nombre')?.value.trim();
-            const inputEmojiRaw = document.getElementById('input-emoji-personalizado') ? document.getElementById('input-emoji-personalizado')?.value.trim() : iconoNuevaCatSeleccionado;
+            const inputNombreRaw = document.getElementById('input-nueva-cat-nombre').value.trim();
+            const inputEmojiRaw = document.getElementById('input-emoji-personalizado') ? document.getElementById('input-emoji-personalizado').value.trim() : iconoNuevaCatSeleccionado;
             
             const nombre = DOMPurify.sanitize(inputNombreRaw, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
             const iconoFinal = DOMPurify.sanitize(inputEmojiRaw, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] }) || iconoNuevaCatSeleccionado;
@@ -2329,12 +1545,12 @@ let graficoInstancia = null;
                     user_id: session.user.id
                 };
 
-                const { data: newCatData, error: newCatError } = await db.from('categorias').insert([payloadCat]).select();
+                const { data, error } = await db.from('categorias').insert([payloadCat]).select();
                 if (error) throw error;
 
                 let categoriasCache = JSON.parse(localStorage.getItem('categorias_cache') || '[]');
-                if (data && data?.length > 0) {
-                    categoriasCache = [...categoriasCache, data?.[0]];
+                if (data && data.length > 0) {
+                    categoriasCache = [...categoriasCache, data[0]];
                     localStorage.setItem('categorias_cache', JSON.stringify(categoriasCache));
                 }
 
@@ -2407,12 +1623,12 @@ let graficoInstancia = null;
             });
         }
 
-        document.getElementById('tab-captura')?.addEventListener('click', () => cambiarTab('captura'));
-        document.getElementById('tab-planes')?.addEventListener('click', () => cambiarTab('planes'));
-        document.getElementById('tab-dashboard')?.addEventListener('click', () => cambiarTab('dashboard'));
-        document.getElementById('tab-ajustes')?.addEventListener('click', () => cambiarTab('ajustes'));
+        document.getElementById('tab-captura').addEventListener('click', () => cambiarTab('captura'));
+        document.getElementById('tab-planes').addEventListener('click', () => cambiarTab('planes'));
+        document.getElementById('tab-dashboard').addEventListener('click', () => cambiarTab('dashboard'));
+        document.getElementById('tab-ajustes').addEventListener('click', () => cambiarTab('ajustes'));
         
-        document.getElementById('filtro-tiempo')?.addEventListener('change', (e) => {
+        document.getElementById('filtro-tiempo').addEventListener('change', (e) => {
             const selectorMes = document.getElementById('selector-mes-excel');
             if (e.target.value === 'mes') {
                 selectorMes.classList.remove('hidden');
@@ -2430,43 +1646,43 @@ let graficoInstancia = null;
         }
 
         function cerrarModal() {
-            document.getElementById('modal-notas')?.classList.add('hidden');
-            document.getElementById('modal-notas')?.classList.remove('flex');
-            document.getElementById('input-notas')?.value = '';
+            document.getElementById('modal-notas').classList.add('hidden');
+            document.getElementById('modal-notas').classList.remove('flex');
+            document.getElementById('input-notas').value = '';
             categoriaPendiente = null;
         }
 
-        document.getElementById('btn-cancelar-notas')?.addEventListener('click', cerrarModal);
-        document.getElementById('btn-guardar-notas')?.addEventListener('click', () => {
-            guardarTransaccion(categoriaPendiente, document.getElementById('input-notas')?.value.trim());
+        document.getElementById('btn-cancelar-notas').addEventListener('click', cerrarModal);
+        document.getElementById('btn-guardar-notas').addEventListener('click', () => {
+            guardarTransaccion(categoriaPendiente, document.getElementById('input-notas').value.trim());
             cerrarModal();
         });
 
         function abrirModalPlanes() {
-            document.getElementById('modal-tipo-plan')?.classList.remove('hidden');
-            document.getElementById('modal-tipo-plan')?.classList.add('flex');
+            document.getElementById('modal-tipo-plan').classList.remove('hidden');
+            document.getElementById('modal-tipo-plan').classList.add('flex');
         }
 
         function cerrarModalPlanes() {
-            document.getElementById('modal-tipo-plan')?.classList.add('hidden');
-            document.getElementById('modal-tipo-plan')?.classList.remove('flex');
+            document.getElementById('modal-tipo-plan').classList.add('hidden');
+            document.getElementById('modal-tipo-plan').classList.remove('flex');
         }
 
-        document.getElementById('btn-fab-plan')?.addEventListener('click', abrirModalPlanes);
-        document.getElementById('btn-cancelar-planes')?.addEventListener('click', cerrarModalPlanes);
+        document.getElementById('btn-fab-plan').addEventListener('click', abrirModalPlanes);
+        document.getElementById('btn-cancelar-planes').addEventListener('click', cerrarModalPlanes);
 
-        document.getElementById('btn-crear-limite')?.addEventListener('click', () => abrirFormularioPlan('limite'));
-        document.getElementById('btn-crear-meta')?.addEventListener('click', () => abrirFormularioPlan('meta'));
-        document.getElementById('btn-crear-deuda')?.addEventListener('click', () => abrirFormularioPlan('deuda'));
+        document.getElementById('btn-crear-limite').addEventListener('click', () => abrirFormularioPlan('limite'));
+        document.getElementById('btn-crear-meta').addEventListener('click', () => abrirFormularioPlan('meta'));
+        document.getElementById('btn-crear-deuda').addEventListener('click', () => abrirFormularioPlan('deuda'));
 
         async function abrirFormularioPlan(tipo) {
             cerrarModalPlanes();
             tipoPlanActivo = tipo;
             const titulos = { limite: 'Controlar Límite / Fijo', meta: 'Nueva Meta de Ahorro', deuda: 'Registrar Deuda / Crédito' };
-            document.getElementById('titulo-form-plan')?.textContent = titulos[tipo] || 'Nuevo Plan';
-            document.getElementById('input-monto-plan')?.value = '';
-            document.getElementById('input-nombre-plan')?.value = '';
-            document.getElementById('input-acumulado-inicial')?.value = '';
+            document.getElementById('titulo-form-plan').textContent = titulos[tipo] || 'Nuevo Plan';
+            document.getElementById('input-monto-plan').value = '';
+            document.getElementById('input-nombre-plan').value = '';
+            document.getElementById('input-acumulado-inicial').value = '';
 
             const campoCat = document.getElementById('campo-categoria-plan');
             const campoPeriodo = document.getElementById('campo-periodo-plan');
@@ -2494,7 +1710,7 @@ let graficoInstancia = null;
                 categorias = categorias.filter(c => !idsEliminadas.includes(c.id));
 
                 if (categorias.length === 0) {
-                    const { data, error: errCat } = await db.from('categorias').select('*').order('nombre');
+                    const { data, error } = await db.from('').select('*').order('nombre');
                     if (data) categorias = data.filter(c => !idsEliminadas.includes(c.id));
                 }
                 const selectCat = document.getElementById('select-categoria-plan');
@@ -2509,51 +1725,51 @@ let graficoInstancia = null;
                 campoEmergencia.classList.remove('hidden');
                 campoInicio.classList.remove('hidden');
                 campoAcumulado.classList.remove('hidden');
-                document.getElementById('label-acumulado-inicial')?.textContent = 'Ya Ahorrado Inicialmente (Opcional)';
+                document.getElementById('label-acumulado-inicial').textContent = 'Ya Ahorrado Inicialmente (Opcional)';
             } else if (tipo === 'deuda') {
                 campoInicio.classList.remove('hidden');
                 campoAcumulado.classList.remove('hidden');
-                document.getElementById('label-acumulado-inicial')?.textContent = 'Ya Pagado / Amortizado (Opcional)';
+                document.getElementById('label-acumulado-inicial').textContent = 'Ya Pagado / Amortizado (Opcional)';
             }
 
-            document.getElementById('modal-form-plan')?.classList.remove('hidden');
-            document.getElementById('modal-form-plan')?.classList.add('flex');
+            document.getElementById('modal-form-plan').classList.remove('hidden');
+            document.getElementById('modal-form-plan').classList.add('flex');
             document.getElementById('input-monto-plan').focus();
         }
 
-        document.getElementById('select-periodo-plan')?.addEventListener('change', (e) => {
+        document.getElementById('select-periodo-plan').addEventListener('change', (e) => {
             const campoFechas = document.getElementById('campo-fechas-plan');
             if (e.target.value === 'personalizado') campoFechas.classList.remove('hidden');
             else campoFechas.classList.add('hidden');
         });
 
         function cerrarFormularioPlan() {
-            document.getElementById('modal-form-plan')?.classList.add('hidden');
-            document.getElementById('modal-form-plan')?.classList.remove('flex');
+            document.getElementById('modal-form-plan').classList.add('hidden');
+            document.getElementById('modal-form-plan').classList.remove('flex');
         }
 
-        document.getElementById('btn-cancelar-form-plan')?.addEventListener('click', cerrarFormularioPlan);
+        document.getElementById('btn-cancelar-form-plan').addEventListener('click', cerrarFormularioPlan);
         
-        document.getElementById('input-monto-plan')?.addEventListener('input', (e) => {
+        document.getElementById('input-monto-plan').addEventListener('input', (e) => {
             let valor = e.target.value.replace(/\D/g, '');
             if (!valor) { e.target.value = ''; return; }
             e.target.value = formateadorNumerico.format(parseInt(valor));
         });
 
-        document.getElementById('input-acumulado-inicial')?.addEventListener('input', (e) => {
+        document.getElementById('input-acumulado-inicial').addEventListener('input', (e) => {
             let valor = e.target.value.replace(/\D/g, '');
             if (!valor) { e.target.value = ''; return; }
             e.target.value = formateadorNumerico.format(parseInt(valor));
         });
 
-        document.getElementById('btn-guardar-plan')?.addEventListener('click', async () => {
+        document.getElementById('btn-guardar-plan').addEventListener('click', async () => {
             const btnGuardar = document.getElementById('btn-guardar-plan');
             if (btnGuardar.disabled) return;
 
-            const rawMonto = document.getElementById('input-monto-plan')?.value.replace(/\D/g, '');
+            const rawMonto = document.getElementById('input-monto-plan').value.replace(/\D/g, '');
             const montoVal = parseInt(rawMonto);
-            const tituloVal = document.getElementById('input-nombre-plan')?.value.trim();
-            const rawAcum = document.getElementById('input-acumulado-inicial')?.value.replace(/\D/g, '');
+            const tituloVal = document.getElementById('input-nombre-plan').value.trim();
+            const rawAcum = document.getElementById('input-acumulado-inicial').value.replace(/\D/g, '');
             const acumVal = rawAcum ? parseInt(rawAcum) : 0;
             
             if(!montoVal || montoVal <= 0 || !tituloVal) {
@@ -2579,7 +1795,7 @@ let graficoInstancia = null;
             };
 
             if (tipoPlanActivo === 'limite') {
-                const catId = document.getElementById('select-categoria-plan')?.value;
+                const catId = document.getElementById('select-categoria-plan').value;
                 if (!catId) {
                     mostrarToast('Selecciona la categoría a controlar', 'error');
                     btnGuardar.disabled = false;
@@ -2587,12 +1803,12 @@ let graficoInstancia = null;
                     return;
                 }
                 payload.categoria_id = catId;
-                payload.periodo = document.getElementById('select-periodo-plan')?.value;
+                payload.periodo = document.getElementById('select-periodo-plan').value;
                 payload.auto_renovar = document.getElementById('check-auto-renovar').checked;
                 
                 if (payload.periodo === 'personalizado') {
-                    payload.fecha_inicio = document.getElementById('input-fecha-inicio-plan')?.value || new Date().toISOString().slice(0,10);
-                    payload.fecha_fin = document.getElementById('input-fecha-fin-plan')?.value || null;
+                    payload.fecha_inicio = document.getElementById('input-fecha-inicio-plan').value || new Date().toISOString().slice(0,10);
+                    payload.fecha_fin = document.getElementById('input-fecha-fin-plan').value || null;
                 }
             } else if (tipoPlanActivo === 'meta') {
                 payload.es_fondo_emergencia = document.getElementById('check-fondo-emergencia').checked;
@@ -2601,7 +1817,7 @@ let graficoInstancia = null;
                 payload.mostrar_en_inicio = document.getElementById('check-mostrar-inicio').checked;
             }
 
-            const { error: insPError } = await db.from('planes').insert([payload]);
+            const { error } = await db.from('planes').insert([payload]);
             btnGuardar.disabled = false;
             btnGuardar.classList.remove('opacity-50');
             
@@ -2666,7 +1882,7 @@ let graficoInstancia = null;
             const { data: { session } } = await db.auth.getSession();
             if (!session) return;
 
-            const { data: limites, error: errLimites } = await db.from('planes')
+            const { data, error } = await db.from('')
                 .select('*')
                 .eq('tipo', 'limite')
                 .eq('categoria_id', categoriaId)
@@ -2676,7 +1892,7 @@ let graficoInstancia = null;
 
             for (let lim of limites) {
                 const rango = calcularVentanaPeriodo(lim.periodo || 'mensual', lim.fecha_inicio, lim.fecha_fin, lim.auto_renovar);
-                const { data: trans, error: errTrans } = await db.from('transacciones')
+                const { data, error } = await db.from('')
                     .select('monto')
                     .eq('categoria_id', categoriaId)
                     .eq('user_id', session.user.id)
@@ -2741,7 +1957,7 @@ let graficoInstancia = null;
     const display = document.getElementById('flujo-monto-display');
 
     if (navigator.onLine) {
-      const { error: insTxError } = await db.from('transacciones').insert([payload]);
+      const { error } = await db.from('transacciones').insert([payload]);
       if (error) throw error; 
     } else {
       encolarTransaccionManual(payload);
@@ -2765,7 +1981,7 @@ let graficoInstancia = null;
       limpiar();
       guardandoTransaccionActiva = false;
       mostrarToast('Transacción registrada con éxito');
-      if (document.getElementById('pantalla-dashboard') && !document.getElementById('pantalla-dashboard')?.classList.contains('hidden')) {
+      if (document.getElementById('pantalla-dashboard') && !document.getElementById('pantalla-dashboard').classList.contains('hidden')) {
         cargarEstadisticas();
       }
     }, 300);
@@ -2783,7 +1999,7 @@ let graficoInstancia = null;
         setTimeout(() => {
             if (display) display.style.color = 'white';
             cerrarFlujo(); limpiar();
-            if (document.getElementById('pantalla-dashboard') && !document.getElementById('pantalla-dashboard')?.classList.contains('hidden')) cargarEstadisticas();
+            if (document.getElementById('pantalla-dashboard') && !document.getElementById('pantalla-dashboard').classList.contains('hidden')) cargarEstadisticas();
         }, 300);
         return; // Salida temprana exitosa
     }
@@ -2841,7 +2057,7 @@ function encolarTransaccionManual(payload) {
                         <button id="btn-primer-plan" class="text-emerald-400 font-bold text-sm tracking-widest uppercase cursor-pointer">CREAR MI PRIMER PLAN</button>
                     </div>`;
                     const btnPrimerPlan = document.getElementById('btn-primer-plan');
-                    if(btnPrimerPlan) btnPrimerPlan?.addEventListener('click', abrirModalPlanes);
+                    if(btnPrimerPlan) btnPrimerPlan.addEventListener('click', abrirModalPlanes);
                     return;
                 } 
                 
@@ -2917,7 +2133,7 @@ function encolarTransaccionManual(payload) {
                     btnDelete.type = "button";
                     btnDelete.className = "absolute right-0 top-0 bottom-0 w-24 flex flex-col items-center justify-center text-white font-bold active:bg-red-600 transition-colors cursor-pointer";
                     btnDelete.innerHTML = `<span class="text-xl mb-1">🗑️</span><span class="text-[10px] uppercase tracking-wider">Borrar</span>`;
-                    btnDelete?.addEventListener('click', () => eliminarPlan(p?.id));
+                    btnDelete.addEventListener('click', () => eliminarPlan(p?.id));
                     wrapper.appendChild(btnDelete);
 
                     const tarjeta = document.createElement('div');
@@ -2945,21 +2161,21 @@ function encolarTransaccionManual(payload) {
                     `;
                     
                     let startX = 0, currentX = 0, isDragging = false;
-                    tarjeta?.addEventListener('touchstart', e => { 
+                    tarjeta.addEventListener('touchstart', e => { 
                         startX = e.touches[0].clientX; 
                         currentX = startX;
                         isDragging = true; 
                         tarjeta.style.transition = 'none';
                     }, {passive: true});
                     
-                    tarjeta?.addEventListener('touchmove', e => {
+                    tarjeta.addEventListener('touchmove', e => {
                         if(!isDragging) return;
                         currentX = e.touches[0].clientX;
                         let diff = currentX - startX;
                         if(diff < 0) tarjeta.style.transform = `translateX(${Math.max(diff, -100)}px)`;
                     }, {passive: true});
                     
-                    tarjeta?.addEventListener('touchend', () => {
+                    tarjeta.addEventListener('touchend', () => {
                         isDragging = false;
                         tarjeta.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)';
                         let diff = currentX - startX;
@@ -3002,7 +2218,7 @@ function encolarTransaccionManual(payload) {
             try {
                 if (!navigator.onLine) throw new Error("Requiere conexión a internet activa.");
                 
-                const { error: delPlanError } = await db.from('planes').delete().eq('id', id);
+                const { error } = await db.from('planes').delete().eq('id', id);
                 if (error) throw error;
                 
                 mostrarToast('Plan eliminado');
@@ -3017,7 +2233,7 @@ function encolarTransaccionManual(payload) {
             const { data: { session } } = await db.auth.getSession();
             if (!session) return;
             
-            const { data: planes, error: errPlanes } = await db.from('planes').select('*').eq('user_id', session.user.id);
+            const { data, error } = await db.from('').select('*').eq('user_id', session.user.id);
             let totalFijosYDeudas = 0;
             let tieneFondoEmergencia = false;
             
@@ -3061,7 +2277,7 @@ function encolarTransaccionManual(payload) {
             try {
                 if (!navigator.onLine) throw new Error("Operación no disponible sin conexión.");
                 
-                const { error: delTxError } = await db.from('transacciones').delete().eq('id', id);
+                const { error } = await db.from('transacciones').delete().eq('id', id);
                 if (error) throw error;
                 
                 // Sincronización inmutable manual de la caché para aliviar latencia de re-fetch
@@ -3095,12 +2311,12 @@ function encolarTransaccionManual(payload) {
                 ahorroAnual = valorSimuladorBase * 12;
             }
 
-            document.getElementById('sim-mensual')?.textContent = formatearMoneda(ahorroMensual);
-            document.getElementById('sim-anual')?.textContent = formatearMoneda(ahorroAnual);
+            document.getElementById('sim-mensual').textContent = formatearMoneda(ahorroMensual);
+            document.getElementById('sim-anual').textContent = formatearMoneda(ahorroAnual);
         }
 
         if (btnSimDiario && btnSimMensual && inputSimValor) {
-            btnSimDiario?.addEventListener('click', () => {
+            btnSimDiario.addEventListener('click', () => {
                 modoSimuladorEsDiario = true;
                 btnSimDiario.className = "px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-500 text-slate-950 cursor-pointer";
                 btnSimMensual.className = "px-2.5 py-1 rounded-lg text-[10px] font-bold text-slate-400 cursor-pointer";
@@ -3108,7 +2324,7 @@ function encolarTransaccionManual(payload) {
                 actualizarSimulador();
             });
 
-            btnSimMensual?.addEventListener('click', () => {
+            btnSimMensual.addEventListener('click', () => {
                 modoSimuladorEsDiario = false;
                 btnSimMensual.className = "px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-500 text-slate-950 cursor-pointer";
                 btnSimDiario.className = "px-2.5 py-1 rounded-lg text-[10px] font-bold text-slate-400 cursor-pointer";
@@ -3116,7 +2332,7 @@ function encolarTransaccionManual(payload) {
                 actualizarSimulador();
             });
 
-            inputSimValor?.addEventListener('input', (e) => {
+            inputSimValor.addEventListener('input', (e) => {
                 let raw = e.target.value.replace(/\D/g, '');
                 if (!raw) {
                     valorSimuladorBase = 0;
@@ -3134,12 +2350,12 @@ function encolarTransaccionManual(payload) {
             const { data: { session } } = await db.auth.getSession();
             if (!session) {
                 renderizarDashboardUI(0, 0, 0, [], 0, 0, 0);
-                document.getElementById('historial-transacciones')?.innerHTML = '';
+                document.getElementById('historial-transacciones').innerHTML = '';
                 return;
             }
 
-            const filtro = document.getElementById('filtro-tiempo')?.value;
-            const mesSeleccionado = parseInt(document.getElementById('selector-mes-excel')?.value);
+            const filtro = document.getElementById('filtro-tiempo').value;
+            const mesSeleccionado = parseInt(document.getElementById('selector-mes-excel').value);
             const ahora = new Date();
             let inicioISO, finISO;
             
@@ -3287,10 +2503,10 @@ function encolarTransaccionManual(payload) {
 
 
 
-            document.getElementById('cuenta-efectivo-val')?.textContent = formatearMoneda(totalesCuentas['Efectivo']);
-            document.getElementById('cuenta-bancos-val')?.textContent = formatearMoneda(totalesCuentas['Bancos']);
-            document.getElementById('cuenta-tarjetas-val')?.textContent = formatearMoneda(totalesCuentas['Tarjetas']);
-            document.getElementById('cuenta-transferencia-val')?.textContent = formatearMoneda(totalesCuentas['Transferencia']);
+            document.getElementById('cuenta-efectivo-val').textContent = formatearMoneda(totalesCuentas['Efectivo']);
+            document.getElementById('cuenta-bancos-val').textContent = formatearMoneda(totalesCuentas['Bancos']);
+            document.getElementById('cuenta-tarjetas-val').textContent = formatearMoneda(totalesCuentas['Tarjetas']);
+            document.getElementById('cuenta-transferencia-val').textContent = formatearMoneda(totalesCuentas['Transferencia']);
 
             db.from('planes').select('*').eq('user_id', session.user.id)
                 .then(({ data: planesData, error }) => {
@@ -3400,7 +2616,7 @@ function encolarTransaccionManual(payload) {
 
             /* [NUEVO] Patrón Singleton: Único Event Listener Global para todo el historial */
             if (!contenedorHistorial.dataset.listenerActivo) {
-                contenedorHistorial?.addEventListener('click', (e) => {
+                contenedorHistorial.addEventListener('click', (e) => {
                     const btnBorrar = e.target.closest('.btn-borrar-tx');
                     if (btnBorrar && btnBorrar.dataset.txid) {
                         eliminarTransaccion(btnBorrar.dataset.txid);
@@ -3414,7 +2630,7 @@ function encolarTransaccionManual(payload) {
         let cuentaFiltroActiva = 'todas';
 
         document.querySelectorAll('.filtro-cta-btn').forEach(btn => {
-            btn?.addEventListener('click', (e) => {
+            btn.addEventListener('click', (e) => {
                 document.querySelectorAll('.filtro-cta-btn').forEach(b => {
                     b.className = "filtro-cta-btn px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-400 font-bold text-[11px] shrink-0 cursor-pointer";
                 });
@@ -3427,7 +2643,7 @@ function encolarTransaccionManual(payload) {
         const inputBuscarHistorial = document.getElementById('input-buscar-historial');
         if (inputBuscarHistorial) {
             let debounceTimer;
-            inputBuscarHistorial?.addEventListener('input', () => {
+            inputBuscarHistorial.addEventListener('input', () => {
                 clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(() => filtrarYRenderizarHistorial(), 300);
             });
@@ -3458,7 +2674,7 @@ function encolarTransaccionManual(payload) {
 
         const btnVoz = document.getElementById('btn-voz');
         if (btnVoz) {
-            btnVoz?.addEventListener('click', () => {
+            btnVoz.addEventListener('click', () => {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 if (!SpeechRecognition) {
                     mostrarToast('Tu navegador no soporta dictado por voz', 'error');
@@ -3491,11 +2707,11 @@ function encolarTransaccionManual(payload) {
             let pDisp = totalIngresado > 0 ? ((balanceReal / totalIngresado) * 100).toFixed(0) : 0;
             if(pDisp < 0) pDisp = 0; if(pDisp > 100) pDisp = 100;
 
-            document.getElementById('dash-ingresos')?.textContent = `+${formatearMoneda(totalIngresado)}`;
-            document.getElementById('dash-gastos')?.textContent = `-${formatearMoneda(totalGastado)}`;
-            document.getElementById('dash-balance')?.textContent = formatearMoneda(balanceReal);
-            document.getElementById('dash-porcentaje')?.textContent = `${pDisp}%`;
-            document.getElementById('dash-bar')?.style.width = `${pDisp}%`;
+            document.getElementById('dash-ingresos').textContent = `+${formatearMoneda(totalIngresado)}`;
+            document.getElementById('dash-gastos').textContent = `-${formatearMoneda(totalGastado)}`;
+            document.getElementById('dash-balance').textContent = formatearMoneda(balanceReal);
+            document.getElementById('dash-porcentaje').textContent = `${pDisp}%`;
+            document.getElementById('dash-bar').style.width = `${pDisp}%`;
 
             if (totalIngresado > 0) {
                 const necPct = Math.round((totalNecesidades / totalIngresado) * 100);
@@ -3515,24 +2731,24 @@ function encolarTransaccionManual(payload) {
                 elAho.textContent = `${ahoPct}%`;
                 elAho.className = `text-xs font-bold ${ahoPct >= 20 ? 'text-emerald-400' : 'text-slate-300'}`;
             } else {
-                document.getElementById('stat-50')?.textContent = '0%';
-                document.getElementById('stat-30')?.textContent = '0%';
-                document.getElementById('stat-20')?.textContent = '0%';
+                document.getElementById('stat-50').textContent = '0%';
+                document.getElementById('stat-30').textContent = '0%';
+                document.getElementById('stat-20').textContent = '0%';
             }
 
             const ahora = new Date();
-            const mesSeleccionado = parseInt(document.getElementById('selector-mes-excel')?.value);
+            const mesSeleccionado = parseInt(document.getElementById('selector-mes-excel').value);
             const diasTranscurridos = Math.max(1, ahora.getDate());
             
             const promedio = totalGastado / diasTranscurridos;
             const diasDeVidaRestantes = promedio > 0 ? Math.floor(balanceReal / promedio) : 99;
 
-            document.getElementById('dash-promedio')?.textContent = formatearMoneda(promedio);
-            document.getElementById('dash-seguro')?.textContent = formatearMoneda(promedio);
-            document.getElementById('dash-dias-restantes')?.textContent = balanceReal <= 0 ? '¡Sin fondos!' : `~${diasDeVidaRestantes} días de vida`;
+            document.getElementById('dash-promedio').textContent = formatearMoneda(promedio);
+            document.getElementById('dash-seguro').textContent = formatearMoneda(promedio);
+            document.getElementById('dash-dias-restantes').textContent = balanceReal <= 0 ? '¡Sin fondos!' : `~${diasDeVidaRestantes} días de vida`;
 
             const ordenados = [...arrGastos].sort((a,b) => b.gastado - a.gastado);
-            document.getElementById('dash-top-cat')?.textContent = ordenados.length > 0 && ordenados[0].gastado > 0 ? ordenados[0].nombre : 'N/A';
+            document.getElementById('dash-top-cat').textContent = ordenados.length > 0 && ordenados[0].gastado > 0 ? ordenados[0].nombre : 'N/A';
 
             const matrizContainer = document.getElementById('matriz-presupuesto-excel');
             matrizContainer.innerHTML = '';
@@ -3593,7 +2809,7 @@ function encolarTransaccionManual(payload) {
 
                     /* [NUEVO] Patrón Singleton de delegación para proteger la memoria RAM en el Dashboard */
                     if (!matrizContainer.dataset.listenerActivo) {
-                        matrizContainer?.addEventListener('click', (e) => {
+                        matrizContainer.addEventListener('click', (e) => {
                             const btn = e.target.closest('.btn-editar-presupuesto');
                             if (!btn) return;
                             
@@ -3702,7 +2918,7 @@ function encolarTransaccionManual(payload) {
                 b.type = 'button';
                 b.className = "flex items-center gap-1.5 px-3 py-1.5 bg-slate-900/90 border border-slate-800/80 rounded-full text-xs font-semibold text-slate-300 active:scale-95 transition-all shrink-0 cursor-pointer shadow-sm hover:border-emerald-500/40";
                 b.innerHTML = `<span>${escapeHTML(cat.icono)}</span> <span class="max-w-[90px] truncate">${escapeHTML(cat.nombre)}</span>`;
-                b?.addEventListener('click', () => {
+                b.addEventListener('click', () => {
                     if (parseInt(monto) <= 0) {
                         mostrarToast('Digita un monto primero', 'error');
                         return;
@@ -3714,13 +2930,13 @@ function encolarTransaccionManual(payload) {
         }
 
         document.querySelectorAll('.sug-nota-chip').forEach(btn => {
-            btn?.addEventListener('click', (e) => {
-                document.getElementById('input-notas')?.value = e.target.textContent;
+            btn.addEventListener('click', (e) => {
+                document.getElementById('input-notas').value = e.target.textContent;
             });
         });
 
         document.querySelectorAll('.btn-tema').forEach(btn => {
-            btn?.addEventListener('click', (e) => {
+            btn.addEventListener('click', (e) => {
                 const tema = e.currentTarget.getAttribute('data-tema') || 'emerald';
                 localStorage.setItem('tema_color_app', tema);
                 
@@ -3747,6 +2963,4 @@ function encolarTransaccionManual(payload) {
                     .catch(err => console.error('Error SW:', err));
             });
         }
-    </script>
-</body>
-</html>
+    
