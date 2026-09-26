@@ -1170,35 +1170,53 @@
                 let idsEliminadas = JSON.parse(localStorage.getItem('categorias_eliminadas_ids') || '[]');
 
                 if (session && navigator.onLine) {
-                    for (let id of idsEliminadas) {
-                        const esForanea = id.startsWith('fallback') || typeof id !== 'string' || id.length < 15;
-                        if (!esForanea) await db.from('categorias').delete().eq('id', id);
-                    }
-                    
-                    const editadas = categorias.filter(c => c._editado);
-                    for (let cat of editadas) {
-                        const payload = { nombre: cat.nombre, icono: cat.icono, es_fijo: cat.es_fijo };
-                        if (!cat.user_id) {
-                            const { data } = await db.from('categorias').insert([{...payload, tipo: cat.tipo, user_id: session.user.id}]).select();
-                            if (data) cat.id = data[0].id;
-                        } else {
-                            await db.from('categorias').update(payload).eq('id', cat.id).eq('user_id', session.user.id);
+                    try {
+                        for (let id of idsEliminadas) {
+                            const esForanea = id.startsWith('fallback') || typeof id !== 'string' || id.length < 15;
+                            if (!esForanea) {
+                                const { error } = await db.from('categorias').delete().eq('id', id).eq('user_id', session.user.id);
+                                if (error) throw new Error(`Fallo RLS al borrar: ${error.message}`);
+                            }
                         }
+                        
+                        const editadas = categorias.filter(c => c._editado);
+                        for (let cat of editadas) {
+                            const payload = { nombre: cat.nombre, icono: cat.icono, es_fijo: cat.es_fijo };
+                            if (!cat.user_id) {
+                                const { data, error } = await db.from('categorias').insert([{...payload, tipo: cat.tipo, user_id: session.user.id}]).select();
+                                if (error) throw new Error(`Fallo inserción: ${error.message}`);
+                                if (data && data.length > 0) cat.id = data[0].id;
+                            } else {
+                                const { error } = await db.from('categorias').update(payload).eq('id', cat.id).eq('user_id', session.user.id);
+                                if (error) throw new Error(`Fallo actualización: ${error.message}`);
+                            }
+                        }
+
+                        // Consolidación Atómica: Solo se ejecuta si NINGUNA operación a la API falló
+                        categorias = categorias.filter(c => !idsEliminadas.includes(c.id));
+                        categorias = categorias.map(c => { delete c._editado; return c; });
+                        localStorage.setItem('categorias_cache', JSON.stringify(categorias));
+                        localStorage.removeItem('categorias_eliminadas_ids');
+
+                        btn.classList.add('hidden');
+                        btn.disabled = false;
+                        btn.textContent = '💾 Confirmar y Guardar Cambios';
+                        
+                        renderizarCategoriasFlujo();
+                        abrirModalGestionarCategorias();
+                        mostrarToast('Categorías sincronizadas con éxito.');
+                    } catch (errorTransaccion) {
+                        console.error('[CISO Audit] Rollback Transaccional UI:', errorTransaccion);
+                        mostrarToast(errorTransaccion.message, 'error');
+                        btn.disabled = false;
+                        btn.textContent = '💾 Reintentar Guardado (Fallo de Red/Permisos)';
+                        return; // Abortamos la destrucción del caché para evitar desincronización
                     }
+                } else {
+                    mostrarToast('Sin conexión válida con Supabase', 'error');
+                    btn.disabled = false;
+                    btn.textContent = '💾 Confirmar y Guardar Cambios';
                 }
-
-                categorias = categorias.filter(c => !idsEliminadas.includes(c.id));
-                categorias = categorias.map(c => { delete c._editado; return c; });
-                localStorage.setItem('categorias_cache', JSON.stringify(categorias));
-                localStorage.removeItem('categorias_eliminadas_ids');
-
-                btn.classList.add('hidden');
-                btn.disabled = false;
-                btn.textContent = '💾 Confirmar y Guardar Cambios';
-                
-                renderizarCategoriasFlujo();
-                abrirModalGestionarCategorias();
-                mostrarToast('Categorías sincronizadas con éxito.');
             });
         }
 
@@ -3143,9 +3161,23 @@ function encolarTransaccionManual(payload) {
                 ];
             }
             if (navigator.onLine) {
-                const { data: catData } = await db.from('categorias').select('*');
-                if (catData && catData.length > 0) { 
-                    categorias = catData.filter(c => !idsEliminadas.includes(c.id)); 
+                // Filtro explícito para aislamiento multi-tenant en capas cliente
+                let query = db.from('categorias').select('*').order('nombre');
+                if (session) query = query.or(`user_id.is.null,user_id.eq.${session.user.id}`);
+                
+                const { data: catData, error: catError } = await query;
+                if (!catError && catData && catData.length > 0) { 
+                    const editadasLocal = categorias.filter(c => c._editado);
+                    let categoriasFusionadas = catData.filter(c => !idsEliminadas.includes(c.id));
+                    
+                    // Merge State: Preservar ediciones optimistas (Drafts) ante reloads
+                    editadasLocal.forEach(catEditada => {
+                        const idx = categoriasFusionadas.findIndex(c => c.id === catEditada.id);
+                        if (idx !== -1) categoriasFusionadas[idx] = catEditada;
+                        else categoriasFusionadas.push(catEditada);
+                    });
+
+                    categorias = categoriasFusionadas;
                     localStorage.setItem('categorias_cache', JSON.stringify(categorias)); 
                 }
             }
