@@ -1103,6 +1103,15 @@
             try {
                 const { error } = await db.auth.signOut();
                 if (error) throw error;
+                
+                // [CISO] Purga absoluta de memoria volátil cross-tenant para evitar resurrección de datos
+                localStorage.removeItem('categorias_cache');
+                localStorage.removeItem('categorias_eliminadas_ids');
+                localStorage.removeItem('transacciones_cache_dia');
+                localStorage.removeItem('transacciones_cache_mes');
+                localStorage.removeItem('transacciones_cache_anio');
+                transaccionesCacheActuales = [];
+                
                 mostrarToast('Sesión cerrada correctamente');
                 actualizarUIIngreso(null);
                 cargarEstadisticas();
@@ -3152,21 +3161,14 @@ function encolarTransaccionManual(payload) {
             let idsEliminadas = JSON.parse(localStorage.getItem('categorias_eliminadas_ids') || '[]');
             categorias = categorias.filter(c => !idsEliminadas.includes(c.id));
 
-            if (categorias.length === 0) {
-                categorias = [
-                    { id: 'fallback-1', nombre: 'Mercado', icono: '🛒', tipo: 'gasto', es_fijo: false },
-                    { id: 'fallback-2', nombre: 'Arriendo', icono: '🏠', tipo: 'gasto', es_fijo: true },
-                    { id: 'fallback-3', nombre: 'Servicios', icono: '💡', tipo: 'gasto', es_fijo: true },
-                    { id: 'fallback-4', nombre: 'Salario', icono: '📈', tipo: 'ingreso', es_fijo: false }
-                ];
-            }
             if (navigator.onLine) {
                 // Filtro explícito para aislamiento multi-tenant en capas cliente
                 let query = db.from('categorias').select('*').order('nombre');
                 if (session) query = query.or(`user_id.is.null,user_id.eq.${session.user.id}`);
                 
                 const { data: catData, error: catError } = await query;
-                if (!catError && catData && catData.length > 0) { 
+                // [CISO FIX] Removemos la restricción catData.length > 0 para permitir sobreescritura con arreglos vacíos
+                if (!catError && catData) { 
                     const editadasLocal = categorias.filter(c => c._editado);
                     let categoriasFusionadas = catData.filter(c => !idsEliminadas.includes(c.id));
                     
