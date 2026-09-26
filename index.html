@@ -1194,12 +1194,12 @@
                         for (let cat of editadas) {
                             const payload = { nombre: cat.nombre, icono: cat.icono, es_fijo: cat.es_fijo };
                             if (!cat.user_id) {
-                                const { data: catData, error: catError } = await db.from('categorias').insert([{...payload, tipo: cat.tipo, user_id: session.user.id}]).select();
-                                if (error) throw new Error(`Fallo inserción: ${error.message}`);
-                                if (data && data?.length > 0) cat?.id = data?.[0].id;
+                                const { data: catData, error: catErr } = await db.from('categorias').insert([{...payload, tipo: cat.tipo, user_id: session.user.id}]).select();
+                                if (catErr) throw new Error(`Fallo inserción: ${catErr.message}`);
+                                if (catData && catData.length > 0) cat.id = catData[0].id;
                             } else {
-                                const { error: upCatError } = await db.from('categorias').update(payload).eq('id', cat?.id).eq('user_id', session.user.id);
-                                if (error) throw new Error(`Fallo actualización: ${error.message}`);
+                                const { error: upErr } = await db.from('categorias').update(payload).eq('id', cat.id).eq('user_id', session.user.id);
+                                if (upErr) throw new Error(`Fallo actualización: ${upErr.message}`);
                             }
                         }
 
@@ -3003,7 +3003,7 @@ function encolarTransaccionManual(payload) {
                 if (!navigator.onLine) throw new Error("Requiere conexión a internet activa.");
                 
                 const { error: delPlanError } = await db.from('planes').delete().eq('id', id);
-                if (error) throw error;
+                if (delPlanError) throw delPlanError;
                 
                 mostrarToast('Plan eliminado');
                 cargarPlanes();
